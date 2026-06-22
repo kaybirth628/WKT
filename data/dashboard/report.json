@@ -1,0 +1,1626 @@
+{
+  "generated_at": "2026-06-22T02:34:55.362234+00:00",
+  "db_path": "P:\\WKT\\data\\wkt_orders.db",
+  "stats": {
+    "customers": 24,
+    "parts": 143,
+    "order_lines": 321,
+    "shipment_events": 19
+  },
+  "json_files": [
+    {
+      "id": "customer_profiles",
+      "label": "客户档案",
+      "path": "data/customer_profiles.json",
+      "key_count": 42,
+      "exists": true
+    },
+    {
+      "id": "customer_delivery",
+      "label": "送货单收货",
+      "path": "data/delivery_templates/customer_delivery.json",
+      "key_count": 8,
+      "exists": true
+    },
+    {
+      "id": "wkt_company",
+      "label": "威可特抬头",
+      "path": "data/delivery_templates/wkt_company.json",
+      "key_count": 5,
+      "exists": true
+    },
+    {
+      "id": "reconciliation_config",
+      "label": "对账规则",
+      "path": "data/reconciliation_config.json",
+      "key_count": 0,
+      "exists": false
+    }
+  ],
+  "global_config": {
+    "wkt_company_filled": 5,
+    "reconciliation_terms": ""
+  },
+  "customer_matrix": [
+    {
+      "customer": "上海商米科技集团股份有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "上海富山精密机械科技有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "上海金脉电子科技有限公司",
+      "in_master": true,
+      "order_lines": 5,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "东莞市凯泰智联科技有限公司",
+      "in_master": true,
+      "order_lines": 7,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "东莞维诺电子科技有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "先锋高科技（上海）有限公司",
+      "in_master": true,
+      "order_lines": 7,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "先锋高科技（常州）有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "南京克斯勒电气有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "同致电子科技（昆山）有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "安徽欧菲智能车联科技有限公司",
+      "in_master": true,
+      "order_lines": 26,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "广东胡明车业有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "怡利电子科技（江苏）有限公司",
+      "in_master": true,
+      "order_lines": 18,
+      "shipments": 11,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": true,
+      "delivery_filled": 1,
+      "delivery_total": 4,
+      "status": "complete",
+      "issues": []
+    },
+    {
+      "customer": "昆山互协精密模具有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "昆山思瑞奕电子有限公司",
+      "in_master": true,
+      "order_lines": 2,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "昆山昶乐模塑科技有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "昆山晨兴德机械有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "昆山泰仕通精密电子有限公司",
+      "in_master": true,
+      "order_lines": 1,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "昆山鸿鹏达电子有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "江苏日月照明电器有限公司",
+      "in_master": true,
+      "order_lines": 2,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "江苏朗信电气股份有限公司",
+      "in_master": true,
+      "order_lines": 35,
+      "shipments": 1,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "浙江康比利电气有限公司",
+      "in_master": true,
+      "order_lines": 4,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "浙江红黑科技有限公司",
+      "in_master": true,
+      "order_lines": 18,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "浙江金棒运动器材有限公司",
+      "in_master": true,
+      "order_lines": 10,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "海鑫精密电子（常熟）有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "湖州立讯精密工业有限公司",
+      "in_master": true,
+      "order_lines": 2,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "瑞声光电科技（常州）有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "精达科技（安徽）有限公司",
+      "in_master": true,
+      "order_lines": 8,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "苏州允锐液压设备有限公司",
+      "in_master": true,
+      "order_lines": 3,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "苏州大沃工具科技有限公司",
+      "in_master": true,
+      "order_lines": 10,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "苏州爱毕黎实业有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "苏州腾圣技术有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "苏州鑫福泰电子科技有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": true,
+      "delivery_filled": 3,
+      "delivery_total": 4,
+      "status": "delivery_only",
+      "issues": [
+        "有档案但无订单",
+        "有送货单配置但无订单"
+      ]
+    },
+    {
+      "customer": "苏州鑫福泰电子科技有限公司-东硕",
+      "in_master": true,
+      "order_lines": 5,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": true,
+      "delivery_filled": 3,
+      "delivery_total": 4,
+      "status": "complete",
+      "issues": []
+    },
+    {
+      "customer": "苏州鑫福泰电子科技有限公司-中磊",
+      "in_master": true,
+      "order_lines": 1,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": true,
+      "delivery_filled": 3,
+      "delivery_total": 4,
+      "status": "complete",
+      "issues": []
+    },
+    {
+      "customer": "苏州鑫福泰电子科技有限公司-剑桥",
+      "in_master": true,
+      "order_lines": 2,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": true,
+      "delivery_filled": 3,
+      "delivery_total": 4,
+      "status": "complete",
+      "issues": []
+    },
+    {
+      "customer": "苏州鑫福泰电子科技有限公司-力硕",
+      "in_master": true,
+      "order_lines": 4,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": true,
+      "delivery_filled": 3,
+      "delivery_total": 4,
+      "status": "complete",
+      "issues": []
+    },
+    {
+      "customer": "苏州鑫福泰电子科技有限公司-名硕（巴淡）",
+      "in_master": true,
+      "order_lines": 1,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": true,
+      "delivery_filled": 3,
+      "delivery_total": 4,
+      "status": "complete",
+      "issues": []
+    },
+    {
+      "customer": "苏州鑫福泰电子科技有限公司-巨圣",
+      "in_master": true,
+      "order_lines": 2,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": true,
+      "delivery_filled": 3,
+      "delivery_total": 4,
+      "status": "complete",
+      "issues": []
+    },
+    {
+      "customer": "苏州锐霸智能科技有限公司",
+      "in_master": true,
+      "order_lines": 147,
+      "shipments": 7,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "苏州顺广精密设备有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    },
+    {
+      "customer": "迅铂科技（常州）有限公司",
+      "in_master": true,
+      "order_lines": 1,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "partial",
+      "issues": [
+        "有订单但缺送货单配置"
+      ]
+    },
+    {
+      "customer": "镇江鸿福泰电子科技有限公司",
+      "in_master": false,
+      "order_lines": 0,
+      "shipments": 0,
+      "has_profile": true,
+      "profile_filled": 5,
+      "profile_total": 6,
+      "has_delivery": false,
+      "delivery_filled": 0,
+      "delivery_total": 4,
+      "status": "profile_only",
+      "issues": [
+        "有档案但无订单"
+      ]
+    }
+  ],
+  "orphan_keys": {
+    "profiles_without_orders": [
+      "上海商米科技集团股份有限公司",
+      "上海富山精密机械科技有限公司",
+      "东莞维诺电子科技有限公司",
+      "先锋高科技（常州）有限公司",
+      "南京克斯勒电气有限公司",
+      "同致电子科技（昆山）有限公司",
+      "广东胡明车业有限公司",
+      "昆山互协精密模具有限公司",
+      "昆山昶乐模塑科技有限公司",
+      "昆山晨兴德机械有限公司",
+      "昆山鸿鹏达电子有限公司",
+      "海鑫精密电子（常熟）有限公司",
+      "瑞声光电科技（常州）有限公司",
+      "苏州爱毕黎实业有限公司",
+      "苏州腾圣技术有限公司",
+      "苏州鑫福泰电子科技有限公司",
+      "苏州顺广精密设备有限公司",
+      "镇江鸿福泰电子科技有限公司"
+    ],
+    "delivery_without_orders": [
+      "苏州鑫福泰电子科技有限公司"
+    ]
+  },
+  "gaps": {
+    "orders_missing_profile": [],
+    "orders_missing_delivery": [
+      "上海金脉电子科技有限公司",
+      "东莞市凯泰智联科技有限公司",
+      "先锋高科技（上海）有限公司",
+      "安徽欧菲智能车联科技有限公司",
+      "昆山思瑞奕电子有限公司",
+      "昆山泰仕通精密电子有限公司",
+      "江苏日月照明电器有限公司",
+      "江苏朗信电气股份有限公司",
+      "浙江康比利电气有限公司",
+      "浙江红黑科技有限公司",
+      "浙江金棒运动器材有限公司",
+      "湖州立讯精密工业有限公司",
+      "精达科技（安徽）有限公司",
+      "苏州允锐液压设备有限公司",
+      "苏州大沃工具科技有限公司",
+      "苏州锐霸智能科技有限公司",
+      "迅铂科技（常州）有限公司"
+    ],
+    "specs_not_in_parts_master": []
+  },
+  "parts_matrix": [
+    {
+      "product_spec": "散热盖",
+      "customer_part_no": "T9356",
+      "order_line_refs": 16,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手827头壳/ADC12，表面喷漆处理，含轴套",
+      "customer_part_no": "11000030",
+      "order_line_refs": 12,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810S头壳-WKT(可以装皮套)/含轴套，ADC12",
+      "customer_part_no": "11*000000/04016-04",
+      "order_line_refs": 11,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810端盖-WKT/ADC12",
+      "customer_part_no": "11*000000/04023-01",
+      "order_line_refs": 9,
+      "in_master": true
+    },
+    {
+      "product_spec": "机壳",
+      "customer_part_no": "JK11105",
+      "order_line_refs": 9,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手809头壳(含轴套)/扳手809头壳(含轴套)",
+      "customer_part_no": "11*000000/02016-00",
+      "order_line_refs": 7,
+      "in_master": true
+    },
+    {
+      "product_spec": "散热板",
+      "customer_part_no": "T9320",
+      "order_line_refs": 7,
+      "in_master": true
+    },
+    {
+      "product_spec": "JB541A/头部壳体",
+      "customer_part_no": "D0541H00006",
+      "order_line_refs": 6,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手827把手旋钮/ADC12 表面镀铬处理",
+      "customer_part_no": "11*000000/10002-00",
+      "order_line_refs": 6,
+      "in_master": true
+    },
+    {
+      "product_spec": "EL-321W-GL04散熱铝壳",
+      "customer_part_no": "1A321W1W001-0A",
+      "order_line_refs": 5,
+      "in_master": true
+    },
+    {
+      "product_spec": "冷热传导盖\n/8513/ADC12(表面电镀亮 铬）/Ф47X7",
+      "customer_part_no": "B6010001370",
+      "order_line_refs": 5,
+      "in_master": true
+    },
+    {
+      "product_spec": "前挡板",
+      "customer_part_no": "PL9-01020-00-0A",
+      "order_line_refs": 5,
+      "in_master": true
+    },
+    {
+      "product_spec": "小米功放散热器/HWATSINK",
+      "customer_part_no": "P-1030146759",
+      "order_line_refs": 5,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手809端盖/ADC12",
+      "customer_part_no": "11*000000/02023-00",
+      "order_line_refs": 5,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手826头壳-WKT/含轴套",
+      "customer_part_no": "11*000000/09016-01",
+      "order_line_refs": 5,
+      "in_master": true
+    },
+    {
+      "product_spec": "起子机2108-W头壳（升级款）/材质：ADC12,不含轴套",
+      "customer_part_no": "11000158",
+      "order_line_refs": 5,
+      "in_master": true
+    },
+    {
+      "product_spec": "起子机2108W头壳\n-黑色哑光（TRU）/不含轴套，ADC12",
+      "customer_part_no": "11000083",
+      "order_line_refs": 5,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手809S头壳(SD CHE SAT)/ADC12,含轴套，SD CHE模具",
+      "customer_part_no": "11*163000/02016-00",
+      "order_line_refs": 4,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手819头壳-黑色哑光-WKT(TRU)/含轴套",
+      "customer_part_no": "11000242",
+      "order_line_refs": 4,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手819端盖-WKT（优化款）/ADC12,819和826和826A和827和827T共用，配套使用810电机轴承O型圈：16*000000/00110-17",
+      "customer_part_no": "11000132",
+      "order_line_refs": 4,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手826A头壳-WKT/含轴套",
+      "customer_part_no": "11*000000/10016-01",
+      "order_line_refs": 4,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手828端盖-WKT/ADC12,表面喷漆，增加O型圈槽，卡槽直径Φ45.3",
+      "customer_part_no": "11*000000/34023-02",
+      "order_line_refs": 4,
+      "in_master": true
+    },
+    {
+      "product_spec": "电锤24A齿轮箱/ADC12",
+      "customer_part_no": "11*000000/40032-00",
+      "order_line_refs": 4,
+      "in_master": true
+    },
+    {
+      "product_spec": "起子机2108头壳-锐霸灰色/起子机2108头壳-锐霸灰色",
+      "customer_part_no": "11*000001/11016-00",
+      "order_line_refs": 4,
+      "in_master": true
+    },
+    {
+      "product_spec": "黄油枪HY01A齿轮箱-优化款（带油封槽）/ADC12",
+      "customer_part_no": "11000088",
+      "order_line_refs": 4,
+      "in_master": true
+    },
+    {
+      "product_spec": "DUD3500D1_鋁壓鑄散熱片",
+      "customer_part_no": "R08GA87906B60001-X",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "EL-321W-GL0L鋁擠型散熱片",
+      "customer_part_no": "1A321W1N001-0A",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "FRONT_\nCOVER_\nXIAOMI_MS11_DMS",
+      "customer_part_no": "YC013600303900",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "G2124DM11C00",
+      "customer_part_no": "G090000261400999",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "JB539/头壳",
+      "customer_part_no": "B0110000378",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "REAR HOUSING_\nXIAOMI_MS11_DMS",
+      "customer_part_no": "YC0136003040\n00",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "三孔压盖/三孔压盖/压铸铝A380//40.18X9.3,厚度4.3/银白色",
+      "customer_part_no": "3020000214",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "三孔连杆/A380//100.71×41.85×41/银白色",
+      "customer_part_no": "3020000212",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "扇热片/8513/ADC12（外观喷黑色漆）/Ф42.5X16",
+      "customer_part_no": "B6030000533",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手809头壳-黑色（TRU)/含轴套",
+      "customer_part_no": "11000040",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810S头壳-升级款(SD CHE SAT)/深度更改，ADC12,含轴套，SD CHE 模具",
+      "customer_part_no": "11000166",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810端盖（SDCHE SAT)/ADC12",
+      "customer_part_no": "11*163000/04023-00",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手818S头壳(SD CHE STA)/ADC12,含轴套，SD CHE模具",
+      "customer_part_no": "11*163000/06016-00",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手818端盖/ADC12",
+      "customer_part_no": "11*000000/06023-00",
+      "order_line_refs": 3,
+      "in_master": true
+    },
+    {
+      "product_spec": "CAG-C8\n57-PTC\\\n压铸件\\下\n壳\\120 \nmm*120 \nmm*23.3 \nmm\\高亮\n黑\n\\ADC12",
+      "customer_part_no": "YC0136003775\n00",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "CAG_C857_PTC\\压铸\\上壳\\120 mm*12 mm*55.4 mm\\光亮黑+电泳黑\\ADC12",
+      "customer_part_no": "YC0136003778\n01",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "DBC1481L1 EMI plate",
+      "customer_part_no": "R08FA78700A70001-X",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "EL-321W-GL0L 鋁擠型散熱片",
+      "customer_part_no": "1A321W1N001-0A",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "FRONT_COVER_JIDU_MARS1_DMS",
+      "customer_part_no": "YC013600237901",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "JIDU_MA\nRS1_摄\n像头\n_OMS\\前\n盖\\51.5",
+      "customer_part_no": "YC013600222501",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "SP03_台式转接背夹组件",
+      "customer_part_no": "3512-00000-0001R",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "TOP_HOUSING-GWM_HT01_AVM_CONTROLLER\\AVM\\191.3 mm*104.5 mm*27.8 mm\\本色\\ADC12",
+      "customer_part_no": "YC013600330900",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "WL1192 070-650000-165H 成品",
+      "customer_part_no": "36010-00002",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "功放散热器上盖VF8",
+      "customer_part_no": "P-1030180524",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "后盖\n\\BJEV_N\n61_DMS\\\n51.4 \nmm*61.8 \nmm*21.6 \nmm\\黑色\n\\ADC12",
+      "customer_part_no": "YC0136003612\n00",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "外壳-（IP-5801）（E1101)",
+      "customer_part_no": "18003017",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手809头壳-哑光黑色（TRU)/含轴套",
+      "customer_part_no": "11000040",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810S头壳-黑\n色哑光（可以装\n皮套）（TRU）/含轴套，ADC12",
+      "customer_part_no": "11000082",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810头壳-WKT不能装皮套/不含轴套，ADC12",
+      "customer_part_no": "11*000000/04016-02",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手818S端盖(SD CHE SAT/ADC12",
+      "customer_part_no": "11*163000/06023-00",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手818头壳-带花纹/ADC12,含轴套",
+      "customer_part_no": "11*000000/06016-00",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "电机固定座",
+      "customer_part_no": "T4603",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "连杆（HH8318)/19*77*20mm/ADC12/外观震动抛光",
+      "customer_part_no": "B6020000309",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "（待禁用）起子机2108W头壳/起子机2108-W头壳（不含轴套）",
+      "customer_part_no": "11*000000/12016-00",
+      "order_line_refs": 2,
+      "in_master": true
+    },
+    {
+      "product_spec": "1A321W2C001-0A铝挤型 散热片",
+      "customer_part_no": "1A321W2C001-0A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "1A321W2D001-0A铝挤型 新开模",
+      "customer_part_no": "1A321W2D001-0A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "1A321W2E001-0A散热片 新开模",
+      "customer_part_no": "1A321W2E001-0A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "2FRAME;;THSP;MATT;CLEO",
+      "customer_part_no": "2210-01622",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "40V扳手819头壳-WKT(SD CHE SAT)/含轴套",
+      "customer_part_no": "11000061",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "40V扳手819端盖-WKT(SD CHE STA)/ADC12,819和826和826A和827和827T共用",
+      "customer_part_no": "11000060",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "40V扳手826头壳-WKT(SD CHE STA)/含轴套",
+      "customer_part_no": "11000064",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "8040锌合金传热盖/φ54*5.8mm/锌合金/哑光黑色 （请压铸供应商用锌合金材料CNC加工打样）",
+      "customer_part_no": "B6SP0003917",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "Attila WF-8053_PINE-散热器",
+      "customer_part_no": "203-08461-11",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "AugustusMHPS压铸件",
+      "customer_part_no": "942DR801V5",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "Barca EU BHSP压铸件(喷白漆）/喷白漆(参照底座颜色)，产品所有面需通过48H盐雾",
+      "customer_part_no": "71U00332",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "Barca MHSP 压铸件",
+      "customer_part_no": "71U00295（13BK-43N0A11)",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "Barca-压铸成品-硬模",
+      "customer_part_no": "71U00295（13BK-43N0A21)",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "BRACKE\nT_JIDU_\nMARS1_\nFVC_FR\nONT \nCAMERA",
+      "customer_part_no": "YC0136000002\n10",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "DUG7391V1 HOLDER HEATSINK ADC12 皮膜處理 原色",
+      "customer_part_no": "R08A739724A80000-X",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "EL-321W-GL04 散热铝壳",
+      "customer_part_no": "1A321W1W001-0A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "EL-321W-GL04 散热铝壳 ADC12",
+      "customer_part_no": "1A321W1W001-0A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "EL-321W-GL04 散熱鋁殼 ADC12",
+      "customer_part_no": "1A321W1W001-0A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "EL-321W-GL0L 鋁擠型散熱片 Aluminum,6063",
+      "customer_part_no": "1A321W1N001-0A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "EL-321W-GL0P鋁擠型散熱片",
+      "customer_part_no": "1A321W1N002-0A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "FRAME-BOTTOM;-;-;BHSP;MATT;CLEO",
+      "customer_part_no": "2210-01619",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "FRAME-TOP;-;-;B2B SHD;MAT;CLE",
+      "customer_part_no": "2210-01620",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "Front \nCover前\n壳\n\\Huawei_\nN60_CM\nS CAM项\n目\n\\51*23.6*\n23.75\\",
+      "customer_part_no": "YC0136001551\n00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "FRONT_\nCOVER_CHERY_\nEH3_DM\nS",
+      "customer_part_no": "YC0136003035\n00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "G1997DM10C00",
+      "customer_part_no": "G090000073500999",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "G1997DM11C00",
+      "customer_part_no": "G090000073600999",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "HH8027/连杆/18.7*80.1*26mm/ADC12/压铸/振动研磨",
+      "customer_part_no": "B6020000140",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "JB527/头壳",
+      "customer_part_no": "D0527H00001",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "JIDU_Ve\nnus_摄像\n头\n\\FVC\\115\nmm*49\nmm*35.1\nmm\\本色\n\\ADC12\\\n支架",
+      "customer_part_no": "YC0136003516\n00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "PL9-01100-10固定座",
+      "customer_part_no": "BCP-02-00116",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "PV4-N-010/手柄夹块-上",
+      "customer_part_no": "06.2CPV4N.010",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "PV4-N-011/手柄夹块-下",
+      "customer_part_no": "06.2CPV4N.011",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "PV4-N-012/心轴驱动块",
+      "customer_part_no": "06.2CPV4N.012",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "Rear \nCover后\n壳\n\\Huawei_\nN60_CM\nS CAM项\n目\n\\42.4*23.\n6*13.9m",
+      "customer_part_no": "YC0136001552\n00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "REAR_C\nOVER-C\nHERY_E\nH3_DMS",
+      "customer_part_no": "YC0136003034\n00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "REAR_H\nOUSING\n_JIDU_M\nARS1_D\nMS",
+      "customer_part_no": "YC013600237800",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "WF8053_中间散热器_新（ATT-MHSP）8个牙",
+      "customer_part_no": "203-09684-11",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "压盖-（IP-5801）（E1036-1039)",
+      "customer_part_no": "18110022",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "双目支架",
+      "customer_part_no": "3609000899070A00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "后盖\n\\JIDU_M\nARS1_O\nMS",
+      "customer_part_no": "YC013600222600",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2802头壳/ADC12,表面镀黑铬，含轴套",
+      "customer_part_no": "1-000625",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2803头壳/ADC12,表面镀黑铬，含轴套",
+      "customer_part_no": "1-000738",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2803端盖/材质：ADC12",
+      "customer_part_no": "1-000739",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2805头壳/ADC12,表面镀黑铬，含轴套",
+      "customer_part_no": "1-000782",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2805端盖/ADC12,表面镀黑铬",
+      "customer_part_no": "1-000768",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2806头壳/ADC12,表面镀黑铬",
+      "customer_part_no": "1-000795",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2808吊环压板/ADC12,表面镀黑铬",
+      "customer_part_no": "1-000797",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2808头壳/ADC12,表面镀黑铬，含轴套",
+      "customer_part_no": "1-000825",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-扳手W2808端盖/ADC12,表面镀黑铬，含轴套",
+      "customer_part_no": "1-000796",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "大沃款-起子机SD2801头壳/ADC12,表面镀黑铬",
+      "customer_part_no": "1-000641",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "底座",
+      "customer_part_no": "ESC02011A",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手806S头壳(SD CHE SAT)/ADC12,含轴套，SD CHE模具",
+      "customer_part_no": "11*163000/01016-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手806头壳(SK含轴套)/扳手806头壳(SK含轴套)",
+      "customer_part_no": "11*054000/01016-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手806头壳(含轴套)/扳手806头壳(含轴套)",
+      "customer_part_no": "11*000000/01016-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手809头壳(含轴套)/",
+      "customer_part_no": "11*000000/02016-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810S头壳(SD CHE SAT)/ADC12,含轴套，SD CHE模具",
+      "customer_part_no": "11*163000/04016-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810头壳-不能装皮套/不含轴套，ADC12",
+      "customer_part_no": "11*000000/04016-02",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手810端盖-黑色-WKT/ADC12",
+      "customer_part_no": "11000116",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手819端盖-WKT(升级款)(TRU)哑光黑色/尺寸调整，哑光黑色，ADC12，819和826和826A和827和827T共用，配套使用810电机轴承O型圈：16*000000/00110-17",
+      "customer_part_no": "11000289",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手819端盖-WKT/ADC12,819和826和826A和827和827T共用",
+      "customer_part_no": "11*000000/08023-01",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手819端盖/ADC12,819和826和826A和827和827T共用",
+      "customer_part_no": "11*000000/08023-01",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "扳手828头壳-WKT/ADC12,表面喷漆",
+      "customer_part_no": "11*000000/34016-01",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "散热片/8527/ADC12（外观喷黑色漆）/Ф42.5X27.5",
+      "customer_part_no": "B6020000437",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "旋钮/8513",
+      "customer_part_no": "B6020000367",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "旋钮/8527/ADC12压铸（外观氧化）/Ф48X11.5/颜色灰色",
+      "customer_part_no": "B6020000432",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "机壳/JK111-06",
+      "customer_part_no": "JK11106",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "机构五金半成品/ MICRON/E1.S/下盖OPEN款/烤漆/黑全检后",
+      "customer_part_no": "QJ-C202103BKCT-W",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "涨紧圈IP-5801.1/.2（e1064-9065)",
+      "customer_part_no": "18044033",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "电机外壳/电机外壳/ADC12/478x117.6/灰褐色阳极氧化",
+      "customer_part_no": "3020000220",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "电机支架/哪吒款8501/39.5*22.3*27mm/ADC12",
+      "customer_part_no": "B6020000081",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "电钻2109右卡钳-黑色/ADC12,表面喷漆",
+      "customer_part_no": "11000262",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "电钻2109右卡钳/电钻2109右卡钳",
+      "customer_part_no": "11*000000/15027-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "电钻2109左卡钳-黑色/ADC12,表面喷漆",
+      "customer_part_no": "11000261",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "电钻2109左卡钳/电钻2109左卡钳",
+      "customer_part_no": "11*000000/15028-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "电钻2118右卡钳/电钻2118右卡钳",
+      "customer_part_no": "11*000000/17027-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "电钻2118左卡钳/电钻2118左卡钳",
+      "customer_part_no": "11*000000/17028-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "相机卡扣",
+      "customer_part_no": "033A263P015",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "缓起控制板外壳/缓起控制板外壳/ADC12/66*84*31/灰褐色阳极氧化",
+      "customer_part_no": "3020000218",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "起子机2108-E头壳（SD CHE STA)/ADC12,含轴套，SD CHE模具",
+      "customer_part_no": "11000162",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "起子机2108-W头壳/起子机2108-W头壳（不含轴套）",
+      "customer_part_no": "11*000000/12016-00",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "轴承主体支架",
+      "customer_part_no": "033A263P006",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "铝压盖/小白龙款8502/29.4*15*36mm/ADC12",
+      "customer_part_no": "B6020000083",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "铝底座/小白龙款8502/71.2*31.5*38.6mm/ADC12",
+      "customer_part_no": "B6020000082",
+      "order_line_refs": 1,
+      "in_master": true
+    },
+    {
+      "product_spec": "黄油枪HY01A齿轮箱/ADC12",
+      "customer_part_no": "11*000000/41032-00",
+      "order_line_refs": 1,
+      "in_master": true
+    }
+  ],
+  "summary": {
+    "customers_total": 42,
+    "customers_with_orders": 24,
+    "customers_complete": 7,
+    "customers_partial": 17,
+    "customers_profile_only": 17,
+    "customers_delivery_only": 1,
+    "orphan_profile_keys": 18,
+    "orphan_delivery_keys": 1,
+    "parts_master_count": 143,
+    "specs_only_in_orders": 0
+  },
+  "join_key": "客户名称（order_lines.customer = customers.name = JSON 键名）"
+}

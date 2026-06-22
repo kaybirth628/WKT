@@ -1,0 +1,47 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "WKT: 启动 Web 服务",
+      "type": "shell",
+      "command": "python -m pip install flask -q; python test_impl/web/app.py",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "flask",
+        "pattern": {
+          "regexp": "^.*Running on (https?://\\S+).*$",
+          "line": 1,
+          "uri": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Running on"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "wkt-web"
+      }
+    },
+    {
+      "label": "WKT: Cursor 内预览页面",
+      "command": "simpleBrowser.show",
+      "args": ["http://127.0.0.1:5000"]
+    },
+    {
+      "label": "WKT: 启动并预览（推荐）",
+      "dependsOn": ["WKT: 启动 Web 服务", "WKT: Cursor 内预览页面"],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}

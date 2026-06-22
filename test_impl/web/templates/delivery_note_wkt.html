@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>送货单 · {{ doc.title_company }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px 24px;
+      font-family: "SimSun", "Songti SC", "Microsoft YaHei", serif;
+      font-size: 13px;
+      color: #000;
+      background: #fff;
+    }
+    .toolbar {
+      margin-bottom: 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .toolbar button, .toolbar a.btn {
+      padding: 6px 14px;
+      border: 1px solid #024ad8;
+      background: #024ad8;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .toolbar .secondary {
+      background: #fff;
+      color: #024ad8;
+    }
+    body.is-embed .toolbar { display: none; }
+    .sample-banner {
+      margin: 0 0 8px;
+      padding: 6px 10px;
+      background: #fff8e1;
+      border: 1px solid #f59e0b;
+      font-size: 12px;
+    }
+    @media print {
+      .toolbar, .sample-banner { display: none; }
+      body { padding: 8mm; }
+    }
+    .sheet { max-width: 210mm; margin: 0 auto; }
+    .title-company {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 4px;
+      letter-spacing: 0.05em;
+    }
+    .title-doc {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 12px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 16px;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+    .meta-grid span.lbl { white-space: nowrap; }
+    table.items {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    table.items th, table.items td {
+      border: 1px solid #000;
+      padding: 4px 6px;
+      text-align: center;
+      vertical-align: middle;
+      word-break: break-all;
+    }
+    table.items th {
+      font-weight: 700;
+      font-size: 12px;
+    }
+    table.items td.left { text-align: left; }
+    .sign-row {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      line-height: 2.2;
+    }
+    .footer-note {
+      margin-top: 16px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body class="{% if embed %}is-embed{% endif %}">
+  <div class="sheet">
+    {% if doc.is_sample %}
+    <p class="sample-banner">示例预览：正式出货后将填入真实订单数据。</p>
+    {% endif %}
+    <div class="toolbar">
+      <button type="button" onclick="window.print()">打印</button>
+      {% if download_url %}
+      <a class="btn secondary" href="{{ download_url }}">下载 Excel</a>
+      {% endif %}
+      <button type="button" class="secondary" onclick="window.close()">关闭</button>
+    </div>
+
+    <h1 class="title-company">{{ doc.title_company }}</h1>
+    <h2 class="title-doc">送货单</h2>
+
+    <div class="meta-grid">
+      <div><span class="lbl">送货单号：</span>{{ doc.doc_no }}</div>
+      <div><span class="lbl">日期：</span>{{ doc.ship_date_cn }}</div>
+      <div><span class="lbl">收货公司：</span>{{ doc.receiver_company }}</div>
+      <div><span class="lbl">供应商：</span>{{ doc.supplier_name }}</div>
+      <div><span class="lbl">收货地点：</span>{{ doc.receiver_address }}</div>
+      <div><span class="lbl">供应商地址：</span>{{ doc.supplier_address }}</div>
+      <div><span class="lbl">联系人及电话：</span>{{ doc.receiver_contact }}</div>
+      <div><span class="lbl">供应商电话：</span>{{ doc.supplier_phone }}</div>
+    </div>
+
+    <table class="items">
+      <thead>
+        <tr>
+          <th style="width:10%">订单号</th>
+          <th style="width:11%">客户物料编码</th>
+          <th style="width:14%">物料名称</th>
+          <th style="width:12%">规格型号</th>
+          <th style="width:6%">单位</th>
+          <th style="width:8%">数量</th>
+          <th style="width:10%">生产批号</th>
+          <th style="width:7%">箱数</th>
+          <th style="width:12%">备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ln in doc.lines %}
+        <tr>
+          <td class="left">{{ ln.order_no or '/' }}</td>
+          <td class="left">{{ ln.customer_part_no }}</td>
+          <td class="left">{{ ln.product_name }}</td>
+          <td class="left">{{ ln.spec }}</td>
+          <td>{{ ln.unit }}</td>
+          <td>{{ ln.qty }}</td>
+          <td>{{ ln.batch_no }}</td>
+          <td>{{ ln.box_count }}</td>
+          <td class="left">{{ ln.remark }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td colspan="9" class="left">以下空白</td>
+        </tr>
+        <tr>
+          <td colspan="5" style="text-align:left;font-weight:700">合计</td>
+          <td style="font-weight:700">{{ doc.total_qty }}</td>
+          <td colspan="3"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="sign-row">
+      <div>送货人：{{ doc.deliverer }}</div>
+      <div>仓管：{{ doc.warehouse_manager }}</div>
+      <div>收货：{{ doc.receiver_sign }}</div>
+    </div>
+    <p class="footer-note">{{ doc.footer_note }}</p>
+  </div>
+</body>
+</html>

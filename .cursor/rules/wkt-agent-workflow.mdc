@@ -1,0 +1,39 @@
+---
+description: WKT 项目 Agent 工作流：Superpowers 技能、Karpathy 准则、数据结构图同步、AGENTS 合规清单。
+alwaysApply: true
+---
+
+# WKT Agent 工作流
+
+本仓库 Agent **必须**在 `AGENTS.md` 合规清单之上，遵循以下优先级：
+
+1. **用户明确指令**（最高）
+2. **Superpowers 技能**（`.cursor/skills/`，见 `using-superpowers`）
+3. **Karpathy 准则**（`.cursor/rules/karpathy-guidelines.mdc`）
+4. **AGENTS.md**（CHANGELOG / SOP / VERSION / 测试）
+
+## Superpowers
+
+- 任务开始前：若任一 Superpowers 技能有 **≥1%** 适用概率，**必须先 Read 对应 `SKILL.md` 再动手**。
+- 典型映射：
+  - 新功能 / 大改 → `brainstorming` → `writing-plans` → `executing-plans`
+  - 修 Bug → `systematic-debugging`
+  - 写功能代码 → `test-driven-development`（与项目现有 `tests/` 一致）
+  - 完成前 → `verification-before-completion`
+- 更新技能：`scripts/sync-superpowers-skills.ps1`
+
+## 数据库 / 数据结构图同步（强制）
+
+凡改动 **SQLite 表结构**、**持久化字段**、**API 返回的新增/删除字段**、**送货单 JSON 快照结构** 时，**同一任务内**必须同步更新：
+
+- `docs/architecture/data-model.md`（ER 图、字段表、API 示例、数据流）
+- 若影响用户可见数据含义 → 酌情更新 SOP
+- 登记 CHANGELOG
+
+对照源码：`test_impl/order_management/order_entry/line_store.py`（`_SCHEMA`、`_migrate_schema`）。
+
+**不改库结构**的纯 UI/逻辑调整：无需改 data-model，但须在 CHANGELOG 说明。
+
+## 会话入口
+
+新会话先读：`AGENTS.md` → CHANGELOG 顶部 → `docs/architecture/data-model.md`（若涉及数据）。

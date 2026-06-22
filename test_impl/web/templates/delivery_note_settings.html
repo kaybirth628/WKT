@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT · 送货单模板</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260531-list-head" />
+  <style>
+    .dn-page { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 2rem; }
+    .dn-page h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
+    .dn-page .desc { color: var(--muted); font-size: 0.875rem; margin-bottom: 1.25rem; }
+    .dn-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .dn-card h3 { margin: 0 0 0.75rem; font-size: 0.9375rem; }
+    .dn-help { font-size: 0.8125rem; color: var(--muted); line-height: 1.5; }
+    .dn-help code { background: var(--bg-soft); padding: 0.1em 0.35em; border-radius: 4px; }
+    .dn-form { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; }
+    .dn-form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8125rem; }
+    .dn-form input, .dn-form select { min-width: 160px; padding: 0.45rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; }
+    .dn-mapping { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .dn-mapping th, .dn-mapping td { border-bottom: 1px solid var(--border); padding: 0.5rem; text-align: left; }
+    .dn-msg { font-size: 0.875rem; margin-top: 0.5rem; }
+    .dn-msg.ok { color: var(--success); }
+    .dn-msg.err { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <div class="dn-page">
+    <p><a href="/">← 返回订单管理</a></p>
+    <h2>送货单模板</h2>
+    <p class="desc">按客户绑定 Excel 模板；单元格内写 <code>{{客户}}</code>、<code>{{本次出货}}</code> 等占位符，出货后自动填充。未配置的客户使用系统内置送货单。</p>
+
+    <div class="dn-card">
+      <h3>占位符说明</h3>
+      <p class="dn-help" id="placeholderHelp">加载中…</p>
+    </div>
+
+    <div class="dn-card">
+      <h3>上传 Excel 模板</h3>
+      <form class="dn-form" id="uploadForm">
+        <label>模板文件 (.xlsx)
+          <input type="file" name="file" accept=".xlsx,.xlsm" required />
+        </label>
+        <button type="submit" class="btn btn-primary">上传</button>
+      </form>
+      <p class="dn-msg" id="uploadMsg"></p>
+      <p class="dn-help" style="margin-top:0.75rem">已上传：<span id="fileList">—</span></p>
+    </div>
+
+    <div class="dn-card">
+      <h3>客户 → 模板</h3>
+      <form class="dn-form" id="mapForm">
+        <label>客户
+          <input type="text" name="customer" id="mapCustomer" list="customerList" required placeholder="与订单中客户名一致" />
+          <datalist id="customerList"></datalist>
+        </label>
+        <label>模板
+          <select name="template" id="mapTemplate">
+            <option value="builtin_html">内置送货单（HTML 打印）</option>
+          </select>
+        </label>
+        <button type="submit" class="btn btn-primary">保存绑定</button>
+      </form>
+      <p class="dn-msg" id="mapMsg"></p>
+      <table class="dn-mapping" style="margin-top:1rem">
+        <thead><tr><th>客户</th><th>模板</th><th></th></tr></thead>
+        <tbody id="mappingBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    async function loadConfig() {
+      const res = await fetch("/api/delivery-templates");
+      const data = await res.json();
+      const help = document.getElementById("placeholderHelp");
+      help.innerHTML = (data.placeholder_help || []).map((h) => `<div>${h}</div>`).join("");
+      document.getElementById("fileList").textContent =
+        (data.template_files || []).join("、") || "（暂无，使用内置送货单）";
+      const sel = document.getElementById("mapTemplate");
+      sel.innerHTML =
+        '<option value="builtin_html">内置送货单（HTML 打印）</option>' +
+        (data.template_files || [])
+          .map((f) => `<option value="${f}">${f}</option>`)
+          .join("");
+      const tbody = document.getElementById("mappingBody");
+      const mapping = data.mapping || {};
+      const keys = Object.keys(mapping).sort();
+      if (!keys.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted)">暂无绑定</td></tr>';
+      } else {
+        tbody.innerHTML = keys
+          .map(
+            (c) =>
+              `<tr><td>${c}</td><td>${mapping[c]}</td><td><button type="button" class="btn btn-sm btn-outline" data-del="${c}">删除</button></td></tr>`
+          )
+          .join("");
+      }
+      tbody.querySelectorAll("[data-del]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("删除「" + btn.dataset.del + "」的模板绑定？")) return;
+          await fetch("/api/delivery-templates/mapping", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ customer: btn.dataset.del }),
+          });
+          loadConfig();
+        });
+      });
+      const mres = await fetch("/api/master");
+      const master = await mres.json();
+      const dl = document.getElementById("customerList");
+      dl.innerHTML = (master.customers || [])
+        .map((c) => `<option value="${c.name || c}"></option>`)
+        .join("");
+    }
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("uploadMsg");
+      const fd = new FormData(e.target);
+      const res = await fetch("/api/delivery-templates/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      msg.className = "dn-msg " + (res.ok ? "ok" : "err");
+      msg.textContent = res.ok ? "✓ 已上传：" + data.filename : data.error || "上传失败";
+      if (res.ok) loadConfig();
+    });
+    document.getElementById("mapForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("mapMsg");
+      const customer = document.getElementById("mapCustomer").value.trim();
+      const template = document.getElementById("mapTemplate").value;
+      const res = await fetch("/api/delivery-templates/mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customer, template }),
+      });
+      const data = await res.json();
+      msg.className = "dn-msg " + (res.ok ? "ok" : "err");
+      msg.textContent = res.ok ? "✓ 已保存" : data.error || "保存失败";
+      if (res.ok) loadConfig();
+    });
+    loadConfig();
+  </script>
+</body>
+</html>

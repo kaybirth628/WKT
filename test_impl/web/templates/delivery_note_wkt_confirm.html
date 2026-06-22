@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>出货确认 · 送货单</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 12px 16px 20px;
+      font-family: "SimSun", "Songti SC", "Microsoft YaHei", serif;
+      font-size: 13px;
+      color: #000;
+      background: #fff;
+    }
+    .hint-bar {
+      margin: 0 0 10px;
+      padding: 6px 10px;
+      background: #f0f6ff;
+      border: 1px solid #b8d4ff;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #333;
+    }
+    .sheet { max-width: 210mm; margin: 0 auto; }
+    .title-company {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 4px;
+      letter-spacing: 0.05em;
+    }
+    .title-company input {
+      width: 100%;
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      border: none;
+      border-bottom: 1px dashed #999;
+      font-family: inherit;
+      letter-spacing: 0.05em;
+    }
+    .title-doc {
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 12px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 16px;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .meta-grid .lbl { white-space: nowrap; color: #333; }
+    .meta-cell {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+    .fld {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      border-bottom: 1px dashed #bbb;
+      padding: 2px 4px;
+      font: inherit;
+      background: transparent;
+    }
+    .fld.is-manual:placeholder-shown,
+    .fld.is-manual:not(:focus):invalid {
+      background: #fffde7;
+    }
+    .fld:focus {
+      outline: none;
+      border-bottom-color: #024ad8;
+      background: #fff;
+    }
+    table.items {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    table.items th, table.items td {
+      border: 1px solid #000;
+      padding: 2px 4px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    table.items th {
+      font-weight: 700;
+      font-size: 12px;
+      background: #f5f5f5;
+    }
+    table.items td.left { text-align: left; }
+    table.items input.fld {
+      width: 100%;
+      text-align: inherit;
+    }
+    table.items td.left input.fld { text-align: left; }
+    .sign-row {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      line-height: 1.8;
+    }
+    .sign-cell {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .footer-note input.fld {
+      width: 100%;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <p class="hint-bar">与正式送货单版式一致。灰底虚线处为系统已填入；<strong>浅黄底</strong>为待您手填（收货地点、批号、签收等）。</p>
+  <form id="shipConfirmForm" class="sheet" onsubmit="return false;">
+    <div class="title-company">
+      <input type="text" class="fld" name="title_company" data-key="title_company"
+        value="{{ doc.title_company }}" placeholder="收货公司（抬头）" />
+    </div>
+    <h2 class="title-doc">送货单</h2>
+
+    <div class="meta-grid">
+      <div class="meta-cell"><span class="lbl">送货单号：</span>
+        <input class="fld" name="doc_no" data-key="doc_no" value="{{ doc.doc_no }}" /></div>
+      <div class="meta-cell"><span class="lbl">日期：</span>
+        <input class="fld" name="ship_date_cn" data-key="ship_date_cn" value="{{ doc.ship_date_cn }}" /></div>
+      <div class="meta-cell"><span class="lbl">收货公司：</span>
+        <input class="fld" name="receiver_company" data-key="receiver_company"
+          value="{{ doc.receiver_company }}" /></div>
+      <div class="meta-cell"><span class="lbl">供应商：</span>
+        <input class="fld" name="supplier_name" data-key="supplier_name"
+          value="{{ doc.supplier_name }}" /></div>
+      <div class="meta-cell"><span class="lbl">收货地点：</span>
+        <input class="fld is-manual" name="receiver_address" data-key="receiver_address"
+          value="{{ doc.receiver_address }}" placeholder="请填写" /></div>
+      <div class="meta-cell"><span class="lbl">供应商地址：</span>
+        <input class="fld" name="supplier_address" data-key="supplier_address"
+          value="{{ doc.supplier_address }}" /></div>
+      <div class="meta-cell"><span class="lbl">联系人及电话：</span>
+        <input class="fld is-manual" name="receiver_contact" data-key="receiver_contact"
+          value="{{ doc.receiver_contact }}" placeholder="请填写" /></div>
+      <div class="meta-cell"><span class="lbl">供应商电话：</span>
+        <input class="fld" name="supplier_phone" data-key="supplier_phone"
+          value="{{ doc.supplier_phone }}" /></div>
+    </div>
+
+    {% set ln = doc.lines[0] if doc.lines else {} %}
+    <table class="items">
+      <thead>
+        <tr>
+          <th style="width:10%">订单号</th>
+          <th style="width:11%">客户物料编码</th>
+          <th style="width:14%">物料名称</th>
+          <th style="width:12%">规格型号</th>
+          <th style="width:6%">单位</th>
+          <th style="width:8%">数量</th>
+          <th style="width:10%">生产批号</th>
+          <th style="width:7%">箱数</th>
+          <th style="width:12%">备注</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="left"><input class="fld" data-line="order_no" value="{{ ln.order_no or '/' }}" /></td>
+          <td class="left"><input class="fld" data-line="customer_part_no" value="{{ ln.customer_part_no }}" /></td>
+          <td class="left"><input class="fld" data-line="product_name" value="{{ ln.product_name }}" /></td>
+          <td class="left"><input class="fld" data-line="spec" value="{{ ln.spec }}" /></td>
+          <td><input class="fld" data-line="unit" value="{{ ln.unit }}" /></td>
+          <td><input class="fld" data-line="qty" id="lineQty" value="{{ ln.qty }}" /></td>
+          <td><input class="fld is-manual" data-line="batch_no" value="{{ ln.batch_no }}" placeholder="请填写" /></td>
+          <td><input class="fld is-manual" data-line="box_count" value="{{ ln.box_count }}" placeholder="请填写" /></td>
+          <td class="left"><input class="fld is-manual" data-line="remark" value="{{ ln.remark }}" placeholder="请填写" /></td>
+        </tr>
+        <tr>
+          <td colspan="9" class="left" style="color:#888">以下空白</td>
+        </tr>
+        <tr>
+          <td colspan="5" style="text-align:left;font-weight:700">合计</td>
+          <td style="font-weight:700"><input class="fld" name="total_qty" id="totalQty" value="{{ doc.total_qty }}" /></td>
+          <td colspan="3"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="sign-row">
+      <div class="sign-cell"><span>送货人：</span>
+        <input class="fld is-manual" name="deliverer" data-key="deliverer" value="{{ doc.deliverer }}" placeholder="请填写" /></div>
+      <div class="sign-cell"><span>仓管：</span>
+        <input class="fld is-manual" name="warehouse_manager" data-key="warehouse_manager"
+          value="{{ doc.warehouse_manager }}" placeholder="请填写" /></div>
+      <div class="sign-cell"><span>收货：</span>
+        <input class="fld is-manual" name="receiver_sign" data-key="receiver_sign"
+          value="{{ doc.receiver_sign }}" placeholder="请填写" /></div>
+    </div>
+    <div class="footer-note">
+      <input class="fld" name="footer_note" data-key="footer_note" value="{{ doc.footer_note }}" />
+    </div>
+  </form>
+  <script>
+    (function () {
+      function val(sel) {
+        const el = document.querySelector(sel);
+        return el ? String(el.value || "").trim() : "";
+      }
+      function lineVal(key) {
+        const el = document.querySelector("[data-line=\"" + key + "\"]");
+        return el ? String(el.value || "").trim() : "";
+      }
+      document.getElementById("lineQty")?.addEventListener("input", function () {
+        const t = document.getElementById("totalQty");
+        if (t) t.value = this.value;
+      });
+      window.collectDeliveryNoteDoc = function () {
+        const qty = lineVal("qty");
+        return {
+          title_company: val("[name=title_company]"),
+          receiver_company: val("[name=receiver_company]") || val("[name=title_company]"),
+          doc_no: val("[name=doc_no]"),
+          ship_date_cn: val("[name=ship_date_cn]"),
+          receiver_address: val("[name=receiver_address]"),
+          receiver_contact: val("[name=receiver_contact]"),
+          supplier_name: val("[name=supplier_name]"),
+          supplier_address: val("[name=supplier_address]"),
+          supplier_phone: val("[name=supplier_phone]"),
+          footer_note: val("[name=footer_note]"),
+          deliverer: val("[name=deliverer]"),
+          warehouse_manager: val("[name=warehouse_manager]"),
+          receiver_sign: val("[name=receiver_sign]"),
+          total_qty: val("[name=total_qty]") || qty,
+          lines: [{
+            order_no: lineVal("order_no"),
+            customer_part_no: lineVal("customer_part_no"),
+            product_name: lineVal("product_name"),
+            spec: lineVal("spec"),
+            unit: lineVal("unit"),
+            qty: qty,
+            batch_no: lineVal("batch_no"),
+            box_count: lineVal("box_count"),
+            remark: lineVal("remark"),
+          }],
+        };
+      };
+      window.syncLineQtyFromParent = function (q) {
+        const ln = document.getElementById("lineQty");
+        const tot = document.getElementById("totalQty");
+        if (ln) ln.value = q;
+        if (tot) tot.value = q;
+      };
+    })();
+  </script>
+</body>
+</html>

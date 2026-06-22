@@ -1,0 +1,36 @@
+# 密钥与本地配置（禁止入库）
+config/secrets.local.json
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 发布备份
+release_backup/
+
+# 上传临时文件
+test_impl/web/uploads/
+
+# OCR 归档订单（本地文件，不入库）
+orders/*
+!orders/.gitkeep
+
+# 临时导入诊断用 Excel（勿提交业务数据）
+imports/*
+!imports/.gitkeep
+
+# 送货单 Excel 模板（含客户信息，勿提交）
+data/delivery_templates/files/*
+!data/delivery_templates/files/.gitkeep
+
+# 本地订单 SQLite（勿提交业务数据）
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/*.db.bak*
+data/customer_profiles.json
+data/_customer_audit.json

@@ -1,0 +1,159 @@
+/* 成本分析页加宽，充分利用右侧空间 */
+.cost-stack {
+  max-width: 1180px;
+}
+
+/* 顶部基础参数一行排布，保持适中宽度 */
+.cost-stack .form-stack {
+  max-width: 760px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  width: 100%;
+}
+
+.field-group .field {
+  flex: 1;
+}
+
+select {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--primary-focus);
+  box-shadow: var(--focus-ring);
+}
+
+/* 工艺单价：网格排列，紧凑 */
+.process-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.process-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.process-item span {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.process-item input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.process-item input:focus {
+  outline: none;
+  border-color: var(--primary-focus);
+  box-shadow: var(--focus-ring);
+}
+
+.process-item input.filled {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+/* 报价结果 */
+.result-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.result-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+
+.result-row .r-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.result-row .r-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.result-row.grand {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+}
+
+.result-row.grand .r-label {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.result-row.grand .r-value {
+  color: var(--primary);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.result-processes {
+  margin-top: 0.5rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.result-processes h5 {
+  margin: 0 0 0.6rem;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.result-processes .chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  font-size: 0.8125rem;
+}
+
+.chip b {
+  color: var(--primary);
+}

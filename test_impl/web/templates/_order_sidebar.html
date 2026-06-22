@@ -1,0 +1,270 @@
+{# 侧栏；active: entry | detail | shipped | open | closed | closedForced | reconcile | delivery | customerInfo | ai | cost #}
+{% from '_nav_icons.html' import nav_icon %}
+<div class="brand">
+  <div class="logo">WKT</div>
+  <div class="brand-text">
+    <h1>销售管理系统</h1>
+    <p class="subtitle">业务模块</p>
+  </div>
+</div>
+
+<div class="sidebar-module sidebar-module-orders{% if active in ('entry', 'detail', 'shipped', 'open', 'closed', 'closedForced') %} is-expanded{% endif %}" id="sidebarOrdersModule">
+  <button
+    type="button"
+    class="sidebar-module-head sidebar-module-toggle"
+    id="sidebarOrdersToggle"
+    aria-expanded="true"
+    aria-controls="sidebarOrdersChildren"
+  >
+    <span class="sidebar-module-mark" aria-hidden="true">{{ nav_icon('orders') }}</span>
+    <span class="sidebar-module-title">订单管理</span>
+    <span class="sidebar-module-chevron" aria-hidden="true"></span>
+  </button>
+  <nav class="module-nav module-nav-children" id="sidebarOrdersChildren" aria-label="订单管理子模块">
+    <p class="module-nav-section-label">子功能</p>
+    <a class="module-item module-sub{% if active == 'entry' %} active{% endif %}" href="/#entry" data-submodule="entry">
+      <span class="module-icon">{{ nav_icon('entry') }}</span><span class="module-name">订单录入</span>
+    </a>
+    <a class="module-item module-sub{% if active == 'detail' %} active{% endif %}" href="/#detail" data-submodule="detail">
+      <span class="module-icon">{{ nav_icon('detail') }}</span><span class="module-name">订单明细</span>
+    </a>
+    <a class="module-item module-sub{% if active == 'shipped' %} active{% endif %}" href="/#shipped" data-submodule="shipped">
+      <span class="module-icon">{{ nav_icon('shipped') }}</span><span class="module-name">出货明细</span>
+    </a>
+    <a class="module-item module-sub{% if active == 'open' %} active{% endif %}" href="/#open" data-submodule="open">
+      <span class="module-icon">{{ nav_icon('open') }}</span><span class="module-name">未结订单</span>
+    </a>
+
+    <div
+      class="module-nav-subgroup{% if active in ('closed', 'closedForced') %} is-expanded is-child-active{% else %} is-collapsed{% endif %}"
+      id="sidebarClosureGroup"
+      data-subgroup="closure"
+    >
+      <button
+        type="button"
+        class="module-item module-sub module-subgroup-toggle"
+        id="sidebarClosureToggle"
+        aria-expanded="{{ 'true' if active in ('closed', 'closedForced') else 'false' }}"
+        aria-controls="sidebarClosureChildren"
+      >
+        <span class="module-icon">{{ nav_icon('closureGroup') }}</span>
+        <span class="module-name">结案订单</span>
+        <span class="module-sub-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="module-nav-subgroup-children" id="sidebarClosureChildren">
+        <a class="module-item module-sub module-sub-nested{% if active == 'closed' %} active{% endif %}" href="/#closed" data-submodule="closed">
+          <span class="module-icon">{{ nav_icon('closed') }}</span><span class="module-name">正常结案</span>
+        </a>
+        <a class="module-item module-sub module-sub-nested{% if active == 'closedForced' %} active{% endif %}" href="/#closedForced" data-submodule="closedForced">
+          <span class="module-icon">{{ nav_icon('closedForced') }}</span><span class="module-name">强制结案</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<div class="sidebar-module sidebar-module-reconcile">
+  <a class="sidebar-module-head sidebar-module-head-link{% if active == 'reconcile' %} is-active{% endif %}" href="/#reconcile" data-submodule="reconcile">
+    <span class="sidebar-module-mark sidebar-module-mark-reconcile" aria-hidden="true">{{ nav_icon('reconcile') }}</span>
+    <span class="sidebar-module-title">对账</span>
+  </a>
+</div>
+
+<div class="sidebar-module sidebar-module-customer-maint{% if active in ('delivery', 'customerInfo') %} is-expanded{% endif %}" id="sidebarCustomerMaintModule">
+  <button
+    type="button"
+    class="sidebar-module-head sidebar-module-toggle"
+    id="sidebarCustomerMaintToggle"
+    aria-expanded="{{ 'true' if active in ('delivery', 'customerInfo') else 'false' }}"
+    aria-controls="sidebarCustomerMaintChildren"
+  >
+    <span class="sidebar-module-mark sidebar-module-mark-customer" aria-hidden="true">{{ nav_icon('maintGroup') }}</span>
+    <span class="sidebar-module-title">客户维护</span>
+    <span class="sidebar-module-chevron" aria-hidden="true"></span>
+  </button>
+  <nav class="module-nav module-nav-children{% if active not in ('delivery', 'customerInfo') %} is-collapsed-children{% endif %}" id="sidebarCustomerMaintChildren" aria-label="客户维护子模块">
+    <p class="module-nav-section-label">子功能</p>
+    <a class="module-item module-sub{% if active == 'delivery' %} active{% endif %}" href="/#delivery" data-submodule="delivery">
+      <span class="module-icon">{{ nav_icon('delivery') }}</span><span class="module-name">送货单维护</span>
+    </a>
+    <a class="module-item module-sub{% if active == 'customerInfo' %} active{% endif %}" href="/#customerInfo" data-submodule="customerInfo">
+      <span class="module-icon">{{ nav_icon('customerInfo') }}</span><span class="module-name">客户信息维护</span>
+    </a>
+  </nav>
+</div>
+
+<div class="sidebar-module sidebar-module-cost">
+  <a class="sidebar-module-head sidebar-module-head-link{% if active == 'cost' %} is-active{% endif %}" href="/cost">
+    <span class="sidebar-module-mark sidebar-module-mark-cost" aria-hidden="true">{{ nav_icon('cost') }}</span>
+    <span class="sidebar-module-title">成本分析</span>
+  </a>
+</div>
+
+<div class="sidebar-module sidebar-module-ai">
+  <a class="sidebar-module-head sidebar-module-head-link{% if active == 'ai' %} is-active{% endif %}" href="/#ai" data-submodule="ai">
+    <span class="sidebar-module-mark sidebar-module-mark-ai" aria-hidden="true">{{ nav_icon('ai') }}</span>
+    <span class="sidebar-module-title">AI 数据助手</span>
+  </a>
+</div>
+
+<script>
+(function () {
+  var KEY_ORDERS_COLLAPSED = "wkt_sidebar_orders_collapsed";
+  var KEY_CUSTOMER_MAINT_COLLAPSED = "wkt_sidebar_customer_maint_collapsed";
+  var KEY_FOCUS = "wkt_sidebar_content_focus";
+  var KEY_CLOSURE_EXPANDED = "wkt_sidebar_closure_expanded";
+  var ordersModule = document.getElementById("sidebarOrdersModule");
+  var customerMaintModule = document.getElementById("sidebarCustomerMaintModule");
+  var ordersToggle = document.getElementById("sidebarOrdersToggle");
+  var customerMaintToggle = document.getElementById("sidebarCustomerMaintToggle");
+  var sidebar = document.querySelector(".sidebar");
+  if (!ordersModule || !ordersToggle || !sidebar) return;
+
+  function setModuleCollapsed(moduleEl, toggleEl, collapsed, storageKey) {
+    if (!moduleEl || !toggleEl) return;
+    moduleEl.classList.toggle("is-collapsed", collapsed);
+    moduleEl.classList.toggle("is-expanded", !collapsed);
+    toggleEl.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, collapsed ? "1" : "0");
+      } catch (e) {}
+    }
+  }
+
+  function setOrdersCollapsed(collapsed) {
+    setModuleCollapsed(ordersModule, ordersToggle, collapsed, KEY_ORDERS_COLLAPSED);
+  }
+
+  function setCustomerMaintCollapsed(collapsed) {
+    setModuleCollapsed(customerMaintModule, customerMaintToggle, collapsed, KEY_CUSTOMER_MAINT_COLLAPSED);
+  }
+
+  function setContentFocused(focused) {
+    sidebar.classList.toggle("is-content-focused", focused);
+    try {
+      localStorage.setItem(KEY_FOCUS, focused ? "1" : "0");
+    } catch (e) {}
+  }
+
+  function updateModuleActiveStates() {
+    ordersModule.classList.toggle(
+      "is-orders-active",
+      Boolean(ordersModule.querySelector(".module-sub.active"))
+    );
+    if (customerMaintModule) {
+      customerMaintModule.classList.toggle(
+        "is-customer-maint-active",
+        Boolean(customerMaintModule.querySelector(".module-sub.active"))
+      );
+    }
+  }
+
+  function setSubgroupExpanded(groupEl, expanded, persistKey) {
+    if (!groupEl) return;
+    groupEl.classList.toggle("is-expanded", expanded);
+    groupEl.classList.toggle("is-collapsed", !expanded);
+    var btn = groupEl.querySelector(".module-subgroup-toggle");
+    if (btn) btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+    if (persistKey) {
+      try {
+        localStorage.setItem(persistKey, expanded ? "1" : "0");
+      } catch (e) {}
+    }
+  }
+
+  function updateSubgroupChildActive(groupEl) {
+    if (!groupEl) return;
+    groupEl.classList.toggle("is-child-active", Boolean(groupEl.querySelector(".module-sub.active")));
+  }
+
+  function initSubgroup(groupEl, persistKey, defaultExpanded) {
+    if (!groupEl) return;
+    var stored = null;
+    try {
+      stored = localStorage.getItem(persistKey);
+    } catch (e) {}
+    var expanded = defaultExpanded || stored === "1";
+    setSubgroupExpanded(groupEl, expanded, null);
+    updateSubgroupChildActive(groupEl);
+    var btn = groupEl.querySelector(".module-subgroup-toggle");
+    if (btn) {
+      btn.addEventListener("click", function () {
+        var next = !groupEl.classList.contains("is-expanded");
+        setSubgroupExpanded(groupEl, next, persistKey);
+      });
+    }
+  }
+
+  function syncSidebarSubgroups(activeKey) {
+    var closureGroup = document.getElementById("sidebarClosureGroup");
+    if (activeKey === "closed" || activeKey === "closedForced") {
+      setSubgroupExpanded(closureGroup, true, KEY_CLOSURE_EXPANDED);
+    }
+    if (activeKey === "delivery" || activeKey === "customerInfo") {
+      if (customerMaintModule) setCustomerMaintCollapsed(false);
+    }
+    updateSubgroupChildActive(closureGroup);
+    updateModuleActiveStates();
+  }
+
+  function collapseSidebarForNavigation() {
+    if (!ordersModule.classList.contains("is-collapsed")) setOrdersCollapsed(true);
+    if (customerMaintModule && !customerMaintModule.classList.contains("is-collapsed")) {
+      setCustomerMaintCollapsed(true);
+    }
+    if (!sidebar.classList.contains("is-content-focused")) setContentFocused(true);
+    updateModuleActiveStates();
+  }
+
+  function expandSidebarMenu() {
+    if (sidebar.classList.contains("is-content-focused")) setContentFocused(false);
+    if (ordersModule.classList.contains("is-collapsed")) setOrdersCollapsed(false);
+    updateModuleActiveStates();
+  }
+
+  window.collapseSidebarForNavigation = collapseSidebarForNavigation;
+  window.expandSidebarMenu = expandSidebarMenu;
+  window.updateSidebarOrdersActiveState = updateModuleActiveStates;
+  window.syncSidebarSubgroups = syncSidebarSubgroups;
+
+  ordersToggle.addEventListener("click", function () {
+    if (ordersModule.classList.contains("is-collapsed")) {
+      if (sidebar.classList.contains("is-content-focused")) setContentFocused(false);
+      setOrdersCollapsed(false);
+    } else {
+      setOrdersCollapsed(true);
+    }
+    updateModuleActiveStates();
+  });
+
+  if (customerMaintToggle && customerMaintModule) {
+    customerMaintToggle.addEventListener("click", function () {
+      if (customerMaintModule.classList.contains("is-collapsed")) {
+        if (sidebar.classList.contains("is-content-focused")) setContentFocused(false);
+        setCustomerMaintCollapsed(false);
+      } else {
+        setCustomerMaintCollapsed(true);
+      }
+      updateModuleActiveStates();
+    });
+  }
+
+  initSubgroup(
+    document.getElementById("sidebarClosureGroup"),
+    KEY_CLOSURE_EXPANDED,
+    document.getElementById("sidebarClosureGroup")?.classList.contains("is-expanded")
+  );
+
+  var hasActiveOrders = ordersModule.querySelector(".module-sub.active");
+  var onReconcile = document.querySelector(".sidebar-module-reconcile .sidebar-module-head-link.is-active");
+  var hasCustomerMaintChild = customerMaintModule && customerMaintModule.querySelector(".module-sub.active");
+  var onCostPage = document.querySelector(".sidebar-module-cost .sidebar-module-head-link.is-active");
+  var onAiPage = document.querySelector(".sidebar-module-ai .sidebar-module-head-link.is-active");
+  if (hasActiveOrders || onReconcile || hasCustomerMaintChild || onCostPage || onAiPage) {
+    collapseSidebarForNavigation();
+  } else {
+    updateModuleActiveStates();
+  }
+})();
+</script>

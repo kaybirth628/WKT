@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT 销售管理系统 · 订单管理</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260530-sidebar-compact" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      {% set active = 'entry' %}
+      {% include '_order_sidebar.html' %}
+    </aside>
+
+    <div class="app-main">
+      <header class="page-header">
+        <h2 class="page-title" id="pageTitle">订单录入</h2>
+        <p class="page-desc" id="pageDesc">支持 OCR 识别、手动录入</p>
+      </header>
+
+      <main class="content-stack">
+        <!-- 子模块：订单录入 -->
+        <div id="submoduleEntry" class="submodule-panel">
+        <section class="card mode-card">
+          <div class="mode-switch" role="tablist">
+            <button type="button" class="mode-btn" id="modeOcrBtn" data-mode="ocr" role="tab" aria-selected="false">订单 OCR 识别</button>
+            <button type="button" class="mode-btn" id="modeManualBtn" data-mode="manual" role="tab" aria-selected="false">手动录入</button>
+            <button type="button" class="mode-btn is-hidden" id="modeExcelBtn" data-mode="excel" role="tab" aria-selected="false" hidden>Excel 导入</button>
+          </div>
+          <p id="modeHint" class="mode-hint">请先选择录入方式</p>
+        </section>
+
+        <!-- OCR 识别面板（选 OCR 后显示上传；识别成功后才显示预览） -->
+        <div id="ocrPanel" class="mode-panel is-hidden">
+          <section class="card upload-card">
+            <div class="card-head">
+              <div class="card-icon">⤴</div>
+              <div class="card-head-text">
+                <h3>上传订单识别（PDF / 图片）</h3>
+                <p class="card-desc">支持一次选择多个 PDF/图片；RapidOCR 识别 + AI 整理 + 规则校验</p>
+              </div>
+            </div>
+            <div class="upload-row">
+              <input type="file" id="orderFile" accept=".pdf,.png,.jpg,.jpeg,.bmp,.tif,.tiff,.webp" multiple />
+              <button type="button" class="btn btn-primary" id="recognizeBtn">识别</button>
+            </div>
+            <div id="recognizeProgress" class="recognize-progress is-hidden" aria-live="polite">
+              <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+              <p id="progressLabel" class="progress-label">准备中…</p>
+            </div>
+            <p id="recognizeMsg" class="msg"></p>
+          </section>
+
+          <section id="previewArea" class="card preview-card is-hidden">
+            <div id="validationSummary" class="verify-summary is-hidden" aria-live="polite"></div>
+            <div id="ocrRawPanel" class="ocr-raw-panel is-hidden" aria-live="polite"></div>
+            <div class="ocr-review-layout">
+              <section class="ocr-source-block" id="ocrSourceAside">
+                <div class="ocr-source-head">
+                  <h3 class="ocr-source-title">订单原件</h3>
+                  <select id="ocrSourceSelect" class="ocr-source-select is-hidden" aria-label="切换原件"></select>
+                  <select id="ocrSourcePageSelect" class="ocr-source-select is-hidden" aria-label="切换页码"></select>
+                  <div class="ocr-source-tools">
+                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomOut" title="缩小">−</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomReset" title="适合宽度">适合宽度</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomIn" title="放大">+</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="ocrOpenNew">新窗口打开</button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="ocrSourceToggle">收起原件</button>
+                  </div>
+                </div>
+                <p class="ocr-source-hint">PDF 会转为 <strong>200 DPI 高清图</strong> 预览（比嵌入 PDF 更清晰）；默认按原始像素显示，可用 + 放大。下方为识别结果。</p>
+                <div id="ocrSourceViewerWrap" class="ocr-source-viewer-wrap">
+                  <div id="ocrSourceViewer" class="ocr-source-viewer" aria-label="订单原件预览"></div>
+                </div>
+              </section>
+              <section class="ocr-preview-main">
+                <div class="card-head">
+                  <h3>识别预览（每个料号一行<span id="previewBatchHint"></span>）</h3>
+                  <button type="button" class="btn btn-primary" id="batchSubmitBtn">批量提交录入</button>
+                </div>
+                <div class="table-wrap">
+                  <table class="data-table" id="previewTable">
+                    <thead id="previewHead"></thead>
+                    <tbody id="previewBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+
+        <!-- Excel 导入（FEATURE_EXCEL_IMPORT=false 时隐藏，见 app.js） -->
+        <div id="excelPanel" class="mode-panel is-hidden" hidden aria-hidden="true">
+          <section class="card upload-card">
+            <div class="card-head">
+              <div class="card-icon">表</div>
+              <div class="card-head-text">
+                <h3>Excel 批量导入</h3>
+                <p class="card-desc">表头与业务台账一致（15 列）；自动校验未结=PO−已出货；若含「金额」列则校验 PO×含税单价</p>
+              </div>
+            </div>
+            <div class="upload-row">
+              <input type="file" id="excelFile" accept=".xlsx,.xlsm,.csv" />
+              <a class="btn btn-outline" href="/api/lines/import/template" download>下载导入模板</a>
+              <button type="button" class="btn btn-primary" id="excelPreviewBtn">解析并校验</button>
+            </div>
+            <p id="excelMsg" class="msg"></p>
+          </section>
+          <section id="excelPreviewArea" class="card preview-card is-hidden">
+            <div id="excelSummary" class="verify-summary" aria-live="polite"></div>
+            <div id="excelBlockedPanel" class="excel-blocked-panel is-hidden" aria-live="polite"></div>
+            <div id="excelPendingPanel" class="excel-pending-panel is-hidden" aria-live="polite"></div>
+            <div class="card-head excel-preview-toolbar">
+              <h3>导入预览</h3>
+              <div class="excel-filter-btns" role="group" aria-label="预览筛选">
+                <button type="button" class="btn btn-outline btn-sm excel-filter-btn" data-filter="passed">已通过</button>
+                <button type="button" class="btn btn-outline btn-sm excel-filter-btn" data-filter="pending">待确认</button>
+                <button type="button" class="btn btn-outline btn-sm excel-filter-btn" data-filter="blocked">阻断</button>
+                <button type="button" class="btn btn-outline btn-sm excel-filter-btn" data-filter="all">全部</button>
+              </div>
+              <div class="excel-import-actions">
+                <button type="button" class="btn btn-primary" id="excelImportPassedBtn">导入已通过</button>
+                <button type="button" class="btn btn-outline" id="excelImportPendingBtn">确认导入待确认</button>
+                <button type="button" class="btn btn-outline btn-sm" id="excelDownloadBlockedBtn">下载阻断报告</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="excelPreviewTable">
+                <thead id="excelPreviewHead"></thead>
+                <tbody id="excelPreviewBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="excelPendingCard" class="card list-card is-hidden">
+            <h3 class="section-h3">待确认（Excel 导入）</h3>
+            <p id="excelPendingCardHint" class="list-summary"></p>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Excel行</th><th>客户</th><th>订单号</th><th>品名规格</th><th>待确认原因</th>
+                  </tr>
+                </thead>
+                <tbody id="excelPendingCardBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- 手动录入面板 -->
+        <div id="manualPanel" class="mode-panel is-hidden">
+          <section class="card entry-card">
+            <h3 class="section-h3">手动录入</h3>
+            <form id="entryForm" class="entry-form">
+            <input type="hidden" id="editId" value="" />
+            <div class="entry-form-body">
+              <div class="entry-grid">
+                <label class="field"><span>客户</span>
+                  <div class="field-with-btn"><select id="customerSelect" name="customer" required></select>
+                  <button type="button" class="btn btn-add" id="addCustomerBtn" title="新增客户">+</button></div></label>
+                <label class="field"><span>接单日期</span><input type="date" id="orderDate" name="order_date" required /></label>
+                <label class="field"><span>客户交期</span><input type="date" name="delivery_date" /></label>
+                <label class="field"><span>订单号</span><input name="order_no" placeholder="PO号" required /></label>
+                <label class="field field-span-2"><span>账期</span>
+                  <input name="payment_terms" placeholder="按实际填写，如：开票当月不算、月结60天等" /></label>
+              </div>
+              <div class="entry-divider" aria-hidden="true"></div>
+              <div class="entry-grid">
+                <label class="field"><span>品名规格</span>
+                  <div class="field-with-btn"><select id="partSelect" name="product_spec" required></select>
+                  <button type="button" class="btn btn-add" id="addPartBtn" title="新增品名">+</button></div></label>
+                <label class="field"><span>客户料号</span><input id="customerPartNo" name="customer_part_no" placeholder="自动填入" /></label>
+                <label class="field"><span>单重（不含损耗）g</span><input name="unit_weight_g" placeholder="数字或备注，如 120、外购件" value="0" /></label>
+                <label class="field"><span>材质</span><input name="material" placeholder="ADC12" /></label>
+                <label class="field"><span>PO数量</span><input name="po_qty" inputmode="decimal" required /></label>
+              </div>
+              <div class="entry-divider" aria-hidden="true"></div>
+              <div class="entry-grid entry-grid-last">
+                <label class="field"><span>已出货</span><input name="shipped_qty" inputmode="decimal" value="0" /></label>
+                <label class="field"><span>单位</span><input name="unit" placeholder="PCS" /></label>
+                <label class="field"><span>税率(%)</span><input name="tax_rate_pct" inputmode="decimal" value="13" /></label>
+                <label class="field field-span-2"><span>人民币单价（含税）</span><input name="rmb_tax_incl_price" inputmode="decimal" value="0" /></label>
+              </div>
+            </div>
+            <div class="entry-form-actions">
+              <button type="submit" class="btn btn-primary" id="submitBtn">提交录入</button>
+              <button type="button" class="btn btn-outline" id="clearBtn">清空</button>
+              <p id="formMsg" class="msg"></p>
+            </div>
+            </form>
+          </section>
+        </div>
+        </div>
+
+        <!-- 子模块：订单明细 / 出货 / 未结 / 结案（共用列表） -->
+        <div id="submoduleList" class="submodule-panel is-hidden">
+        <section class="card list-card" id="lineListSection">
+          <h3 class="section-h3" id="listSectionTitle">订单明细</h3>
+          <div class="filter-bar filter-bar-compact">
+            <div id="reconcileToolbar" class="reconcile-toolbar is-hidden">
+              <button type="button" class="btn btn-outline btn-sm is-hidden" id="reconcileBackBtn">← 返回汇总</button>
+              <span id="reconcileDetailBadge" class="reconcile-detail-badge is-hidden"></span>
+              <label class="reconcile-filter-label reconcile-summary-only">收款月份
+                <select id="reconcileDueMonthFilter" class="reconcile-filter-select">
+                  <option value="">全部</option>
+                </select>
+              </label>
+              <label class="reconcile-filter-label reconcile-summary-only">出货月份
+                <select id="reconcileShipMonthFilter" class="reconcile-filter-select">
+                  <option value="">全部</option>
+                </select>
+              </label>
+              <button type="button" class="btn btn-outline btn-sm" id="reconcileRefreshBtn">刷新对账</button>
+              <span id="reconcileAmountSummary" class="reconcile-amount-summary"></span>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" id="clearListFiltersBtn">清空筛选</button>
+            <button type="button" class="btn btn-primary btn-sm is-hidden" id="openBatchShipBtn" title="同一客户多条料号合并为一张送货单">合并出货</button>
+            <span id="openBatchShipHint" class="open-batch-hint is-hidden"></span>
+          </div>
+          <div id="listColFilterPanel" class="list-col-filter-panel is-hidden" role="dialog" aria-modal="true" aria-labelledby="listColFilterPanelTitle">
+            <div class="list-col-filter-panel-head">
+              <span id="listColFilterPanelTitle">筛选</span>
+              <button type="button" class="list-col-filter-close" id="listColFilterPanelClose" aria-label="关闭">×</button>
+            </div>
+            <input type="text" class="list-col-filter-search" id="listColFilterSearch" placeholder="搜索选项…" />
+            <label class="list-col-filter-all"><input type="checkbox" id="listColFilterSelectAll" checked /> 全选</label>
+            <div id="listColFilterOptions" class="list-col-filter-options"></div>
+            <div class="list-col-filter-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="listColFilterApply">确定</button>
+              <button type="button" class="btn btn-outline btn-sm" id="listColFilterReset">重置</button>
+            </div>
+          </div>
+          <p id="listMsg" class="msg list-msg"></p>
+          <div class="list-scroll-host">
+            <div class="table-wrap list-table-wrap" id="listTableScroll" tabindex="0" aria-label="订单表格">
+              <table class="data-table list-table">
+                <thead id="listHead"></thead>
+                <tbody id="lineListBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        </div>
+
+        <!-- 子模块：送货单维护 -->
+        <div id="submoduleDelivery" class="submodule-panel is-hidden">
+          <section class="card dn-maint-card">
+            <h3 class="section-h3">威可特统一送货单</h3>
+            <p class="dn-maint-desc">全公司使用同一版式：抬头为<strong>收货公司</strong>（客户名），供应商为昆山威可特；9 列明细表 + 合计 + 签收栏。出货成功后会自动打开已填好的送货单，也可下载 Excel。</p>
+            <details class="dn-details">
+              <summary>版式说明</summary>
+              <div class="dn-help" id="dnPlaceholderHelp">加载中…</div>
+            </details>
+            <p class="dn-maint-hint" id="dnSupplierInfo">供应商信息加载中…</p>
+          </section>
+
+          <section class="card dn-maint-card">
+            <h3 class="section-h3">客户收货信息</h3>
+            <form class="dn-form dn-form-stack" id="dnInfoForm">
+              <label>客户名称
+                <select id="dnMapCustomer" required>
+                  <option value="">请选择客户</option>
+                </select>
+              </label>
+              <label>收货地点
+                <input type="text" id="dnReceiverAddress" placeholder="如：江苏省苏州市…" />
+              </label>
+              <label>联系人及电话
+                <input type="text" id="dnReceiverContact" placeholder="如：陈莉, 138…" />
+              </label>
+              <label>送货单号前缀（可选）
+                <input type="text" id="dnDocPrefix" placeholder="留空则用 WKT，如 ABL" />
+              </label>
+              <div class="dn-form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">保存</button>
+                <button type="button" class="btn btn-outline btn-sm" id="dnPreviewBtn">预览送货单</button>
+                <button type="button" class="btn btn-outline btn-sm" id="dnRefreshBtn">刷新</button>
+              </div>
+            </form>
+            <p id="dnMapMsg" class="msg dn-msg"></p>
+          </section>
+
+          <section class="card list-card dn-maint-card">
+            <h3 class="section-h3">客户一览</h3>
+            <p class="dn-maint-hint">专用送货单：在 Excel 需填写的单元格写占位符（如 <code>{{送货单号}}</code>、<code>{{订单号}}</code>、<code>{{本次出货}}</code>），在下方「送货单」列点<strong>上传</strong>即可绑定该客户；未上传的仍用威可特统一模板。</p>
+            <p id="dnUploadMsg" class="msg dn-msg"></p>
+            <div class="table-wrap">
+              <table class="data-table dn-customer-table">
+                <thead>
+                  <tr>
+                    <th>客户</th>
+                    <th>收货地点</th>
+                    <th>联系人</th>
+                    <th>单号前缀</th>
+                    <th>送货单</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="dnCustomerBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card dn-maint-card" id="dnPreviewSection">
+            <h3 class="section-h3">送货单预览</h3>
+            <p class="dn-maint-hint">以下为<strong>示例数据</strong>；正式出货时自动填入真实订单。</p>
+            <p id="dnPreviewStatus" class="dn-preview-status"></p>
+            <p id="dnPreviewEmpty" class="dn-preview-empty">请选择客户后点「预览送货单」，或在一览表点「预览」</p>
+            <div id="dnPreviewActions" class="dn-preview-actions is-hidden">
+              <span id="dnPreviewTemplateLabel" class="dn-preview-label"></span>
+              <a id="dnPreviewOpenTab" class="btn btn-outline btn-sm" href="#" target="_blank" rel="noopener">新窗口打开</a>
+              <a id="dnPreviewDownload" class="btn btn-primary btn-sm" href="#" target="_blank" rel="noopener">下载 Excel 示例</a>
+            </div>
+            <iframe id="dnPreviewFrame" class="dn-preview-frame is-hidden" title="送货单预览"></iframe>
+          </section>
+        </div>
+
+        <!-- 子模块：客户信息维护 -->
+        <div id="submoduleCustomerInfo" class="submodule-panel is-hidden">
+          <section class="card dn-maint-card">
+            <h3 class="section-h3">客户信息维护</h3>
+            <p class="dn-maint-desc">维护各客户的<strong>公司全称、地址、联系人、电话、邮箱、账期、对账周期</strong>；与订单中的客户名称对应，供对账与商务参考。</p>
+            <p class="dn-maint-hint" id="ciReconcileHint">对账周期加载中…</p>
+          </section>
+
+          <section class="card dn-maint-card">
+            <h3 class="section-h3">编辑客户信息</h3>
+            <form class="dn-form dn-form-stack" id="ciInfoForm">
+              <label>客户名称
+                <select id="ciMapCustomer" required>
+                  <option value="">请选择客户</option>
+                </select>
+              </label>
+              <label>公司全称
+                <input type="text" id="ciCompanyFullName" placeholder="工商注册全称" />
+              </label>
+              <label>地址
+                <input type="text" id="ciAddress" placeholder="注册或收货地址" />
+              </label>
+              <label>联系人
+                <input type="text" id="ciContact" placeholder="业务对接人" />
+              </label>
+              <label>电话
+                <input type="text" id="ciPhone" placeholder="手机或座机" />
+              </label>
+              <label>邮箱
+                <input type="email" id="ciEmail" placeholder="name@company.com" />
+              </label>
+              <label>账期
+                <input type="text" id="ciPaymentTerms" placeholder="如：月结90天" />
+              </label>
+              <label>对账周期
+                <input type="text" id="ciReconciliationCycle" placeholder="如：月结90天·每月25日对账" />
+              </label>
+              <div class="dn-form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">保存</button>
+                <button type="button" class="btn btn-outline btn-sm" id="ciRefreshBtn">刷新</button>
+              </div>
+            </form>
+            <p id="ciMapMsg" class="msg dn-msg"></p>
+          </section>
+
+          <section class="card list-card dn-maint-card">
+            <h3 class="section-h3">客户一览</h3>
+            <div class="table-wrap">
+              <table class="data-table dn-customer-table">
+                <thead>
+                  <tr>
+                    <th>客户</th>
+                    <th>公司全称</th>
+                    <th>联系人</th>
+                    <th>电话</th>
+                    <th>账期</th>
+                    <th>对账周期</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="ciCustomerBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- 子模块：AI 数据助手 -->
+        <div id="submoduleAi" class="submodule-panel is-hidden">
+          {% include '_ai_assistant_panel.html' %}
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <div id="shipDnBackdrop" class="ship-dn-backdrop is-hidden" role="dialog" aria-modal="true" aria-labelledby="shipDnTitle">
+    <div class="ship-dn-modal ship-dn-modal-sheet">
+      <div class="ship-dn-toolbar">
+        <div class="ship-dn-toolbar-main">
+          <h3 id="shipDnTitle">出货确认 · 送货单</h3>
+          <p id="shipDnSubtitle" class="ship-dn-subtitle"></p>
+        </div>
+        <div class="ship-dn-toolbar-qty" id="shipDnSinglePanel">
+          <label>本次出货 <input type="text" id="shipDnQty" class="ship-dn-qty-input" /></label>
+          <label>未结 <input type="text" id="shipDnOpenQty" readonly class="ship-dn-qty-input" /></label>
+          <button type="button" class="btn btn-outline btn-sm" id="shipDnReloadDraft">按数量刷新</button>
+        </div>
+        <div class="ship-dn-toolbar-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="shipDnCancel">取消</button>
+          <button type="button" class="btn btn-primary btn-sm" id="shipDnConfirm">确认出货并生成送货单</button>
+        </div>
+      </div>
+      <div id="shipDnBatchPanel" class="ship-dn-batch-panel is-hidden">
+        <table class="ship-dn-batch-table" id="shipDnBatchTable">
+          <thead>
+            <tr>
+              <th>订单号</th>
+              <th>品名规格</th>
+              <th>未结</th>
+              <th>本次出货</th>
+            </tr>
+          </thead>
+          <tbody id="shipDnBatchBody"></tbody>
+        </table>
+      </div>
+      <input type="hidden" id="shipDnLineId" />
+      <p id="shipDnMsg" class="msg ship-dn-msg"></p>
+      <iframe id="shipDnFrame" class="ship-dn-frame" title="送货单确认（与正式版式一致）"></iframe>
+    </div>
+  </div>
+
+  <script src="/static/delivery-note-admin.js?v=20260622-v050"></script>
+  <script src="/static/customer-info-admin.js?v=20260622-v050"></script>
+  <script src="/static/ai-assistant.js?v=20260622-v050"></script>
+  <script src="/static/app.js?v=20260622-v050"></script>
+</body>
+</html>

@@ -1,0 +1,2004 @@
+{
+  "generated_at": "2026-06-22T02:34:55.362234+00:00",
+  "db_path": "P:\\WKT\\data\\wkt_orders.db",
+  "join_key": "客户名称（order_lines.customer = customers.name = JSON 键名）",
+  "summary": {
+    "customers_total": 42,
+    "customers_with_orders": 24,
+    "customers_complete": 7,
+    "customers_partial": 17,
+    "customers_profile_only": 17,
+    "customers_delivery_only": 1,
+    "orphan_profile_keys": 18,
+    "orphan_delivery_keys": 1,
+    "parts_master_count": 143,
+    "specs_only_in_orders": 0
+  },
+  "overview": {
+    "title": "数据总览",
+    "root": {
+      "label": "WKT 本地数据",
+      "meta": "SQLite + JSON · 客户 24 家有订单"
+    },
+    "branches": [
+      {
+        "id": "base",
+        "label": "基础资料",
+        "color": "blue",
+        "summary": "3 源 · 209 行/键",
+        "leaves": [
+          {
+            "label": "customers",
+            "meta": "24 行",
+            "hint": "name 唯一 · 客户主数据"
+          },
+          {
+            "label": "parts",
+            "meta": "143 行",
+            "hint": "product_spec 唯一 · 品名料号"
+          },
+          {
+            "label": "customer_profiles.json",
+            "meta": "42 键",
+            "hint": "键名 = 客户名称"
+          }
+        ]
+      },
+      {
+        "id": "sales",
+        "label": "销售 · 订单出货",
+        "color": "orange",
+        "summary": "2 表 · 340 行",
+        "leaves": [
+          {
+            "label": "order_lines",
+            "meta": "321 行",
+            "hint": "customer 文本 · 无 FK"
+          },
+          {
+            "label": "shipment_events",
+            "meta": "19 行",
+            "hint": "line_id → order_lines.id"
+          }
+        ]
+      },
+      {
+        "id": "json",
+        "label": "JSON 配置",
+        "color": "purple",
+        "summary": "4 文件 · 55 项",
+        "leaves": [
+          {
+            "label": "customer_delivery.json",
+            "meta": "8 键",
+            "hint": "送货单 · 键=客户名"
+          },
+          {
+            "label": "wkt_company.json",
+            "meta": "5 项",
+            "hint": "威可特抬头"
+          },
+          {
+            "label": "reconciliation_config.json",
+            "meta": "0 项",
+            "hint": "对账规则"
+          }
+        ]
+      }
+    ],
+    "links": [
+      {
+        "from": "customers",
+        "to": "order_lines",
+        "label": "客户名称"
+      },
+      {
+        "from": "order_lines",
+        "to": "shipment_events",
+        "label": "line_id"
+      },
+      {
+        "from": "customers",
+        "to": "customer_profiles.json",
+        "label": "键名匹配"
+      },
+      {
+        "from": "customers",
+        "to": "customer_delivery.json",
+        "label": "键名匹配"
+      },
+      {
+        "from": "parts",
+        "to": "order_lines",
+        "label": "product_spec"
+      }
+    ]
+  },
+  "customers": [
+    {
+      "id": "cust-0",
+      "root": {
+        "label": "苏州锐霸智能科技有限公司",
+        "meta": "部分 · 147 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "147 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "7 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-1",
+      "root": {
+        "label": "江苏朗信电气股份有限公司",
+        "meta": "部分 · 35 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "35 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "1 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-2",
+      "root": {
+        "label": "安徽欧菲智能车联科技有限公司",
+        "meta": "部分 · 26 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "26 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-3",
+      "root": {
+        "label": "怡利电子科技（江苏）有限公司",
+        "meta": "完整 · 18 行"
+      },
+      "color": "green",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "18 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "11 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "1/4",
+          "hint": "送货单"
+        }
+      ]
+    },
+    {
+      "id": "cust-4",
+      "root": {
+        "label": "浙江红黑科技有限公司",
+        "meta": "部分 · 18 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "18 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-5",
+      "root": {
+        "label": "浙江金棒运动器材有限公司",
+        "meta": "部分 · 10 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "10 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-6",
+      "root": {
+        "label": "苏州大沃工具科技有限公司",
+        "meta": "部分 · 10 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "10 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-7",
+      "root": {
+        "label": "精达科技（安徽）有限公司",
+        "meta": "部分 · 8 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "8 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-8",
+      "root": {
+        "label": "东莞市凯泰智联科技有限公司",
+        "meta": "部分 · 7 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "7 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-9",
+      "root": {
+        "label": "先锋高科技（上海）有限公司",
+        "meta": "部分 · 7 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "7 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-10",
+      "root": {
+        "label": "上海金脉电子科技有限公司",
+        "meta": "部分 · 5 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "5 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-11",
+      "root": {
+        "label": "苏州鑫福泰电子科技有限公司-东硕",
+        "meta": "完整 · 5 行"
+      },
+      "color": "green",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "5 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "3/4",
+          "hint": "送货单"
+        }
+      ]
+    },
+    {
+      "id": "cust-12",
+      "root": {
+        "label": "浙江康比利电气有限公司",
+        "meta": "部分 · 4 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "4 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-13",
+      "root": {
+        "label": "苏州鑫福泰电子科技有限公司-力硕",
+        "meta": "完整 · 4 行"
+      },
+      "color": "green",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "4 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "3/4",
+          "hint": "送货单"
+        }
+      ]
+    },
+    {
+      "id": "cust-14",
+      "root": {
+        "label": "苏州允锐液压设备有限公司",
+        "meta": "部分 · 3 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "3 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-15",
+      "root": {
+        "label": "昆山思瑞奕电子有限公司",
+        "meta": "部分 · 2 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "2 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-16",
+      "root": {
+        "label": "江苏日月照明电器有限公司",
+        "meta": "部分 · 2 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "2 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-17",
+      "root": {
+        "label": "湖州立讯精密工业有限公司",
+        "meta": "部分 · 2 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "2 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-18",
+      "root": {
+        "label": "苏州鑫福泰电子科技有限公司-剑桥",
+        "meta": "完整 · 2 行"
+      },
+      "color": "green",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "2 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "3/4",
+          "hint": "送货单"
+        }
+      ]
+    },
+    {
+      "id": "cust-19",
+      "root": {
+        "label": "苏州鑫福泰电子科技有限公司-巨圣",
+        "meta": "完整 · 2 行"
+      },
+      "color": "green",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "2 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "3/4",
+          "hint": "送货单"
+        }
+      ]
+    },
+    {
+      "id": "cust-20",
+      "root": {
+        "label": "昆山泰仕通精密电子有限公司",
+        "meta": "部分 · 1 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "1 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    },
+    {
+      "id": "cust-21",
+      "root": {
+        "label": "苏州鑫福泰电子科技有限公司-中磊",
+        "meta": "完整 · 1 行"
+      },
+      "color": "green",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "1 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "3/4",
+          "hint": "送货单"
+        }
+      ]
+    },
+    {
+      "id": "cust-22",
+      "root": {
+        "label": "苏州鑫福泰电子科技有限公司-名硕（巴淡）",
+        "meta": "完整 · 1 行"
+      },
+      "color": "green",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "1 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "3/4",
+          "hint": "送货单"
+        }
+      ]
+    },
+    {
+      "id": "cust-23",
+      "root": {
+        "label": "迅铂科技（常州）有限公司",
+        "meta": "部分 · 1 行"
+      },
+      "color": "orange",
+      "leaves": [
+        {
+          "label": "customers",
+          "meta": "✓",
+          "hint": "主数据"
+        },
+        {
+          "label": "order_lines",
+          "meta": "1 行",
+          "hint": "订单"
+        },
+        {
+          "label": "shipment_events",
+          "meta": "0 次",
+          "hint": "出货"
+        },
+        {
+          "label": "customer_profiles.json",
+          "meta": "5/6",
+          "hint": "档案"
+        },
+        {
+          "label": "customer_delivery.json",
+          "meta": "未配置",
+          "hint": "送货单",
+          "warn": true
+        }
+      ]
+    }
+  ],
+  "gaps": {
+    "title": "缺口与不一致",
+    "root": {
+      "label": "数据不一致",
+      "meta": "共 68 条明细"
+    },
+    "branches": [
+      {
+        "id": "gap-0",
+        "label": "有订单但缺送货单配置",
+        "color": "red",
+        "summary": "17 条",
+        "leaves": [
+          {
+            "label": "上海金脉电子科技有限公司",
+            "meta": "5 行订单 · 0 次出货",
+            "hint": "order_lines 有 5 行，但 customer_delivery.json 中没有键「上海金脉电子科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "东莞市凯泰智联科技有限公司",
+            "meta": "7 行订单 · 0 次出货",
+            "hint": "order_lines 有 7 行，但 customer_delivery.json 中没有键「东莞市凯泰智联科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "先锋高科技（上海）有限公司",
+            "meta": "7 行订单 · 0 次出货",
+            "hint": "order_lines 有 7 行，但 customer_delivery.json 中没有键「先锋高科技（上海）有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "安徽欧菲智能车联科技有限公司",
+            "meta": "26 行订单 · 0 次出货",
+            "hint": "order_lines 有 26 行，但 customer_delivery.json 中没有键「安徽欧菲智能车联科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "昆山思瑞奕电子有限公司",
+            "meta": "2 行订单 · 0 次出货",
+            "hint": "order_lines 有 2 行，但 customer_delivery.json 中没有键「昆山思瑞奕电子有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "昆山泰仕通精密电子有限公司",
+            "meta": "1 行订单 · 0 次出货",
+            "hint": "order_lines 有 1 行，但 customer_delivery.json 中没有键「昆山泰仕通精密电子有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "江苏日月照明电器有限公司",
+            "meta": "2 行订单 · 0 次出货",
+            "hint": "order_lines 有 2 行，但 customer_delivery.json 中没有键「江苏日月照明电器有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "江苏朗信电气股份有限公司",
+            "meta": "35 行订单 · 1 次出货",
+            "hint": "order_lines 有 35 行，但 customer_delivery.json 中没有键「江苏朗信电气股份有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "浙江康比利电气有限公司",
+            "meta": "4 行订单 · 0 次出货",
+            "hint": "order_lines 有 4 行，但 customer_delivery.json 中没有键「浙江康比利电气有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "浙江红黑科技有限公司",
+            "meta": "18 行订单 · 0 次出货",
+            "hint": "order_lines 有 18 行，但 customer_delivery.json 中没有键「浙江红黑科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "浙江金棒运动器材有限公司",
+            "meta": "10 行订单 · 0 次出货",
+            "hint": "order_lines 有 10 行，但 customer_delivery.json 中没有键「浙江金棒运动器材有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "湖州立讯精密工业有限公司",
+            "meta": "2 行订单 · 0 次出货",
+            "hint": "order_lines 有 2 行，但 customer_delivery.json 中没有键「湖州立讯精密工业有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "精达科技（安徽）有限公司",
+            "meta": "8 行订单 · 0 次出货",
+            "hint": "order_lines 有 8 行，但 customer_delivery.json 中没有键「精达科技（安徽）有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "苏州允锐液压设备有限公司",
+            "meta": "3 行订单 · 0 次出货",
+            "hint": "order_lines 有 3 行，但 customer_delivery.json 中没有键「苏州允锐液压设备有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "苏州大沃工具科技有限公司",
+            "meta": "10 行订单 · 0 次出货",
+            "hint": "order_lines 有 10 行，但 customer_delivery.json 中没有键「苏州大沃工具科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "苏州锐霸智能科技有限公司",
+            "meta": "147 行订单 · 7 次出货",
+            "hint": "order_lines 有 147 行，但 customer_delivery.json 中没有键「苏州锐霸智能科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          },
+          {
+            "label": "迅铂科技（常州）有限公司",
+            "meta": "1 行订单 · 0 次出货",
+            "hint": "order_lines 有 1 行，但 customer_delivery.json 中没有键「迅铂科技（常州）有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+            "warn": true
+          }
+        ]
+      },
+      {
+        "id": "gap-1",
+        "label": "客户档案字段未填全",
+        "color": "orange",
+        "summary": "24 条",
+        "leaves": [
+          {
+            "label": "上海金脉电子科技有限公司",
+            "meta": "5 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "东莞市凯泰智联科技有限公司",
+            "meta": "7 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "先锋高科技（上海）有限公司",
+            "meta": "7 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "安徽欧菲智能车联科技有限公司",
+            "meta": "26 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "怡利电子科技（江苏）有限公司",
+            "meta": "18 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "昆山思瑞奕电子有限公司",
+            "meta": "2 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "昆山泰仕通精密电子有限公司",
+            "meta": "1 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "江苏日月照明电器有限公司",
+            "meta": "2 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "江苏朗信电气股份有限公司",
+            "meta": "35 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "浙江康比利电气有限公司",
+            "meta": "4 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "浙江红黑科技有限公司",
+            "meta": "18 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "浙江金棒运动器材有限公司",
+            "meta": "10 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "湖州立讯精密工业有限公司",
+            "meta": "2 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "精达科技（安徽）有限公司",
+            "meta": "8 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州允锐液压设备有限公司",
+            "meta": "3 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州大沃工具科技有限公司",
+            "meta": "10 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-东硕",
+            "meta": "5 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-中磊",
+            "meta": "1 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-剑桥",
+            "meta": "2 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-力硕",
+            "meta": "4 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-名硕（巴淡）",
+            "meta": "1 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-巨圣",
+            "meta": "2 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "苏州锐霸智能科技有限公司",
+            "meta": "147 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          },
+          {
+            "label": "迅铂科技（常州）有限公司",
+            "meta": "1 行订单",
+            "hint": "档案键已存在，但以下字段为空：邮箱。"
+          }
+        ]
+      },
+      {
+        "id": "gap-2",
+        "label": "送货单配置字段未填全",
+        "color": "purple",
+        "summary": "7 条",
+        "leaves": [
+          {
+            "label": "怡利电子科技（江苏）有限公司",
+            "meta": "18 行订单",
+            "hint": "送货单键已存在，但以下字段为空：收货公司、收货联系人、单号前缀。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-东硕",
+            "meta": "5 行订单",
+            "hint": "送货单键已存在，但以下字段为空：单号前缀。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-中磊",
+            "meta": "1 行订单",
+            "hint": "送货单键已存在，但以下字段为空：单号前缀。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-剑桥",
+            "meta": "2 行订单",
+            "hint": "送货单键已存在，但以下字段为空：单号前缀。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-力硕",
+            "meta": "4 行订单",
+            "hint": "送货单键已存在，但以下字段为空：单号前缀。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-名硕（巴淡）",
+            "meta": "1 行订单",
+            "hint": "送货单键已存在，但以下字段为空：单号前缀。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司-巨圣",
+            "meta": "2 行订单",
+            "hint": "送货单键已存在，但以下字段为空：单号前缀。"
+          }
+        ]
+      },
+      {
+        "id": "gap-3",
+        "label": "档案存在但无订单",
+        "color": "gray",
+        "summary": "18 条",
+        "leaves": [
+          {
+            "label": "上海商米科技集团股份有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「上海商米科技集团股份有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "上海富山精密机械科技有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「上海富山精密机械科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "东莞维诺电子科技有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「东莞维诺电子科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "先锋高科技（常州）有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「先锋高科技（常州）有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "南京克斯勒电气有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「南京克斯勒电气有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "同致电子科技（昆山）有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「同致电子科技（昆山）有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "广东胡明车业有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「广东胡明车业有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "昆山互协精密模具有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「昆山互协精密模具有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "昆山昶乐模塑科技有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「昆山昶乐模塑科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "昆山晨兴德机械有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「昆山晨兴德机械有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "昆山鸿鹏达电子有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「昆山鸿鹏达电子有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "海鑫精密电子（常熟）有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「海鑫精密电子（常熟）有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "瑞声光电科技（常州）有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「瑞声光电科技（常州）有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "苏州爱毕黎实业有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「苏州爱毕黎实业有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "苏州腾圣技术有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「苏州腾圣技术有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "苏州鑫福泰电子科技有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「苏州鑫福泰电子科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "苏州顺广精密设备有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「苏州顺广精密设备有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          },
+          {
+            "label": "镇江鸿福泰电子科技有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_profiles.json 有键「镇江鸿福泰电子科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。"
+          }
+        ]
+      },
+      {
+        "id": "gap-4",
+        "label": "送货单配置存在但无订单",
+        "color": "red",
+        "summary": "1 条",
+        "leaves": [
+          {
+            "label": "苏州鑫福泰电子科技有限公司",
+            "meta": "0 行订单",
+            "hint": "customer_delivery.json 有键「苏州鑫福泰电子科技有限公司」，但 order_lines 中无对应订单。"
+          }
+        ]
+      },
+      {
+        "id": "gap-5",
+        "label": "批量缺口（汇总）",
+        "color": "orange",
+        "summary": "1 条",
+        "leaves": [
+          {
+            "label": "17 个客户",
+            "meta": "17 家客户",
+            "hint": "以下客户已有档案但普遍缺少送货单配置：上海金脉电子科技有限公司、东莞市凯泰智联科技有限公司、先锋高科技（上海）有限公司、安徽欧菲智能车联科技有限公司、昆山思瑞奕电子有限公司、昆山泰仕通精密电子有限公司、江苏日月照明电器有限公司、江苏朗信电气股份有限公司…。这是当前「部分映射」状态的主要原因。"
+          }
+        ]
+      }
+    ]
+  },
+  "inconsistencies": [
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "上海金脉电子科技有限公司",
+      "reason": "order_lines 有 5 行，但 customer_delivery.json 中没有键「上海金脉电子科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "5 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "东莞市凯泰智联科技有限公司",
+      "reason": "order_lines 有 7 行，但 customer_delivery.json 中没有键「东莞市凯泰智联科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "7 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "先锋高科技（上海）有限公司",
+      "reason": "order_lines 有 7 行，但 customer_delivery.json 中没有键「先锋高科技（上海）有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "7 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "安徽欧菲智能车联科技有限公司",
+      "reason": "order_lines 有 26 行，但 customer_delivery.json 中没有键「安徽欧菲智能车联科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "26 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "昆山思瑞奕电子有限公司",
+      "reason": "order_lines 有 2 行，但 customer_delivery.json 中没有键「昆山思瑞奕电子有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "2 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "昆山泰仕通精密电子有限公司",
+      "reason": "order_lines 有 1 行，但 customer_delivery.json 中没有键「昆山泰仕通精密电子有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "1 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "江苏日月照明电器有限公司",
+      "reason": "order_lines 有 2 行，但 customer_delivery.json 中没有键「江苏日月照明电器有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "2 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "江苏朗信电气股份有限公司",
+      "reason": "order_lines 有 35 行，但 customer_delivery.json 中没有键「江苏朗信电气股份有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "35 行订单 · 1 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "浙江康比利电气有限公司",
+      "reason": "order_lines 有 4 行，但 customer_delivery.json 中没有键「浙江康比利电气有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "4 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "浙江红黑科技有限公司",
+      "reason": "order_lines 有 18 行，但 customer_delivery.json 中没有键「浙江红黑科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "18 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "浙江金棒运动器材有限公司",
+      "reason": "order_lines 有 10 行，但 customer_delivery.json 中没有键「浙江金棒运动器材有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "10 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "湖州立讯精密工业有限公司",
+      "reason": "order_lines 有 2 行，但 customer_delivery.json 中没有键「湖州立讯精密工业有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "2 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "精达科技（安徽）有限公司",
+      "reason": "order_lines 有 8 行，但 customer_delivery.json 中没有键「精达科技（安徽）有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "8 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "苏州允锐液压设备有限公司",
+      "reason": "order_lines 有 3 行，但 customer_delivery.json 中没有键「苏州允锐液压设备有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "3 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "苏州大沃工具科技有限公司",
+      "reason": "order_lines 有 10 行，但 customer_delivery.json 中没有键「苏州大沃工具科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "10 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "苏州锐霸智能科技有限公司",
+      "reason": "order_lines 有 147 行，但 customer_delivery.json 中没有键「苏州锐霸智能科技有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "147 行订单 · 7 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "有订单但缺送货单配置",
+      "category_id": "missing_delivery",
+      "subject": "迅铂科技（常州）有限公司",
+      "reason": "order_lines 有 1 行，但 customer_delivery.json 中没有键「迅铂科技（常州）有限公司」（或 receiver_* / doc_no_prefix 均为空）。出货打印送货单时将缺少收货地址/联系人。",
+      "impact": "1 行订单 · 0 次出货",
+      "suggestion": "在「送货单维护」中为该客户名称配置收货地址与联系人。",
+      "severity": "warn"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "上海金脉电子科技有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "5 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "东莞市凯泰智联科技有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "7 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "先锋高科技（上海）有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "7 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "安徽欧菲智能车联科技有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "26 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "怡利电子科技（江苏）有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "18 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "昆山思瑞奕电子有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "2 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "昆山泰仕通精密电子有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "1 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "江苏日月照明电器有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "2 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "江苏朗信电气股份有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "35 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "浙江康比利电气有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "4 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "浙江红黑科技有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "18 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "浙江金棒运动器材有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "10 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "湖州立讯精密工业有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "2 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "精达科技（安徽）有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "8 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州允锐液压设备有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "3 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州大沃工具科技有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "10 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州鑫福泰电子科技有限公司-东硕",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "5 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州鑫福泰电子科技有限公司-中磊",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "1 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州鑫福泰电子科技有限公司-剑桥",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "2 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州鑫福泰电子科技有限公司-力硕",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "4 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州鑫福泰电子科技有限公司-名硕（巴淡）",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "1 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州鑫福泰电子科技有限公司-巨圣",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "2 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "苏州锐霸智能科技有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "147 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "客户档案字段未填全",
+      "category_id": "incomplete_profile",
+      "subject": "迅铂科技（常州）有限公司",
+      "reason": "档案键已存在，但以下字段为空：邮箱。",
+      "impact": "1 行订单",
+      "suggestion": "补全 customer_profiles.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "送货单配置字段未填全",
+      "category_id": "incomplete_delivery",
+      "subject": "怡利电子科技（江苏）有限公司",
+      "reason": "送货单键已存在，但以下字段为空：收货公司、收货联系人、单号前缀。",
+      "impact": "18 行订单",
+      "suggestion": "补全 customer_delivery.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "送货单配置字段未填全",
+      "category_id": "incomplete_delivery",
+      "subject": "苏州鑫福泰电子科技有限公司-东硕",
+      "reason": "送货单键已存在，但以下字段为空：单号前缀。",
+      "impact": "5 行订单",
+      "suggestion": "补全 customer_delivery.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "送货单配置字段未填全",
+      "category_id": "incomplete_delivery",
+      "subject": "苏州鑫福泰电子科技有限公司-中磊",
+      "reason": "送货单键已存在，但以下字段为空：单号前缀。",
+      "impact": "1 行订单",
+      "suggestion": "补全 customer_delivery.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "送货单配置字段未填全",
+      "category_id": "incomplete_delivery",
+      "subject": "苏州鑫福泰电子科技有限公司-剑桥",
+      "reason": "送货单键已存在，但以下字段为空：单号前缀。",
+      "impact": "2 行订单",
+      "suggestion": "补全 customer_delivery.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "送货单配置字段未填全",
+      "category_id": "incomplete_delivery",
+      "subject": "苏州鑫福泰电子科技有限公司-力硕",
+      "reason": "送货单键已存在，但以下字段为空：单号前缀。",
+      "impact": "4 行订单",
+      "suggestion": "补全 customer_delivery.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "送货单配置字段未填全",
+      "category_id": "incomplete_delivery",
+      "subject": "苏州鑫福泰电子科技有限公司-名硕（巴淡）",
+      "reason": "送货单键已存在，但以下字段为空：单号前缀。",
+      "impact": "1 行订单",
+      "suggestion": "补全 customer_delivery.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "送货单配置字段未填全",
+      "category_id": "incomplete_delivery",
+      "subject": "苏州鑫福泰电子科技有限公司-巨圣",
+      "reason": "送货单键已存在，但以下字段为空：单号前缀。",
+      "impact": "2 行订单",
+      "suggestion": "补全 customer_delivery.json 中该客户的空字段。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "上海商米科技集团股份有限公司",
+      "reason": "customer_profiles.json 有键「上海商米科技集团股份有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "上海富山精密机械科技有限公司",
+      "reason": "customer_profiles.json 有键「上海富山精密机械科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "东莞维诺电子科技有限公司",
+      "reason": "customer_profiles.json 有键「东莞维诺电子科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "先锋高科技（常州）有限公司",
+      "reason": "customer_profiles.json 有键「先锋高科技（常州）有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "南京克斯勒电气有限公司",
+      "reason": "customer_profiles.json 有键「南京克斯勒电气有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "同致电子科技（昆山）有限公司",
+      "reason": "customer_profiles.json 有键「同致电子科技（昆山）有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "广东胡明车业有限公司",
+      "reason": "customer_profiles.json 有键「广东胡明车业有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "昆山互协精密模具有限公司",
+      "reason": "customer_profiles.json 有键「昆山互协精密模具有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "昆山昶乐模塑科技有限公司",
+      "reason": "customer_profiles.json 有键「昆山昶乐模塑科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "昆山晨兴德机械有限公司",
+      "reason": "customer_profiles.json 有键「昆山晨兴德机械有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "昆山鸿鹏达电子有限公司",
+      "reason": "customer_profiles.json 有键「昆山鸿鹏达电子有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "海鑫精密电子（常熟）有限公司",
+      "reason": "customer_profiles.json 有键「海鑫精密电子（常熟）有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "瑞声光电科技（常州）有限公司",
+      "reason": "customer_profiles.json 有键「瑞声光电科技（常州）有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "苏州爱毕黎实业有限公司",
+      "reason": "customer_profiles.json 有键「苏州爱毕黎实业有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "苏州腾圣技术有限公司",
+      "reason": "customer_profiles.json 有键「苏州腾圣技术有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "苏州鑫福泰电子科技有限公司",
+      "reason": "customer_profiles.json 有键「苏州鑫福泰电子科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "苏州顺广精密设备有限公司",
+      "reason": "customer_profiles.json 有键「苏州顺广精密设备有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "档案存在但无订单",
+      "category_id": "orphan_profile",
+      "subject": "镇江鸿福泰电子科技有限公司",
+      "reason": "customer_profiles.json 有键「镇江鸿福泰电子科技有限公司」（已填 5/6 字段），但 order_lines 中没有任何订单使用此客户名。",
+      "impact": "0 行订单",
+      "suggestion": "预录入客户可保留；若曾用简称下单，需把订单 customer 改为与此键一致。",
+      "severity": "info"
+    },
+    {
+      "category": "送货单配置存在但无订单",
+      "category_id": "orphan_delivery",
+      "subject": "苏州鑫福泰电子科技有限公司",
+      "reason": "customer_delivery.json 有键「苏州鑫福泰电子科技有限公司」，但 order_lines 中无对应订单。",
+      "impact": "0 行订单",
+      "suggestion": "确认客户名称是否与订单一致；无用键可删除。",
+      "severity": "info"
+    },
+    {
+      "category": "批量缺口（汇总）",
+      "category_id": "batch_summary",
+      "subject": "17 个客户",
+      "reason": "以下客户已有档案但普遍缺少送货单配置：上海金脉电子科技有限公司、东莞市凯泰智联科技有限公司、先锋高科技（上海）有限公司、安徽欧菲智能车联科技有限公司、昆山思瑞奕电子有限公司、昆山泰仕通精密电子有限公司、江苏日月照明电器有限公司、江苏朗信电气股份有限公司…。这是当前「部分映射」状态的主要原因。",
+      "impact": "17 家客户",
+      "suggestion": "优先在「送货单维护」批量补收货地址。",
+      "severity": "info"
+    }
+  ]
+}

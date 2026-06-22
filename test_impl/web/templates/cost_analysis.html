@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT 销售管理系统 · 成本分析</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260530-sidebar-expand" />
+  <link rel="stylesheet" href="/static/cost.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      {% set active = 'cost' %}
+      {% include '_order_sidebar.html' %}
+    </aside>
+
+    <div class="app-main">
+      <header class="page-header">
+        <h2 class="page-title">成本分析 · 客户报价</h2>
+        <p class="page-desc">选择原材 → 填写各工艺单价 → 自动生成客户报价</p>
+      </header>
+
+      <main class="content-stack cost-stack">
+        <section class="card">
+          <div class="card-head">
+            <div class="card-icon">¥</div>
+            <div class="card-head-text">
+              <h3>报价参数</h3>
+              <p class="card-desc">原材为下拉选择，工艺单价按需填写</p>
+            </div>
+          </div>
+
+          <form id="costForm" class="form">
+            <div class="form-stack">
+              <div class="field-group">
+                <label class="field">
+                  <span>原材（下拉选择）</span>
+                  <select name="material_code" id="materialSelect" required></select>
+                </label>
+                <label class="field">
+                  <span>原材单价</span>
+                  <input name="material_unit_price" type="number" step="0.0001" min="0" value="0" />
+                </label>
+                <label class="field">
+                  <span>原材重量</span>
+                  <input name="material_weight" type="number" step="0.0001" min="0" value="0" />
+                </label>
+              </div>
+            </div>
+
+            <div class="items-block">
+              <div class="items-head">
+                <h4>工艺单价</h4>
+                <p class="card-desc">只填用到的工艺，留空表示不计入</p>
+              </div>
+              <div id="processGrid" class="process-grid"></div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary btn-block">生成客户报价</button>
+              <p id="costMsg" class="msg"></p>
+            </div>
+          </form>
+        </section>
+
+        <section class="card" id="resultCard" hidden>
+          <div class="card-head">
+            <div class="card-icon list-icon">∑</div>
+            <div class="card-head-text">
+              <h3>报价结果</h3>
+              <p class="card-desc">实时根据录入计算</p>
+            </div>
+          </div>
+          <div id="resultBody"></div>
+        </section>
+      </main>
+
+    </div>
+  </div>
+
+  <script src="/static/cost.js"></script>
+</body>
+</html>

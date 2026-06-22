@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT 销售管理系统 · 主题方案预览</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/theme-preview.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">WKT</div>
+        <div class="brand-text">
+          <h1>销售管理系统</h1>
+          <p class="subtitle">订单管理</p>
+        </div>
+      </div>
+      <p class="sidebar-label">功能模块</p>
+      <nav class="module-nav">
+        <a class="module-item" href="/"><span class="module-icon">1</span><span class="module-name">订单录入</span></a>
+        <span class="module-item disabled"><span class="module-icon">2</span><span class="module-name">出货明细</span></span>
+        <span class="module-item disabled"><span class="module-icon">3</span><span class="module-name">对账</span></span>
+        <span class="module-item disabled"><span class="module-icon">4</span><span class="module-name">未结订单</span></span>
+        <span class="module-item disabled"><span class="module-icon">5</span><span class="module-name">结案订单</span></span>
+        <a class="module-item" href="/cost"><span class="module-icon">6</span><span class="module-name">成本分析</span></a>
+      </nav>
+    </aside>
+
+    <div class="app-main">
+      <header class="page-header">
+        <h2 class="page-title">主题方案预览</h2>
+        <p class="page-desc">WKT 已接入 6 套浅色主题（含极简纯白）· 完整 73 套大厂方案见 <a href="/design-gallery">方案库预览</a></p>
+      </header>
+
+      <main class="content-stack">
+        <p id="themeCurrentBanner" class="theme-current-banner"></p>
+        <div id="themeGrid" class="theme-preview-grid"></div>
+      </main>
+
+      <footer class="footer">
+        <span>test_impl 演示 · <a href="/">返回订单录入</a></span>
+        <span>设计库：docs/design/awesome-design-md</span>
+      </footer>
+    </div>
+  </div>
+  <div id="themeToast" class="theme-toast" role="status"></div>
+  <script src="/static/theme-preview.js"></script>
+</body>
+</html>

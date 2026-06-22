@@ -1,0 +1,44 @@
+{# AI 数据助手主内容区（侧栏业务模块 #ai） #}
+<div id="aiAssistantRoot" class="ai-assistant-page" aria-live="polite">
+  <section class="card ai-assistant-card">
+    <div class="ai-assistant-toolbar">
+      <button type="button" id="aiAssistantMemoryToggle" class="btn btn-outline btn-sm ai-assistant-memory-btn">业务记忆</button>
+      <span class="ai-assistant-toolbar-hint">基于 DeepSeek · 只读查询本地库 · 记忆保存在 data/ai_assistant_memory.json</span>
+    </div>
+
+    <div id="aiAssistantMemoryPanel" class="ai-assistant-memory-panel is-hidden">
+      <p class="ai-assistant-memory-hint">
+        以下内容保存在本机 <code>data/ai_assistant_memory.json</code>，重启电脑后仍会生效。每行一条规则；术语格式为「词=解释」。
+      </p>
+      <label class="ai-assistant-memory-label">业务规则（每行一条）</label>
+      <textarea id="aiMemoryRules" class="ai-assistant-memory-text" rows="4"></textarea>
+      <label class="ai-assistant-memory-label">术语对照（每行：词=解释）</label>
+      <textarea id="aiMemoryGlossary" class="ai-assistant-memory-text" rows="3" placeholder="出货=按 shipped_at 统计"></textarea>
+      <label class="ai-assistant-memory-label">补充说明</label>
+      <textarea id="aiMemoryCustom" class="ai-assistant-memory-text" rows="2"></textarea>
+      <div class="ai-assistant-memory-actions">
+        <button type="button" id="aiMemorySave" class="btn btn-primary btn-sm">保存记忆</button>
+        <span id="aiMemorySaveStatus" class="ai-assistant-memory-save-status"></span>
+      </div>
+    </div>
+
+    <div id="aiAssistantMessages" class="ai-assistant-messages">
+      <div class="ai-assistant-welcome">
+        可提问例如：「本月出货最多的客户」「未结订单按客户汇总」。<br />
+        输入 <strong>记住：……</strong> 可把话术写入业务记忆（永久保存）。
+      </div>
+    </div>
+
+    <form id="aiAssistantForm" class="ai-assistant-form">
+      <textarea
+        id="aiAssistantInput"
+        class="ai-assistant-input"
+        rows="2"
+        placeholder="输入问题，Enter 发送；记住：话术 可永久保存"
+        maxlength="2000"
+      ></textarea>
+      <button type="submit" id="aiAssistantSend" class="btn btn-primary ai-assistant-send">发送</button>
+    </form>
+    <p id="aiAssistantStatus" class="ai-assistant-status"></p>
+  </section>
+</div>
