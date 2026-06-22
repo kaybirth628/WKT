@@ -1,0 +1,10 @@
+{
+  "示例客户": {
+    "address": "江苏省苏州市工业园区示例路 1 号",
+    "contact": "张三",
+    "phone": "13800000000",
+    "email": "zhangsan@example.com",
+    "payment_terms": "月结90天",
+    "reconciliation_cycle": "月结90天·每月25日对账"
+  }
+}

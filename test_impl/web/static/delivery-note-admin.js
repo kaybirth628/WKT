@@ -1,11 +1,17 @@
-/** 送货单维护：统一版式 + 客户一览行内上传专用 Excel */
+/** 送货单维护：客户档案 + 送货收货信息（合并原客户信息维护） */
 (function () {
+  let profileMap = {};
+
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function attrEsc(s) {
+    return esc(s).replace(/'/g, "&#39;");
   }
 
   function showMsg(el, text, ok) {
@@ -33,128 +39,95 @@
     return res.json();
   }
 
-  function rowsFromConfig(data) {
-    return data.customer_rows || [];
+  function splitContactPhone(contact, phone) {
+    contact = String(contact || "").trim();
+    phone = String(phone || "").trim();
+    if (phone) return { contact, phone };
+    const m = contact.match(/(\d{7,})/);
+    if (!m) return { contact, phone };
+    return {
+      contact: contact.slice(0, m.index).trim().replace(/[,，、]\s*$/, ""),
+      phone: m[1],
+    };
   }
 
-  function templateCellHtml(row) {
-    const customer = esc(row.customer);
-    const isStd = row.is_wkt_standard !== false && !row.is_custom_excel;
-    let tag;
-    if (isStd) {
-      tag = '<span class="dn-tpl-tag dn-tpl-tag--std">统一</span>';
-    } else if (row.template_missing) {
-      tag = '<span class="dn-tpl-tag dn-tpl-tag--warn">待上传</span>';
-    } else {
-      const fn = esc(row.template_file || "专用");
-      tag = `<span class="dn-tpl-tag dn-tpl-tag--custom" title="${fn}">专用</span>`;
-    }
-    const resetBtn =
-      row.is_custom_excel && !row.is_wkt_standard
-        ? `<button type="button" class="btn btn-sm btn-link dn-reset-tpl-btn" data-customer="${customer}">恢复统一</button>`
-        : "";
-    return `<div class="dn-tpl-cell">
-      ${tag}
-      <label class="btn btn-sm btn-outline dn-upload-inline" title="上传该客户专用 Excel（.xlsx）">
-        上传<input type="file" class="dn-row-upload-input" accept=".xlsx,.xlsm" data-customer="${customer}" hidden />
-      </label>
-      ${resetBtn}
-    </div>`;
-  }
-
-  async function uploadTemplateForCustomer(customer, file) {
-    const msg = document.getElementById("dnUploadMsg");
-    if (!customer || !file) return;
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("customer", customer);
-    showMsg(msg, "正在上传…", true);
-    const res = await fetch("/api/delivery-templates/upload", { method: "POST", body: fd });
-    const data = await parseJsonResponse(res);
-    if (!res.ok) {
-      showMsg(msg, data.error || "上传失败", false);
-      return;
-    }
-    showMsg(msg, "✓ 已上传并绑定：" + customer + " · " + data.filename, true);
-    await loadDeliveryNoteAdmin();
-    loadDeliveryNotePreview(customer);
-  }
-
-  async function resetTemplateForCustomer(customer) {
-    const msg = document.getElementById("dnUploadMsg");
-    if (!customer) return;
-    if (!confirm("确定恢复为威可特统一送货单？")) return;
-    const res = await fetch("/api/delivery-templates/mapping", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customer }),
-    });
-    const data = await parseJsonResponse(res);
-    showMsg(msg, res.ok ? "✓ 已恢复统一模板" : data.error || "操作失败", res.ok);
-    if (res.ok) {
-      await loadDeliveryNoteAdmin();
-      loadDeliveryNotePreview(customer);
-    }
-  }
-
-  async function loadCustomerInfoFields(customer) {
-    const addr = document.getElementById("dnReceiverAddress");
-    const contact = document.getElementById("dnReceiverContact");
-    const prefix = document.getElementById("dnDocPrefix");
-    if (!customer) {
-      if (addr) addr.value = "";
-      if (contact) contact.value = "";
-      if (prefix) prefix.value = "";
-      return;
-    }
-    const res = await fetch(
-      "/api/delivery-templates/customer-info?customer=" + encodeURIComponent(customer)
+  function rowProfile(row) {
+    const p = profileMap[row.customer] || {};
+    const split = splitContactPhone(
+      row.receiver_contact || p.contact || "",
+      row.receiver_phone || p.phone || ""
     );
-    const data = await parseJsonResponse(res);
-    const info = res.ok ? data.info || {} : {};
-    if (addr) addr.value = info.receiver_address || "";
-    if (contact) contact.value = info.receiver_contact || "";
-    if (prefix) prefix.value = info.doc_no_prefix || "";
+    return {
+      address: row.address || row.receiver_address || p.address || "",
+      contact: split.contact,
+      phone: split.phone,
+      email: row.email || p.email || "",
+      payment_terms: row.payment_terms || p.payment_terms || "",
+      reconciliation_cycle: row.reconciliation_cycle || p.reconciliation_cycle || "",
+    };
   }
 
-  function bindCustomerTableEvents() {
-    const tbody = document.getElementById("dnCustomerBody");
-    if (!tbody || tbody.dataset.bound) return;
-    tbody.dataset.bound = "1";
+  function rowsFromConfig(data) {
+    let rows = data.customer_rows || [];
+    if (!rows.length && data.mapping && typeof data.mapping === "object") {
+      rows = Object.keys(data.mapping)
+        .sort((a, b) => a.localeCompare(b, "zh"))
+        .map((customer) => ({ customer }));
+    }
+    return rows;
+  }
 
-    tbody.addEventListener("change", (e) => {
-      const input = e.target.closest(".dn-row-upload-input");
-      if (!input?.files?.[0]) return;
-      const customer = input.dataset.customer || "";
-      uploadTemplateForCustomer(customer, input.files[0]).finally(() => {
-        input.value = "";
-      });
-    });
+  function readRowInputs(tr) {
+    const val = (field) => tr.querySelector(`[data-field="${field}"]`)?.value.trim() || "";
+    const address = val("address");
+    const contact = val("contact");
+    const phone = val("phone");
+    return {
+      address,
+      contact,
+      phone,
+      email: val("email"),
+      payment_terms: val("payment_terms"),
+      reconciliation_cycle: val("reconciliation_cycle"),
+      receiver_address: address,
+      receiver_contact: contact,
+      receiver_phone: phone,
+    };
+  }
 
-    tbody.addEventListener("click", (e) => {
-      const resetBtn = e.target.closest(".dn-reset-tpl-btn");
-      if (resetBtn) {
-        e.preventDefault();
-        resetTemplateForCustomer(resetBtn.dataset.customer || "");
-        return;
-      }
-      const editBtn = e.target.closest(".dn-edit-btn");
-      if (editBtn) {
-        const customer = editBtn.dataset.customer || "";
-        const cust = document.getElementById("dnMapCustomer");
-        if (cust) cust.value = customer;
-        loadCustomerInfoFields(customer);
-        document.getElementById("dnInfoForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-      const previewBtn = e.target.closest(".dn-preview-row-btn");
-      if (previewBtn) {
-        const customer = previewBtn.dataset.customer || "";
-        const cust = document.getElementById("dnMapCustomer");
-        if (cust) cust.value = customer;
-        loadDeliveryNotePreview(customer);
-      }
+  async function saveCustomerRow(customer, inputs) {
+    const profileRes = await fetch("/api/customer-profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer,
+        profile: {
+          address: inputs.address,
+          contact: inputs.contact,
+          phone: inputs.phone,
+          email: inputs.email,
+          payment_terms: inputs.payment_terms,
+          reconciliation_cycle: inputs.reconciliation_cycle,
+        },
+      }),
     });
+    const profileData = await parseJsonResponse(profileRes);
+    if (!profileRes.ok) throw new Error(profileData.error || "客户档案保存失败");
+
+    const deliveryRes = await fetch("/api/delivery-templates/customer-info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer,
+        info: {
+          receiver_address: inputs.receiver_address,
+          receiver_contact: inputs.receiver_contact,
+          receiver_phone: inputs.receiver_phone,
+        },
+      }),
+    });
+    const deliveryData = await parseJsonResponse(deliveryRes);
+    if (!deliveryRes.ok) throw new Error(deliveryData.error || "送货信息保存失败");
   }
 
   function renderCustomerTable(data) {
@@ -163,52 +136,57 @@
     const rows = rowsFromConfig(data);
     if (!rows.length) {
       tbody.innerHTML =
-        '<tr><td colspan="6" class="empty-cell">暂无客户。请先在「订单录入」创建客户。</td></tr>';
+        '<tr><td colspan="9" class="empty-cell">暂无客户。请先在「订单录入」创建客户。</td></tr>';
       return;
     }
     tbody.innerHTML = rows
       .map((row) => {
-        const addr = esc(row.receiver_address || "—");
-        const contact = esc(row.receiver_contact || "—");
-        const prefix = esc(row.doc_no_prefix || "WKT");
+        const tpl = esc(row.template_display || (row.is_wkt_standard ? "威可特统一模板" : row.template || "—"));
+        const tplCls = row.template_missing ? " dn-badge-warn" : row.is_custom_excel ? " dn-badge-excel" : " dn-badge-default";
+        const p = rowProfile(row);
         return `<tr data-customer="${esc(row.customer)}">
-              <td>${esc(row.customer)}</td>
-              <td>${addr}</td>
-              <td>${contact}</td>
-              <td>${prefix}</td>
-              <td>${templateCellHtml(row)}</td>
-              <td>
-                <button type="button" class="btn btn-sm btn-outline dn-edit-btn" data-customer="${esc(row.customer)}">编辑</button>
-                <button type="button" class="btn btn-sm btn-primary dn-preview-row-btn" data-customer="${esc(row.customer)}">预览</button>
+              <td class="dn-cell-name">${esc(row.customer)}</td>
+              <td><span class="dn-badge${tplCls}">${tpl}</span></td>
+              <td><input type="text" class="dn-inline-input" data-field="address" value="${attrEsc(p.address)}" placeholder="地址" /></td>
+              <td><input type="text" class="dn-inline-input" data-field="contact" value="${attrEsc(p.contact)}" placeholder="联系人" /></td>
+              <td><input type="text" class="dn-inline-input" data-field="phone" value="${attrEsc(p.phone)}" placeholder="电话" /></td>
+              <td><input type="email" class="dn-inline-input" data-field="email" value="${attrEsc(p.email)}" placeholder="邮箱" /></td>
+              <td><input type="text" class="dn-inline-input" data-field="payment_terms" value="${attrEsc(p.payment_terms)}" placeholder="账期" /></td>
+              <td><input type="text" class="dn-inline-input" data-field="reconciliation_cycle" value="${attrEsc(p.reconciliation_cycle)}" placeholder="对账周期" /></td>
+              <td class="dn-cell-actions">
+                <button type="button" class="btn btn-sm btn-primary dn-save-row-btn" data-customer="${esc(row.customer)}">保存</button>
+                <button type="button" class="btn btn-sm btn-outline dn-preview-row-btn" data-customer="${esc(row.customer)}">预览</button>
               </td>
             </tr>`;
       })
       .join("");
-  }
 
-  async function fillDnCustomerSelect(data, keepValue) {
-    const sel = document.getElementById("dnMapCustomer");
-    if (!sel) return;
-    const prev = keepValue != null ? keepValue : sel.value;
-    const names = new Set();
-    try {
-      const mres = await fetch("/api/master");
-      const master = await mres.json();
-      (master.customers || []).forEach((c) => {
-        const n = typeof c === "string" ? c : c?.name;
-        if (n && String(n).trim()) names.add(String(n).trim());
+    const msg = document.getElementById("dnMapMsg");
+
+    tbody.querySelectorAll(".dn-save-row-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const customer = btn.dataset.customer || "";
+        const tr = btn.closest("tr");
+        if (!customer || !tr) return;
+        btn.disabled = true;
+        try {
+          await saveCustomerRow(customer, readRowInputs(tr));
+          showMsg(msg, "✓ 已保存", true);
+          if (window.showSaveSuccess) window.showSaveSuccess("✓ 已保存");
+        } catch (err) {
+          showMsg(msg, err.message || "保存失败", false);
+          if (window.showSaveError) window.showSaveError(err.message || "保存失败");
+        } finally {
+          btn.disabled = false;
+        }
       });
-    } catch {
-      /* ignore */
-    }
-    rowsFromConfig(data).forEach((r) => {
-      if (r.customer) names.add(String(r.customer).trim());
     });
-    const sorted = [...names].sort((a, b) => a.localeCompare(b, "zh"));
-    sel.innerHTML =
-      '<option value="">请选择客户</option>' +
-      sorted.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
-    if (prev && sorted.includes(prev)) sel.value = prev;
+
+    tbody.querySelectorAll(".dn-preview-row-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        loadDeliveryNotePreview(btn.dataset.customer || "");
+      });
+    });
   }
 
   async function loadDeliveryNotePreview(customer) {
@@ -254,27 +232,21 @@
       if (download && data.preview_download_url) {
         download.href = data.preview_download_url;
         download.classList.remove("is-hidden");
-        download.textContent = data.is_wkt_standard ? "下载 Excel 示例" : "下载专用模板示例";
       }
-
-      if (data.is_wkt_standard && data.preview_html_url) {
-        if (openTab) {
-          openTab.href = data.preview_html_url;
-          openTab.classList.remove("is-hidden");
-        }
-        if (frame) {
-          frame.classList.remove("is-hidden");
-          frame.src = data.preview_html_url + "&embed=1";
-        }
-      } else {
-        if (openTab) openTab.classList.add("is-hidden");
-        if (frame) {
-          frame.classList.add("is-hidden");
-          frame.src = "about:blank";
-        }
+      const htmlUrl =
+        data.is_custom_excel && !data.preview_html_url
+          ? `/delivery-note/preview-sample?customer=${encodeURIComponent(customer)}&embed=1`
+          : (data.preview_html_url || "") + "&embed=1";
+      if (openTab) {
+        openTab.href = data.is_custom_excel && !data.preview_html_url
+          ? `/delivery-note/preview-sample?customer=${encodeURIComponent(customer)}`
+          : data.preview_html_url;
       }
-
-      setStatus(data.template_missing ? "专用模板文件待上传" : "✓ 已加载送货单预览（示例数据）");
+      if (frame && htmlUrl) {
+        frame.classList.remove("is-hidden");
+        frame.src = htmlUrl;
+      }
+      setStatus(data.template_missing ? "专用模板文件待放入 files/" : "✓ 已加载送货单预览");
       document.getElementById("dnPreviewSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
       setStatus("");
@@ -284,83 +256,46 @@
     }
   }
 
+  async function loadReconcileHint() {
+    const hint = document.getElementById("dnMaintHint");
+    if (!hint) return;
+    const base =
+      "维护客户地址、联系人、电话、邮箱、账期、对账周期及送货收货信息；编辑后点「保存」，地址与联系人同步用于送货单。";
+    try {
+      const res = await fetch("/api/reconciliation/config");
+      const data = await res.json();
+      if (res.ok && data.terms_display) {
+        hint.textContent = `${base} 对账周期示例：${data.terms_display}`;
+      } else {
+        hint.textContent = base;
+      }
+    } catch {
+      hint.textContent = base;
+    }
+  }
+
   async function loadDeliveryNoteAdmin() {
-    const selBefore = document.getElementById("dnMapCustomer")?.value;
+    await loadReconcileHint();
     const res = await fetch("/api/delivery-templates");
     const data = await parseJsonResponse(res);
-    await fillDnCustomerSelect(data, selBefore);
-    const help = document.getElementById("dnPlaceholderHelp");
-    if (help) {
-      const lines = [...(data.placeholder_help || []), ...(data.custom_placeholder_help || [])];
-      help.innerHTML = lines.map((h) => `<div>${esc(h)}</div>`).join("");
-    }
-    const sup = document.getElementById("dnSupplierInfo");
-    if (sup && data.supplier) {
-      const s = data.supplier;
-      sup.textContent = `供应商：${s.supplier_name || ""} · ${s.supplier_address || ""} · ${s.supplier_phone || ""}`;
-    }
+    profileMap = data.customer_profiles || {};
     renderCustomerTable(data);
-    if (selBefore) await loadCustomerInfoFields(selBefore);
   }
 
   function bindDeliveryNoteAdmin() {
-    bindCustomerTableEvents();
-
-    const infoForm = document.getElementById("dnInfoForm");
-    if (infoForm && !infoForm.dataset.bound) {
-      infoForm.dataset.bound = "1";
-      infoForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const msg = document.getElementById("dnMapMsg");
-        const customer = document.getElementById("dnMapCustomer")?.value.trim();
-        if (!customer) {
-          showMsg(msg, "请选择客户", false);
-          return;
-        }
-        const info = {
-          receiver_address: document.getElementById("dnReceiverAddress")?.value.trim() || "",
-          receiver_contact: document.getElementById("dnReceiverContact")?.value.trim() || "",
-          doc_no_prefix: document.getElementById("dnDocPrefix")?.value.trim() || "",
-        };
-        const res = await fetch("/api/delivery-templates/customer-info", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ customer, info }),
-        });
-        const data = await res.json();
-        showMsg(msg, res.ok ? "✓ 已保存收货信息" : data.error || "保存失败", res.ok);
-        if (res.ok) {
-          await loadDeliveryNoteAdmin();
-          loadDeliveryNotePreview(customer);
-        }
-      });
-    }
     const refreshBtn = document.getElementById("dnRefreshBtn");
     if (refreshBtn && !refreshBtn.dataset.bound) {
       refreshBtn.dataset.bound = "1";
-      refreshBtn.addEventListener("click", () => loadDeliveryNoteAdmin());
-    }
-    const previewBtn = document.getElementById("dnPreviewBtn");
-    if (previewBtn && !previewBtn.dataset.bound) {
-      previewBtn.dataset.bound = "1";
-      previewBtn.addEventListener("click", () => {
-        const customer = document.getElementById("dnMapCustomer")?.value.trim();
-        if (!customer) {
-          alert("请先选择客户");
-          return;
-        }
-        loadDeliveryNotePreview(customer);
-      });
-    }
-    const custSel = document.getElementById("dnMapCustomer");
-    if (custSel && !custSel.dataset.infoBound) {
-      custSel.dataset.infoBound = "1";
-      custSel.addEventListener("change", () => {
-        loadCustomerInfoFields(custSel.value.trim());
+      refreshBtn.addEventListener("click", () => {
+        showMsg(document.getElementById("dnMapMsg"), "", true);
+        loadDeliveryNoteAdmin().catch((e) => {
+          showMsg(document.getElementById("dnMapMsg"), e.message || "刷新失败", false);
+        });
       });
     }
   }
 
+  bindDeliveryNoteAdmin();
   window.loadDeliveryNoteAdmin = loadDeliveryNoteAdmin;
   window.bindDeliveryNoteAdmin = bindDeliveryNoteAdmin;
   window.loadDeliveryNotePreview = loadDeliveryNotePreview;

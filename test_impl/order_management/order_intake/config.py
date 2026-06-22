@@ -45,6 +45,14 @@ class IntakeConfig:
             or "deepseek-v4-pro"
         )
 
+    @property
+    def assistant_model(self) -> str:
+        return (
+            os.environ.get("DEEPSEEK_ASSISTANT_MODEL")
+            or self._file_cfg.get("deepseek_assistant_model")
+            or "deepseek-chat"
+        )
+
     def require_api_key(self) -> str:
         key = self.api_key
         if not key:

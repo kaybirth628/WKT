@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 ROOT = Path(__file__).resolve().parents[3]
 PROFILES_FILE = ROOT / "data" / "customer_profiles.json"

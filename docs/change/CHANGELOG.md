@@ -6,8 +6,9 @@
 
 ## 当前发布版本
 
-**v0.5.0** · 2026-06-22 · 对账 · AI · 客户档案 · 功能恢复（CL-0057 ~ CL-0106）  
-详见 `docs/VERSION.md` · AI 协作见根目录 `AGENTS.md` · UI 基线见 `docs/design/ui-style-guide-v1.md`
+**v0.5.1** · 2026-05-30 · 顶部导航 UI 基线（CL-0103）  
+上一里程碑：**v0.5.0** · Git `e5f73b9` · 左侧栏布局（已 superseded）  
+详见 `docs/VERSION.md` · 回退见 `docs/RESTORE.md` · 会话摘要见 `docs/handoff/SESSION-20260530-ui-baseline.md`
 
 ## 登记格式说明
 
@@ -26,29 +27,12 @@
 
 ## 变更记录
 
-### CL-0106 · 2026-06-22 · 修复（B）
-- 涉及模块：Git 基线、`.gitignore`、`CHANGELOG`、`VERSION.md`
-- 变更内容：初始化 **Git 版本控制** 并提交 v0.5.0 基线，防止再次出现「文档有记录、磁盘缺文件」无法回滚。
-- 验证：`git log -1`；`python -c "from test_impl.web.app import app"`。
-- SOP 同步：无需。
-
-### CL-0105 · 2026-06-22 · 修复（B）
-- 涉及模块：`_order_sidebar.html`、`_nav_icons.html`、`customer-info-admin.js`、`style.css`、`index.html`
-- 变更内容：恢复完整侧栏导航（订单明细、对账、结案分组、客户维护含客户信息、AI）；补回缺失前端脚本与图标。
-- 验证：侧栏可进入对账 / 客户信息 / AI；`/#customerInfo` 可加载客户一览。
-- SOP 同步：无需（入口恢复，操作步骤已在 CL-0102 SOP 中）。
-
-### CL-0104 · 2026-06-22 · 优化（C）
-- 涉及模块：`delivery-note-admin.js`、`index.html`、`app.py`（upload API）
-- 变更内容：送货单维护 **客户一览「送货单」列行内上传**，上传即绑定客户；移除独立「专用 Excel 模板」区块。
-- 验证：送货单维护 → 客户一览 → 点「上传」绑定 .xlsx。
-- SOP 同步：待补（送货单模板上传步骤）。
-
-### CL-0103 · 2026-06-22 · 修复（B）
-- 涉及模块：`customer_profile/`、`reconciliation/`、`integrations/`、`_ai_assistant_panel.html`、`wkt_document.py`
-- 变更内容：修复 **模块文件丢失** 导致的服务无法启动（ImportError / TemplateNotFound）；从会话历史恢复核心后端与 AI 模板。
-- 验证：首页 `/` 返回 200；`/api/health` build 为 `20260622-v0.5.0-recovery`。
-- SOP 同步：无需。
+### CL-0103 · 2026-05-30 · 重构（B）
+- 涉及模块：`_order_sidebar.html`（顶栏）、`index.html`、`cost_analysis.html`、`style.css`、`cost.css`、`app.js`、`delivery-note-admin.js`、SOP、`docs/RESTORE.md`、`snapshots/ui-baseline-20260530/`
+- 变更内容：**UI 架构基线**——左侧栏改为 **顶部导航**；订单管理 **下拉子菜单**；模块 **标题+说明移至页脚**；成本分析 **全宽布局**；客户信息维护已并入送货单维护（见 CL-0102 前后会话）。
+- 验证：`python -m unittest discover -s tests -p "test_*.py"` → 103/103；顶栏下拉、页脚文案随子模块切换、成本页铺满。
+- SOP 同步：已更新第二节「界面长什么样」。
+- Git：tag `ui-baseline-20260530`；回退见 `docs/RESTORE.md`。
 
 ### CL-0102 · 2026-05-30 · 新增（B）
 - 涉及模块：`customer_profile/`、`/api/customer-profiles`、客户维护子菜单、`customer-info-admin.js`、SOP

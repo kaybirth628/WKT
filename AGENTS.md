@@ -8,7 +8,7 @@
 - **运行入口**：根目录 `一键启动网页.bat` → Flask `http://127.0.0.1:5000`
 - **代码根**：`test_impl/`（**禁止**直接改 `src/`）
 - **数据**：SQLite `data/wkt_orders.db`；配置与模板在 `data/`
-- **当前版本**：**v0.5.0**（见 `docs/VERSION.md`）
+- **当前版本**：**v0.5.1**（见 `docs/VERSION.md`）· UI 顶栏基线 · 回退见 `docs/RESTORE.md`
 
 ## 目录速查
 
@@ -25,6 +25,8 @@
 | 变更日志 | `docs/change/CHANGELOG.md` |
 | 操作 SOP | `docs/SOP/系统操作SOP.md` |
 | 版本记录 | `docs/VERSION.md` |
+| **版本回退** | `docs/RESTORE.md` |
+| **会话摘要（长对话续接）** | `docs/handoff/SESSION-*.md` |
 | **数据结构** | `docs/architecture/data-model.md` |
 | 代码地图（CodeGraph） | `.codegraph/` 索引；CLI `codegraph`；MCP 见 `.cursor/mcp.json` |
 | Agent Skills | `.cursor/skills/`（Superpowers + karpathy-guidelines） |
@@ -83,7 +85,7 @@
 - **不 over-engineer**：不抽一层只调用一次的 helper；不写不可能触发的防御代码。
 - **注释**：仅解释非 obvious 的业务/技术点。
 - **测试**：仅在有真实行为覆盖时新增；不堆 trivial assert。
-- **不主动 git commit/push**，除非用户明确要求。
+- **不主动 git commit/push**，除非用户明确要求（用户要求同步时须 commit + 更新 CHANGELOG）。
 
 ## 密钥与敏感文件
 
@@ -102,13 +104,21 @@
 
 新会话或模型切换时，Agent 应：
 
-1. 读 `AGENTS.md`（本文件）+ CHANGELOG 顶部 5 条 + VERSION 当前版；涉及数据时读 `docs/architecture/data-model.md`
+1. 读 `AGENTS.md`（本文件）+ **`docs/handoff/SESSION-*.md`（若有）** + CHANGELOG 顶部 5 条 + VERSION 当前版；涉及数据时读 `docs/architecture/data-model.md`
 2. 任务开始前检查 Superpowers / Karpathy 是否适用（见 `using-superpowers`）
-2. 用户描述的功能若已在 CHANGELOG/SOP 出现，**在已有实现上扩展**，避免重复造轮子
-3. 完成工作后，在回复中简要列出：CL 编号、是否更 SOP、测试数、是否需要重启服务
-4. 大功能拆分时，每条 CL 对应一个可验证的用户故事
+3. 用户描述的功能若已在 CHANGELOG/SOP 出现，**在已有实现上扩展**，避免重复造轮子
+4. 完成工作后，在回复中简要列出：**CL 编号**、是否更 SOP、测试数、是否需要重启服务、**Git commit/tag（若已同步）**
+5. 大功能拆分时，每条 CL 对应一个可验证的用户故事
+6. **UI 基线**：顶部导航 + 页脚说明 + 订单下拉（CL-0103）；勿擅自改回左侧栏
 
-## 当前里程碑 v0.4.0 能力（CL-0051 ~ CL-0056）
+## 当前里程碑 v0.5.1 能力（CL-0103 + 此前）
+
+- **UI**：顶部导航、订单下拉、页脚标题/说明、成本全宽
+- SQLite 持久化 + 出货 + 对账 + 送货单维护（含客户信息）
+- WKT 统一送货单 + 出货确认弹窗 + 飞书通知 + OCR 高清预览
+- 变更治理：CHANGELOG + SOP + Git tag 回退（`docs/RESTORE.md`）
+
+## 历史里程碑 v0.4.0（CL-0051 ~ CL-0056）
 
 - SQLite 持久化 + 出货事件 + 未结出货
 - WKT 统一送货单 + 送货单维护页

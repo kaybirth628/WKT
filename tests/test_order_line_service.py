@@ -232,6 +232,27 @@ class TestOrderLineService(unittest.TestCase):
         self.assertEqual(len(events), 2)
         self.assertEqual(sum(e.ship_qty for e in events), Decimal("500"))
 
+    def test_force_close_line(self) -> None:
+        line = self.svc.create_line(
+            {
+                "customer": "强制结案测",
+                "order_date": "2026-05-30",
+                "order_no": "PO-FC",
+                "product_spec": "件F",
+                "po_qty": "100",
+                "shipped_qty": "20",
+            }
+        )
+        forced = self.svc.force_close_line(line.id)
+        self.assertEqual(forced.closure_type, "forced")
+        self.assertEqual(forced.open_qty(), Decimal("80"))
+        self.assertEqual(len(self.svc.list_lines(view="open")), 0)
+        self.assertEqual(len(self.svc.list_lines(view="closed")), 0)
+        forced_rows = self.svc.list_lines(view="closed_forced")
+        self.assertEqual(len(forced_rows), 1)
+        self.assertEqual(forced_rows[0].id, line.id)
+        self.assertEqual(len(self.svc.list_shipment_events()), 0)
+
     def test_ship_line_with_duplicate_sibling_rows(self) -> None:
         """库中存在同客户·订单号·品名重复行时，出货仍应成功。"""
         base = {

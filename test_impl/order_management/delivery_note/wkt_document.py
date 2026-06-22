@@ -95,23 +95,75 @@ def split_receiver_contact(text: str) -> tuple[str, str]:
     return text, ""
 
 
-def get_customer_delivery_info(customer: str) -> dict:
+def get_raw_customer_delivery_info(customer: str) -> dict:
     customer = (customer or "").strip()
     all_cfg = load_customer_delivery_config()
     row = all_cfg.get(customer, {})
     return row if isinstance(row, dict) else {}
 
 
+def get_customer_delivery_info(customer: str) -> dict:
+    """读取送货收货信息；地址/联系人为空时回退到客户档案。"""
+    customer = (customer or "").strip()
+    if not customer:
+        return {}
+    raw = get_raw_customer_delivery_info(customer)
+    contact = (raw.get("receiver_contact") or "").strip()
+    phone = (raw.get("receiver_phone") or "").strip()
+    if contact and not phone:
+        contact, phone = split_receiver_contact(contact)
+    out = {
+        "receiver_company": (raw.get("receiver_company") or "").strip(),
+        "receiver_address": (raw.get("receiver_address") or "").strip(),
+        "receiver_contact": contact,
+        "receiver_phone": phone,
+        "doc_no_prefix": (raw.get("doc_no_prefix") or "").strip(),
+    }
+    if not out["receiver_company"]:
+        out["receiver_company"] = customer
+
+    from test_impl.order_management.customer_profile.store import get_profile
+
+    profile = get_profile(customer)
+    if not out["receiver_address"]:
+        addr = (profile.get("address") or "").strip()
+        if addr:
+            out["receiver_address"] = addr
+    if not out["receiver_contact"]:
+        out["receiver_contact"] = (profile.get("contact") or "").strip()
+    if not out["receiver_phone"]:
+        out["receiver_phone"] = (profile.get("phone") or "").strip()
+    return out
+
+
 def save_customer_delivery_info(customer: str, info: dict) -> None:
     customer = (customer or "").strip()
     if not customer:
         raise ValueError("客户名称不能为空")
+    existing = get_raw_customer_delivery_info(customer)
+    contact = (info.get("receiver_contact") if "receiver_contact" in info else existing.get("receiver_contact") or "")
+    contact = str(contact or "").strip()
+    phone = (info.get("receiver_phone") if "receiver_phone" in info else existing.get("receiver_phone") or "")
+    phone = str(phone or "").strip()
+    if contact and not phone and "receiver_phone" not in info:
+        contact, phone = split_receiver_contact(contact)
+    elif "receiver_contact" in info and contact and not phone:
+        contact, phone = split_receiver_contact(contact)
+    if "doc_no_prefix" in info:
+        doc_prefix = (info.get("doc_no_prefix") or "").strip()
+    else:
+        doc_prefix = (existing.get("doc_no_prefix") or "").strip()
+    address = info.get("receiver_address") if "receiver_address" in info else existing.get("receiver_address") or ""
     all_cfg = load_customer_delivery_config()
     all_cfg[customer] = {
-        "receiver_company": (info.get("receiver_company") or "").strip(),
-        "receiver_address": (info.get("receiver_address") or "").strip(),
-        "receiver_contact": (info.get("receiver_contact") or "").strip(),
-        "doc_no_prefix": (info.get("doc_no_prefix") or "").strip(),
+        "receiver_company": (
+            (info.get("receiver_company") or "").strip()
+            or (existing.get("receiver_company") or "").strip()
+        ),
+        "receiver_address": str(address or "").strip(),
+        "receiver_contact": contact,
+        "receiver_phone": phone,
+        "doc_no_prefix": doc_prefix,
     }
     _save_json(_CUSTOMER_FILE, all_cfg)
 

@@ -13,7 +13,6 @@ from test_impl.order_management.order_entry.shipment_models import ShipmentEvent
 
 from .template_store import BUILTIN_HTML, DeliveryTemplateStore, WKT_STANDARD
 from .wkt_document import (
-    _gen_doc_no,
     build_document_from_event,
     build_draft_document,
     build_sample_document,
@@ -23,8 +22,8 @@ from .wkt_document import (
     load_company_config,
     load_customer_delivery_config,
     save_customer_delivery_info,
-    split_receiver_contact,
 )
+from .wkt_document import _gen_doc_no  # noqa: PLC2701
 from .wkt_xlsx import build_xlsx_bytes
 
 try:
@@ -53,19 +52,26 @@ def _fmt_date(s: str) -> str:
 
 
 def _fmt_date_dot(s: str) -> str:
-    base = _fmt_date(s)
-    if not base:
-        return ""
-    parts = base.split("-")
-    if len(parts) == 3:
-        y, m, d = parts
+    s = _fmt_date(s)
+    if not s or len(s) < 10:
+        return s
+    y, m, d = s.split("-", 2)
+    try:
         return f"{y}.{int(m)}.{int(d)}"
-    return base
+    except ValueError:
+        return s
 
 
-def _split_contact_phone(text: str) -> tuple[str, str]:
-    contact, phone = split_receiver_contact(text or "")
-    return contact, phone
+def _split_contact_phone(text: str) -> Tuple[str, str]:
+    text = (text or "").strip()
+    if not text:
+        return "", ""
+    m = re.search(r"(\d{7,})", text)
+    if m:
+        phone = m.group(1)
+        contact = text[: m.start()].strip(" ,，、")
+        return contact, phone
+    return text, ""
 
 
 class DeliveryNoteService:
@@ -134,14 +140,30 @@ class DeliveryNoteService:
         event: Optional[ShipmentEvent] = None,
         event_id: Optional[int] = None,
     ) -> Dict[str, str]:
+        from test_impl.order_management.customer_profile.store import get_profile
+
+        from .bilingual_template import layout_for
+
+        customer = (customer or ctx.get("客户") or "").strip()
         company = load_company_config()
         delivery = get_customer_delivery_info(customer)
+        profile = get_profile(customer)
+
         recv_contact = (delivery.get("receiver_contact") or "").strip()
         recv_phone = (delivery.get("receiver_phone") or "").strip()
-        if recv_contact and not recv_phone:
-            recv_contact, recv_phone = _split_contact_phone(recv_contact)
+        if not recv_contact and not recv_phone:
+            recv_contact = (profile.get("contact") or "").strip()
+            recv_phone = (profile.get("phone") or "").strip()
+        elif not recv_phone:
+            recv_contact, recv_phone = _split_contact_phone(delivery.get("receiver_contact", ""))
 
-        prefix = (delivery.get("doc_no_prefix") or "").strip() or company.get("doc_no_prefix", "WKT")
+        cfg = layout_for(customer)
+        prefix = (
+            (delivery.get("doc_no_prefix") or "").strip()
+            or cfg.get("doc_prefix_default")
+            or company.get("doc_no_prefix", "WKT")
+        )
+
         ship_dt = event.shipped_at if event else datetime.now(timezone.utc)
         monthly_seq = 1
         if event is not None:
@@ -260,6 +282,18 @@ class DeliveryNoteService:
         meta = self._templates.template_status(customer)
         return {"customer": customer, **meta, "is_excel": meta["is_custom_excel"], "is_builtin": False}
 
+    def _require_custom_template_path(self, customer: str) -> Path:
+        path = self._templates.resolve_template_path(customer)
+        if path:
+            return path
+        status = self._templates.template_status(customer)
+        if status["is_custom_excel"] and status["template_missing"]:
+            raise ValueError(
+                f"客户「{customer}」使用专用送货单模板「{status['template_file']}」，"
+                f"但文件不存在。请将模板放入 data/delivery_templates/files/ 后重试。"
+            )
+        raise ValueError(f"客户「{customer}」未配置专用送货单模板")
+
     def _replace_placeholders(self, text: str, ctx: Dict[str, str]) -> str:
         if not text or "{{" not in text:
             return text
@@ -364,7 +398,7 @@ class DeliveryNoteService:
             out["preview_html_url"] = ""
             label = meta["template_file"] or "专用 Excel 模板"
             if meta["template_missing"]:
-                label += "（文件缺失，请上传）"
+                label += "（模板文件待放入 files/）"
             out["template_label"] = f"专用模板 · {label}"
         return out
 
@@ -397,14 +431,25 @@ class DeliveryNoteService:
         mapping = self._templates.load_mapping()
         customer_names.update(all_delivery.keys())
         customer_names.update(mapping.keys())
+        from test_impl.order_management.customer_profile.store import get_profile, load_all_profiles
+
+        profiles = load_all_profiles()
         rows = []
         for name in sorted(customer_names, key=lambda x: x.lower()):
             info = get_customer_delivery_info(name)
+            profile = profiles.get(name) or get_profile(name)
+            contact = (info.get("receiver_contact") or profile.get("contact") or "").strip()
+            phone = (info.get("receiver_phone") or profile.get("phone") or "").strip()
+            if contact and not phone:
+                from .wkt_document import split_receiver_contact
+
+                contact, phone = split_receiver_contact(contact)
+            address = (info.get("receiver_address") or profile.get("address") or "").strip()
             meta = self._templates.template_status(name)
             if meta["is_wkt_standard"]:
                 template_display = "威可特统一模板"
             elif meta["template_missing"]:
-                template_display = f"专用 · {meta['template_file']}（待上传）"
+                template_display = f"专用 · {meta['template_file']}（待放入）"
             else:
                 template_display = f"专用 · {meta['template_file']}"
             rows.append(
@@ -418,9 +463,14 @@ class DeliveryNoteService:
                     "is_wkt_standard": meta["is_wkt_standard"],
                     "is_custom_excel": meta["is_custom_excel"],
                     "template_missing": meta["template_missing"],
-                    "receiver_address": info.get("receiver_address", ""),
-                    "receiver_contact": info.get("receiver_contact", ""),
+                    "receiver_address": address,
+                    "receiver_contact": contact,
+                    "receiver_phone": phone,
                     "doc_no_prefix": info.get("doc_no_prefix", ""),
+                    "address": address,
+                    "email": (profile.get("email") or "").strip(),
+                    "payment_terms": (profile.get("payment_terms") or "").strip(),
+                    "reconciliation_cycle": (profile.get("reconciliation_cycle") or "").strip(),
                 }
             )
         return {
@@ -431,8 +481,18 @@ class DeliveryNoteService:
             "special_customers": list(mapping.keys()),
             "template_files": self._templates.list_template_files(),
             "placeholder_help": list(_wkt_field_help()),
-            "custom_placeholder_help": list(_custom_field_help()),
             "customer_rows": rows,
+            "customer_profiles": {
+                k: {
+                    "address": v.get("address", ""),
+                    "contact": v.get("contact", ""),
+                    "phone": v.get("phone", ""),
+                    "email": v.get("email", ""),
+                    "payment_terms": v.get("payment_terms", ""),
+                    "reconciliation_cycle": v.get("reconciliation_cycle", ""),
+                }
+                for k, v in profiles.items()
+            },
         }
 
     def get_customer_delivery(self, customer: str) -> dict:
@@ -457,17 +517,10 @@ def _safe_file_part(s: str) -> str:
 
 def _wkt_field_help() -> tuple[str, ...]:
     return (
-        "全公司统一送货单版式（抬头为收货公司，供应商为威可特）。",
-        "表格列：订单号、客户物料编码、物料名称、规格型号、单位、数量、生产批号、箱数、备注。",
-        "每客户可维护：收货地点、联系人及电话、送货单号前缀（如 ABL）。",
-        "出货后自动带出订单号、料号、品名、材质、单位、本次出货数量。",
-    )
-
-
-def _custom_field_help() -> tuple[str, ...]:
-    return (
-        "在 Excel 单元格写入占位符，出货时自动替换。常用：",
-        "{{送货单号}} {{发货日期}} {{出货日期}} {{订单号}} {{客户料号}} {{品名规格}} {{产品描述}} {{材质}} {{本次出货}} {{合计}}",
-        "{{供应商名称}} {{供应商地址}} {{收货公司}} {{收货地址}} {{收货联系人}} {{收货电话}}",
-        "{{备注}} 留空时可出货后在 Excel 里手工填写。",
+        "默认：全公司威可特统一送货单（抬头收货公司，9 列明细 + 合计 + 签收栏）。",
+        "专用客户：使用 data/delivery_templates/files/ 下独立 Excel 模板（见 mapping.json）。",
+        "专用模板占位符示例：{{客户}} {{订单号}} {{品名规格}} {{客户料号}} {{本次出货}} {{出货日期}}；"
+        "双语专用模板另含：{{送货单号}} {{制单日期}} {{发货日期}} {{供应商名称}} {{收货地址}} {{收货联系人}} 等。",
+        "每客户可维护：收货地点、联系人及电话、送货单号前缀（统一模板生效；专用模板按各自版式）。",
+        "出货后自动填入订单号、料号、品名、材质、单位、本次出货数量。",
     )

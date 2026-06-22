@@ -72,6 +72,44 @@ class TestDeliveryNote(unittest.TestCase):
         self.assertEqual(wb2.active["A1"].value, "爱毕黎")
         self.assertEqual(wb2.active["A2"].value, "送货单")
 
+    def test_custom_excel_template_for_mapped_customer(self) -> None:
+        if Workbook is None:
+            self.skipTest("openpyxl not installed")
+        files_dir = self.tpl_root / "files"
+        files_dir.mkdir(parents=True, exist_ok=True)
+        tpl_name = "专用客.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        ws["A1"] = "{{客户}}"
+        ws["A2"] = "{{订单号}}"
+        ws["A3"] = "{{本次出货}}"
+        wb.save(files_dir / tpl_name)
+        self.templates.set_customer_template("专用客", tpl_name)
+
+        line = self.svc.create_line(
+            {
+                "customer": "专用客",
+                "order_no": "PO-S",
+                "product_spec": "测试件",
+                "po_qty": "10",
+                "unit": "PCS",
+            }
+        )
+        _, ev = self.svc.ship_line(line.id, "3")
+        kind, payload = self.dn.render_for_event(ev.id)
+        self.assertEqual(kind, "xlsx")
+        data, _fname = payload
+        from openpyxl import load_workbook
+        import io
+
+        wb2 = load_workbook(io.BytesIO(data))
+        self.assertEqual(wb2.active["A1"].value, "专用客")
+        self.assertEqual(wb2.active["A2"].value, "PO-S")
+
+    def test_default_wkt_for_unmapped_customer(self) -> None:
+        meta = self.dn.template_info("普通客户")
+        self.assertTrue(meta["is_wkt_standard"])
+
     def test_ship_with_delivery_note_snapshot(self) -> None:
         import json
 

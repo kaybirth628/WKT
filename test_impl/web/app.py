@@ -184,7 +184,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260622-v0.5.0-recovery",
+            "build": "20260530-ui-baseline-v051",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -534,6 +534,15 @@ def delivery_note_preview_sample():
         return "缺少客户参数", 400
     try:
         info = delivery_note_service.preview_for_customer(customer)
+        if info.get("is_custom_excel"):
+            return render_template(
+                "delivery_note_custom_preview.html",
+                customer=customer,
+                template_file=info.get("template_file") or "",
+                template_missing=info.get("template_missing"),
+                download_url=info.get("preview_download_url"),
+                embed=embed,
+            )
         doc = delivery_note_service.render_sample_html_doc(customer)
         return render_template(
             "delivery_note_wkt.html",
@@ -603,12 +612,9 @@ def upload_delivery_template():
     f = request.files.get("file")
     if not f or not f.filename:
         return jsonify({"error": "请选择文件"}), 400
-    customer = (request.form.get("customer") or "").strip()
     try:
         name = delivery_note_service.upload_template_file(f.filename, f.read())
-        if customer:
-            delivery_note_service.set_customer_template(customer, name)
-        return jsonify({"ok": True, "filename": name, "customer": customer or None})
+        return jsonify({"ok": True, "filename": name})
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 

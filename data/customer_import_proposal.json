@@ -1,0 +1,587 @@
+{
+  "generated_at": "2026-05-30",
+  "status": "已执行 — 鑫福泰订单简称保留",
+  "revision": "v2 — 用户更正公司全称后重新映射",
+  "summary": {
+    "profile_count": 36,
+    "order_customer_groups": 24,
+    "proposed_renames": 24,
+    "needs_confirmation": 1,
+    "total_order_lines": 318
+  },
+  "profiles": [
+    {
+      "canonical_name": "安徽欧菲智能车联科技有限公司",
+      "company_full_name": "安徽欧菲智能车联科技有限公司",
+      "address": "合肥市巢湖市黄麓镇创业大道与烔中路交汇处1号",
+      "contact": "黄磊",
+      "phone": "15656066008",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "苏州大沃工具科技有限公司",
+      "company_full_name": "苏州大沃工具科技有限公司",
+      "address": "江苏省苏州市吴中区木渎镇金枫南路1218号吴中区机器人产业园8幢（b3）5层",
+      "contact": "卜宪伟",
+      "phone": "15221726801",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "东莞市凯泰智联科技有限公司",
+      "company_full_name": "东莞市凯泰智联科技有限公司",
+      "address": "广东省东莞市黄江镇北岸南路32号（仓库三楼）",
+      "contact": "邓成程",
+      "phone": "13553801673",
+      "email": "",
+      "payment_terms": "月结60天",
+      "reconciliation_cycle": "月结60天"
+    },
+    {
+      "canonical_name": "浙江红黑科技有限公司",
+      "company_full_name": "浙江红黑科技有限公司",
+      "address": "浙江省丽水市缙云县壶镇镇聚贤路1号",
+      "contact": "宋瑞珍",
+      "phone": "15957818877",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "瑞声光电科技（常州）有限公司",
+      "company_full_name": "瑞声光电科技（常州）有限公司",
+      "address": "常州市武进区常漕路3号瑞声科技园新能源厂区-南门1号楼5楼",
+      "contact": "陈小峰",
+      "phone": "17600404069",
+      "email": "",
+      "payment_terms": "月结90天，承兑汇票180天",
+      "reconciliation_cycle": "月结90天，承兑汇票180天"
+    },
+    {
+      "canonical_name": "上海商米科技集团股份有限公司",
+      "company_full_name": "上海商米科技集团股份有限公司",
+      "address": "浙江省嘉兴市嘉善县魏塘街道魏中路1号2幢1层北侧和3层",
+      "contact": "闫刘锋",
+      "phone": "17620321897",
+      "email": "",
+      "payment_terms": "月结60天，承兑汇票60天",
+      "reconciliation_cycle": "月结60天，承兑汇票60天"
+    },
+    {
+      "canonical_name": "苏州顺广精密设备有限公司",
+      "company_full_name": "苏州顺广精密设备有限公司",
+      "address": "江苏省昆山市张浦镇振新东路111号",
+      "contact": "程兰",
+      "phone": "19941970250",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "苏州腾圣技术有限公司",
+      "company_full_name": "苏州腾圣技术有限公司",
+      "address": "苏州市相城区渭塘爱格豪路55号2号楼2楼",
+      "contact": "张麟",
+      "phone": "13584264146",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "浙江金棒运动器材有限公司",
+      "company_full_name": "浙江金棒运动器材有限公司",
+      "address": "浙江省丽水市缙云县壶镇镇聚贤路1号",
+      "contact": "虞培",
+      "phone": "15005786840",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "上海金脉电子科技有限公司",
+      "company_full_name": "上海金脉电子科技有限公司",
+      "address": "江西省新余市分宜县东环北路8号",
+      "contact": "袁志华",
+      "phone": "15717905034",
+      "email": "",
+      "payment_terms": "月结90天，承兑汇票180天",
+      "reconciliation_cycle": "月结90天，承兑汇票180天"
+    },
+    {
+      "canonical_name": "昆山晨兴德机械有限公司",
+      "company_full_name": "昆山晨兴德机械有限公司",
+      "address": "昆山市城北高新区盛创路55号金土地智造园A栋1楼",
+      "contact": "胡杰",
+      "phone": "18168985619",
+      "email": "",
+      "payment_terms": "票到付款",
+      "reconciliation_cycle": "票到付款"
+    },
+    {
+      "canonical_name": "同致电子科技（昆山）有限公司",
+      "company_full_name": "同致电子科技（昆山）有限公司",
+      "address": "江苏省昆山市玉山镇晨丰路8号",
+      "contact": "高增",
+      "phone": "57268188-625",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "东莞维诺电子科技有限公司",
+      "company_full_name": "东莞维诺电子科技有限公司",
+      "address": "广东省东莞市东坑镇兴国路东坑段7号3号楼",
+      "contact": "谢小姐",
+      "phone": "13712889190",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "上海富山精密机械科技有限公司",
+      "company_full_name": "上海富山精密机械科技有限公司",
+      "address": "上海市金山区朱泾镇工业园区中达路800号",
+      "contact": "陈幼华",
+      "phone": "15901919532",
+      "email": "",
+      "payment_terms": "月结30天",
+      "reconciliation_cycle": "月结30天"
+    },
+    {
+      "canonical_name": "海鑫精密电子（常熟）有限公司",
+      "company_full_name": "海鑫精密电子（常熟）有限公司",
+      "address": "江苏省苏州市常熟市董浜镇徐市民丰路35号常熟经济开发区第十产业园5/6/7/8幢厂房",
+      "contact": "彭书贞",
+      "phone": "15856235115",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "昆山鸿鹏达电子有限公司",
+      "company_full_name": "昆山鸿鹏达电子有限公司",
+      "address": "昆山市玉山镇金蝶路16号",
+      "contact": "业静熙",
+      "phone": "18915743698",
+      "email": "",
+      "payment_terms": "月结60天",
+      "reconciliation_cycle": "月结60天"
+    },
+    {
+      "canonical_name": "南京克斯勒电气有限公司",
+      "company_full_name": "南京克斯勒电气有限公司",
+      "address": "南京市江宁区水阁路6号38栋",
+      "contact": "陆康",
+      "phone": "15156998670",
+      "email": "",
+      "payment_terms": "月结30天",
+      "reconciliation_cycle": "月结30天"
+    },
+    {
+      "canonical_name": "广东胡明车业有限公司",
+      "company_full_name": "广东胡明车业有限公司",
+      "address": "广东省东莞市石排镇沙角金沙南路 8 号",
+      "contact": "廖叶梅",
+      "phone": "17837629590",
+      "email": "",
+      "payment_terms": "月结30天",
+      "reconciliation_cycle": "月结30天"
+    },
+    {
+      "canonical_name": "苏州爱毕黎实业有限公司",
+      "company_full_name": "苏州爱毕黎实业有限公司",
+      "address": "江苏省苏州太仓市双凤镇凤林路65号",
+      "contact": "陈莉",
+      "phone": "13816487528",
+      "email": "",
+      "payment_terms": "月结30天",
+      "reconciliation_cycle": "月结30天"
+    },
+    {
+      "canonical_name": "昆山互协精密模具有限公司",
+      "company_full_name": "昆山互协精密模具有限公司",
+      "address": "昆山市张浦镇振兴东路583号",
+      "contact": "陈祝华",
+      "phone": "13873989739",
+      "email": "",
+      "payment_terms": "月结60天",
+      "reconciliation_cycle": "月结60天"
+    },
+    {
+      "canonical_name": "昆山昶乐模塑科技有限公司",
+      "company_full_name": "昆山昶乐模塑科技有限公司",
+      "address": "昆山市张浦镇俱进路1461号B1栋",
+      "contact": "胡晓英",
+      "phone": "13662648613",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "精达科技（安徽）有限公司",
+      "company_full_name": "精达科技（安徽）有限公司",
+      "address": "安徽省芜湖市繁昌区繁昌经济开发区神山路和中江路往北350米1号",
+      "contact": "姚俊峰",
+      "phone": "18155392018",
+      "email": "",
+      "payment_terms": "月结60天",
+      "reconciliation_cycle": "月结60天"
+    },
+    {
+      "canonical_name": "浙江康比利电气有限公司",
+      "company_full_name": "浙江康比利电气有限公司",
+      "address": "浙江省湖州市南太湖新区敢山路1288号",
+      "contact": "郑文杰",
+      "phone": "15715895623",
+      "email": "",
+      "payment_terms": "月结30天",
+      "reconciliation_cycle": "月结30天"
+    },
+    {
+      "canonical_name": "江苏朗信电气股份有限公司",
+      "company_full_name": "江苏朗信电气股份有限公司",
+      "address": "张家港市杨舍镇塘市紫荆路108号(2号物流门）",
+      "contact": "周惠芳",
+      "phone": "18915473985",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "湖州立讯精密工业有限公司",
+      "company_full_name": "湖州立讯精密工业有限公司",
+      "address": "浙江省湖州市吴兴区织里镇晟讯路399号A3栋1楼仓库",
+      "contact": "贾如金",
+      "phone": "17636195284",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "江苏日月照明电器有限公司",
+      "company_full_name": "江苏日月照明电器有限公司",
+      "address": "江苏省盐城市建湖县光明路999号日月照明电器有限公司一号仓库",
+      "contact": "郁文娟",
+      "phone": "15751122252",
+      "email": "",
+      "payment_terms": "月结60天",
+      "reconciliation_cycle": "月结60天"
+    },
+    {
+      "canonical_name": "苏州锐霸智能科技有限公司",
+      "company_full_name": "苏州锐霸智能科技有限公司",
+      "address": "苏州市吴中区兴吴路27号6栋",
+      "contact": "吴松",
+      "phone": "18261657967",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "昆山思瑞奕电子有限公司",
+      "company_full_name": "昆山思瑞奕电子有限公司",
+      "address": "江苏省昆山市北门路1588号",
+      "contact": "朱静",
+      "phone": "13912688901",
+      "email": "",
+      "payment_terms": "月结60天",
+      "reconciliation_cycle": "月结60天"
+    },
+    {
+      "canonical_name": "苏州允锐液压设备有限公司",
+      "company_full_name": "苏州允锐液压设备有限公司",
+      "address": "江苏省苏州市工业园区唯亭镇春辉路22号-2#厂房",
+      "contact": "肖丽红",
+      "phone": "18151968368",
+      "email": "",
+      "payment_terms": "月结30天",
+      "reconciliation_cycle": "月结30天"
+    },
+    {
+      "canonical_name": "昆山泰仕通精密电子有限公司",
+      "company_full_name": "昆山泰仕通精密电子有限公司",
+      "address": "昆山市红杨路1188号1号厂房",
+      "contact": "邓海斌",
+      "phone": "15879617978",
+      "email": "",
+      "payment_terms": "月结60天",
+      "reconciliation_cycle": "月结60天"
+    },
+    {
+      "canonical_name": "先锋高科技（常州）有限公司",
+      "company_full_name": "先锋高科技（常州）有限公司",
+      "address": "上海市奉贤区环城北路1号(西门)",
+      "contact": "陆辉",
+      "phone": "15800724604",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "先锋高科技（上海）有限公司",
+      "company_full_name": "先锋高科技（上海）有限公司",
+      "address": "上海市奉贤区环城北路1号(西门)",
+      "contact": "陆辉",
+      "phone": "15800724604",
+      "email": "",
+      "payment_terms": "月结90天",
+      "reconciliation_cycle": "月结90天"
+    },
+    {
+      "canonical_name": "苏州鑫福泰电子科技有限公司",
+      "company_full_name": "苏州鑫福泰电子科技有限公司",
+      "address": "昆山市锦溪镇昆开路88号",
+      "contact": "胡长戈",
+      "phone": "13862608372",
+      "email": "",
+      "payment_terms": "月结120天",
+      "reconciliation_cycle": "月结120天"
+    },
+    {
+      "canonical_name": "镇江鸿福泰电子科技有限公司",
+      "company_full_name": "镇江鸿福泰电子科技有限公司",
+      "address": "江苏省镇江市丹徒区辛丰镇亨威创业园",
+      "contact": "胡长戈",
+      "phone": "13862608372",
+      "email": "",
+      "payment_terms": "月结120天",
+      "reconciliation_cycle": "月结120天"
+    },
+    {
+      "canonical_name": "迅铂科技（常州）有限公司",
+      "company_full_name": "迅铂科技（常州）有限公司",
+      "address": "江苏省无锡市新吴区新荣路26号无锡荣志电子有限公司",
+      "contact": "徐海兵",
+      "phone": "13222928097",
+      "email": "",
+      "payment_terms": "月结60天",
+      "reconciliation_cycle": "月结60天"
+    },
+    {
+      "canonical_name": "怡利电子科技（江苏）有限公司",
+      "company_full_name": "怡利电子科技（江苏）有限公司",
+      "address": "江苏省苏州市吴江市运东经济开发区锦湖西路167号",
+      "contact": "赵艳杰",
+      "phone": "15250512188",
+      "email": "",
+      "payment_terms": "月结95天",
+      "reconciliation_cycle": "月结95天"
+    }
+  ],
+  "order_renames": [
+    {
+      "from": "锐霸",
+      "to": "苏州锐霸智能科技有限公司",
+      "count": 147,
+      "confidence": "高",
+      "note": "简称=锐霸"
+    },
+    {
+      "from": "朗信",
+      "to": "江苏朗信电气股份有限公司",
+      "count": 35,
+      "confidence": "高",
+      "note": "简称=朗信"
+    },
+    {
+      "from": "安徽欧菲光",
+      "to": "安徽欧菲智能车联科技有限公司",
+      "count": 26,
+      "confidence": "高",
+      "note": "欧菲光→欧菲智能车联"
+    },
+    {
+      "from": "怡利",
+      "to": "怡利电子科技（江苏）有限公司",
+      "count": 18,
+      "confidence": "高",
+      "note": "简称=怡利，锦湖西路167"
+    },
+    {
+      "from": "红黑",
+      "to": "浙江红黑科技有限公司",
+      "count": 18,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "大沃",
+      "to": "苏州大沃工具科技有限公司",
+      "count": 10,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "金棒",
+      "to": "浙江金棒运动器材有限公司",
+      "count": 10,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "东莞凯泰智联",
+      "to": "东莞市凯泰智联科技有限公司",
+      "count": 7,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "先锋（上海）",
+      "to": "先锋高科技（上海）有限公司",
+      "count": 7,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "精达（安徽）",
+      "to": "精达科技（安徽）有限公司",
+      "count": 8,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "金脉",
+      "to": "上海金脉电子科技有限公司",
+      "count": 5,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "鑫福泰-东硕",
+      "to": "苏州鑫福泰电子科技有限公司",
+      "count": 5,
+      "confidence": "高",
+      "note": "鑫福泰系列统一归苏州鑫福泰"
+    },
+    {
+      "from": "鑫福泰-力硕",
+      "to": "苏州鑫福泰电子科技有限公司",
+      "count": 4,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "康比利",
+      "to": "浙江康比利电气有限公司",
+      "count": 4,
+      "confidence": "高",
+      "note": "康比利→浙江康比利电气"
+    },
+    {
+      "from": "苏州允锐（油力）",
+      "to": "苏州允锐液压设备有限公司",
+      "count": 3,
+      "confidence": "高",
+      "note": "油力=允锐液压"
+    },
+    {
+      "from": "思瑞奕",
+      "to": "昆山思瑞奕电子有限公司",
+      "count": 2,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "日月照明",
+      "to": "江苏日月照明电器有限公司",
+      "count": 2,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "立讯",
+      "to": "湖州立讯精密工业有限公司",
+      "count": 2,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "鑫福泰-剑桥",
+      "to": "苏州鑫福泰电子科技有限公司",
+      "count": 2,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "鑫福泰-巨圣",
+      "to": "苏州鑫福泰电子科技有限公司",
+      "count": 2,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "泰仕通",
+      "to": "昆山泰仕通精密电子有限公司",
+      "count": 1,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "迅铂",
+      "to": "迅铂科技（常州）有限公司",
+      "count": 1,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "鑫福泰-中磊",
+      "to": "苏州鑫福泰电子科技有限公司",
+      "count": 1,
+      "confidence": "高",
+      "note": ""
+    },
+    {
+      "from": "鑫福泰-名硕（巴淡）",
+      "to": "苏州鑫福泰电子科技有限公司",
+      "count": 1,
+      "confidence": "待确认",
+      "note": "海外工厂名硕（巴淡），暂归苏州鑫福泰；若应归镇江鸿福泰请说明"
+    }
+  ],
+  "delivery_template_renames": [
+    {
+      "from": "怡利",
+      "to": "怡利电子科技（江苏）有限公司",
+      "note": "同步更新 customer_delivery.json 键名及收货地址"
+    }
+  ],
+  "profiles_without_orders": [
+    "瑞声光电科技（常州）有限公司",
+    "上海商米科技集团股份有限公司",
+    "苏州顺广精密设备有限公司",
+    "苏州腾圣技术有限公司",
+    "昆山晨兴德机械有限公司",
+    "同致电子科技（昆山）有限公司",
+    "东莞维诺电子科技有限公司",
+    "上海富山精密机械科技有限公司",
+    "海鑫精密电子（常熟）有限公司",
+    "昆山鸿鹏达电子有限公司",
+    "南京克斯勒电气有限公司",
+    "广东胡明车业有限公司",
+    "苏州爱毕黎实业有限公司",
+    "昆山互协精密模具有限公司",
+    "昆山昶乐模塑科技有限公司",
+    "先锋高科技（常州）有限公司",
+    "镇江鸿福泰电子科技有限公司"
+  ],
+  "after_confirm_actions": [
+    "写入 data/customer_profiles.json（36 家，键为公司全称）",
+    "UPDATE order_lines SET customer = 全称 WHERE customer = 简称",
+    "更新 customers 主数据表（删除旧简称、插入全称）",
+    "迁移 data/delivery_templates/customer_delivery.json 键名",
+    "可选：订单行 payment_terms 与客户档案账期对齐"
+  ],
+  "executed_at": "2026-06-21T07:50:41.518760+00:00",
+  "executed_renames": 18,
+  "skipped_renames": [
+    "鑫福泰-东硕",
+    "鑫福泰-力硕",
+    "鑫福泰-剑桥",
+    "鑫福泰-巨圣",
+    "鑫福泰-中磊",
+    "鑫福泰-名硕（巴淡）"
+  ]
+}

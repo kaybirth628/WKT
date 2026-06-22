@@ -69,41 +69,13 @@ class DeliveryTemplateStore:
     def resolve_template_name(self, customer: str) -> str:
         customer = (customer or "").strip()
         mapping = self.load_mapping()
-        return mapping.get(customer, WKT_STANDARD)
+        if customer in mapping:
+            return mapping[customer]
+        return WKT_STANDARD
 
     def is_custom_template(self, customer: str) -> bool:
         name = self.resolve_template_name(customer)
         return name not in (WKT_STANDARD, BUILTIN_HTML)
-
-    def template_status(self, customer: str) -> dict:
-        customer = (customer or "").strip()
-        mapping = self.load_mapping()
-        if customer not in mapping:
-            return {
-                "template": WKT_STANDARD,
-                "template_file": "",
-                "is_wkt_standard": True,
-                "is_custom_excel": False,
-                "template_missing": False,
-            }
-        name = mapping[customer]
-        if name in (WKT_STANDARD, BUILTIN_HTML):
-            return {
-                "template": WKT_STANDARD,
-                "template_file": "",
-                "is_wkt_standard": True,
-                "is_custom_excel": False,
-                "template_missing": False,
-            }
-        path = self.files_dir / name
-        missing = not path.is_file()
-        return {
-            "template": name,
-            "template_file": name,
-            "is_wkt_standard": False,
-            "is_custom_excel": True,
-            "template_missing": missing,
-        }
 
     def resolve_template_path(self, customer: str) -> Optional[Path]:
         name = self.resolve_template_name(customer)
@@ -111,6 +83,26 @@ class DeliveryTemplateStore:
             return None
         path = self.files_dir / name
         return path if path.is_file() else None
+
+    def template_status(self, customer: str) -> dict:
+        customer = (customer or "").strip()
+        name = self.resolve_template_name(customer)
+        if name in (WKT_STANDARD, BUILTIN_HTML):
+            return {
+                "template": WKT_STANDARD,
+                "template_file": "",
+                "is_wkt_standard": True,
+                "is_custom_excel": False,
+                "template_missing": False,
+            }
+        path = self.files_dir / name
+        return {
+            "template": name,
+            "template_file": name,
+            "is_wkt_standard": False,
+            "is_custom_excel": True,
+            "template_missing": not path.is_file(),
+        }
 
     def save_upload(self, filename: str, data: bytes) -> str:
         if not data:

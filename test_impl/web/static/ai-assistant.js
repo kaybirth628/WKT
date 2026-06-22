@@ -160,6 +160,7 @@
       var data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "保存失败");
       memorySaveStatus.textContent = "已保存（重启后仍有效）";
+      if (window.showSaveSuccess) window.showSaveSuccess("✓ 已保存");
       setTimeout(function () {
         memorySaveStatus.textContent = "";
       }, 2500);
@@ -182,6 +183,7 @@
       var data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "保存失败");
       await loadMemoryForm();
+      if (window.showSaveSuccess) window.showSaveSuccess("✓ 已保存");
       appendMessage(
         "assistant",
         "<div class=\"ai-assistant-answer\">已写入业务记忆，下次开机仍会参考这条规则。</div>"

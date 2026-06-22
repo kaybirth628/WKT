@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>专用送货单预览 · {{ customer }}</title>
+  <style>
+    body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; margin: 1.5rem; color: #1e293b; line-height: 1.5; }
+    .box { max-width: 520px; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
+    h1 { font-size: 1.1rem; margin: 0 0 0.75rem; }
+    p { margin: 0.35rem 0; font-size: 0.9rem; }
+    code { background: #e2e8f0; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85rem; }
+    .warn { color: #b45309; }
+    a.btn { display: inline-block; margin-top: 0.75rem; padding: 0.4rem 0.85rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>专用 Excel 送货单</h1>
+    <p><strong>{{ customer }}</strong></p>
+    <p>模板文件：<code>{{ template_file }}</code></p>
+    {% if template_missing %}
+    <p class="warn">模板文件尚未放入 <code>data/delivery_templates/files/</code>，请先制作并上传。</p>
+    {% else %}
+    <p>此客户不使用网页版统一送货单，出货与预览均生成专用 Excel。</p>
+    <p>请下载下方示例 Excel 查看占位/版式（正式版式替换同文件名即可）。</p>
+    {% endif %}
+    {% if download_url and not template_missing %}
+    <a class="btn" href="{{ download_url }}" target="_blank" rel="noopener">下载 Excel 示例</a>
+    {% endif %}
+  </div>
+</body>
+</html>

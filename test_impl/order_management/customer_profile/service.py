@@ -33,7 +33,11 @@ class CustomerProfileService:
         return get_profile(customer)
 
     def save(self, customer: str, info: dict) -> Dict[str, str]:
-        return save_profile(customer, info)
+        row = save_profile(customer, info)
+        from .delivery_sync import sync_delivery_from_profile
+
+        sync_delivery_from_profile(customer, row, only_if_empty=True)
+        return row
 
     def empty_profile(self) -> Dict[str, str]:
         return dict(EMPTY_PROFILE)

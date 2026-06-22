@@ -42,6 +42,7 @@ class OrderLine:
     tax_rate: Decimal                # 税率 0~1
     rmb_tax_incl_price: Decimal      # 人民币单价（含税）
     payment_terms: str               # 账期
+    closure_type: str = ""            # 结案方式：空=未强制；forced=强制结案
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 

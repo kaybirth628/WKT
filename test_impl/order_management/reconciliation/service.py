@@ -77,11 +77,7 @@ def _merge_lines(lines: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for bucket in buckets.values():
         out.append(
             {
-                **{
-                    k: v
-                    for k, v in bucket.items()
-                    if k not in ("ship_qty", "amount", "merge_count", "source_event_ids")
-                },
+                **{k: v for k, v in bucket.items() if k not in ("ship_qty", "amount", "merge_count", "source_event_ids")},
                 "ship_qty": serialize_qty(bucket["ship_qty"]),
                 "amount": serialize_amount(bucket["amount"]),
                 "merge_count": bucket["merge_count"],
@@ -156,9 +152,20 @@ class ReconciliationService:
                 }
             )
         out = _merge_lines(raw)
+        customer_totals: Dict[str, Decimal] = {}
+        for row in out:
+            name = row["customer"] or "(未填客户)"
+            customer_totals[name] = customer_totals.get(name, Decimal("0")) + Decimal(
+                str(row["amount"] or "0")
+            )
         out.sort(
-            key=lambda r: (r["receivable_date"], r["shipped_at"], r["customer"], r["order_no"]),
-            reverse=True,
+            key=lambda r: (
+                -customer_totals[r["customer"] or "(未填客户)"],
+                r["customer"] or "(未填客户)",
+                r["receivable_date"],
+                r["shipped_at"],
+                r["order_no"],
+            ),
         )
         return out
 

@@ -31,6 +31,4 @@ data/*.db
 data/*.db-journal
 data/*.db-wal
 data/*.db-shm
-data/*.db.bak*
-data/customer_profiles.json
-data/_customer_audit.json
+data/ai_assistant_memory.json

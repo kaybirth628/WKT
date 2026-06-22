@@ -119,7 +119,7 @@
   </style>
 </head>
 <body>
-  <p class="hint-bar">与正式送货单版式一致。灰底虚线处为系统已填入；<strong>浅黄底</strong>为待您手填（收货地点、批号、签收等）。</p>
+  <p class="hint-bar">与正式送货单版式一致。灰底虚线处为系统已填入；<strong>浅黄底</strong>为待您手填（收货地点、批号、签收等）。合并出货时多行明细共用本张送货单。</p>
   <form id="shipConfirmForm" class="sheet" onsubmit="return false;">
     <div class="title-company">
       <input type="text" class="fld" name="title_company" data-key="title_company"
@@ -152,7 +152,6 @@
           value="{{ doc.supplier_phone }}" /></div>
     </div>
 
-    {% set ln = doc.lines[0] if doc.lines else {} %}
     <table class="items">
       <thead>
         <tr>
@@ -167,18 +166,20 @@
           <th style="width:12%">备注</th>
         </tr>
       </thead>
-      <tbody>
-        <tr>
+      <tbody id="lineRowsBody">
+        {% for ln in doc.lines %}
+        <tr class="line-row">
           <td class="left"><input class="fld" data-line="order_no" value="{{ ln.order_no or '/' }}" /></td>
           <td class="left"><input class="fld" data-line="customer_part_no" value="{{ ln.customer_part_no }}" /></td>
           <td class="left"><input class="fld" data-line="product_name" value="{{ ln.product_name }}" /></td>
           <td class="left"><input class="fld" data-line="spec" value="{{ ln.spec }}" /></td>
           <td><input class="fld" data-line="unit" value="{{ ln.unit }}" /></td>
-          <td><input class="fld" data-line="qty" id="lineQty" value="{{ ln.qty }}" /></td>
+          <td><input class="fld line-qty" data-line="qty" value="{{ ln.qty }}" /></td>
           <td><input class="fld is-manual" data-line="batch_no" value="{{ ln.batch_no }}" placeholder="请填写" /></td>
           <td><input class="fld is-manual" data-line="box_count" value="{{ ln.box_count }}" placeholder="请填写" /></td>
           <td class="left"><input class="fld is-manual" data-line="remark" value="{{ ln.remark }}" placeholder="请填写" /></td>
         </tr>
+        {% endfor %}
         <tr>
           <td colspan="9" class="left" style="color:#888">以下空白</td>
         </tr>
@@ -210,16 +211,38 @@
         const el = document.querySelector(sel);
         return el ? String(el.value || "").trim() : "";
       }
-      function lineVal(key) {
-        const el = document.querySelector("[data-line=\"" + key + "\"]");
+      function rowLineVal(tr, key) {
+        const el = tr.querySelector("[data-line=\"" + key + "\"]");
         return el ? String(el.value || "").trim() : "";
       }
-      document.getElementById("lineQty")?.addEventListener("input", function () {
+      function updateTotalFromLines() {
+        let sum = 0;
+        document.querySelectorAll("tbody tr.line-row .line-qty").forEach(function (el) {
+          const n = parseFloat(String(el.value || "").replace(/,/g, ""));
+          if (!isNaN(n)) sum += n;
+        });
         const t = document.getElementById("totalQty");
-        if (t) t.value = this.value;
+        if (t && sum > 0) t.value = String(sum);
+      }
+      document.querySelectorAll(".line-qty").forEach(function (el) {
+        el.addEventListener("input", updateTotalFromLines);
       });
       window.collectDeliveryNoteDoc = function () {
-        const qty = lineVal("qty");
+        const lines = [];
+        document.querySelectorAll("tbody tr.line-row").forEach(function (tr) {
+          lines.push({
+            order_no: rowLineVal(tr, "order_no"),
+            customer_part_no: rowLineVal(tr, "customer_part_no"),
+            product_name: rowLineVal(tr, "product_name"),
+            spec: rowLineVal(tr, "spec"),
+            unit: rowLineVal(tr, "unit"),
+            qty: rowLineVal(tr, "qty"),
+            batch_no: rowLineVal(tr, "batch_no"),
+            box_count: rowLineVal(tr, "box_count"),
+            remark: rowLineVal(tr, "remark"),
+          });
+        });
+        const qty = lines[0] ? lines[0].qty : "";
         return {
           title_company: val("[name=title_company]"),
           receiver_company: val("[name=receiver_company]") || val("[name=title_company]"),
@@ -235,21 +258,21 @@
           warehouse_manager: val("[name=warehouse_manager]"),
           receiver_sign: val("[name=receiver_sign]"),
           total_qty: val("[name=total_qty]") || qty,
-          lines: [{
-            order_no: lineVal("order_no"),
-            customer_part_no: lineVal("customer_part_no"),
-            product_name: lineVal("product_name"),
-            spec: lineVal("spec"),
-            unit: lineVal("unit"),
-            qty: qty,
-            batch_no: lineVal("batch_no"),
-            box_count: lineVal("box_count"),
-            remark: lineVal("remark"),
-          }],
+          ship_qty: qty,
+          lines: lines,
         };
       };
       window.syncLineQtyFromParent = function (q) {
-        const ln = document.getElementById("lineQty");
+        const rows = document.querySelectorAll("tbody tr.line-row");
+        if (Array.isArray(q)) {
+          rows.forEach(function (tr, i) {
+            const ln = tr.querySelector(".line-qty");
+            if (ln && q[i] != null) ln.value = q[i];
+          });
+          updateTotalFromLines();
+          return;
+        }
+        const ln = document.querySelector(".line-qty");
         const tot = document.getElementById("totalQty");
         if (ln) ln.value = q;
         if (tot) tot.value = q;
