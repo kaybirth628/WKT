@@ -4,6 +4,10 @@ const FEATURE_EXCEL_IMPORT = false;
 const FEATURE_SHIPPED_MODULE = true;
 /** 未结订单：同一客户多料号合并出货 */
 const FEATURE_BATCH_SHIP = true;
+/** 订单首页可视化（数据量不足时可先关闭） */
+const FEATURE_HOME_DASHBOARD = false;
+/** AI 数据助手（暂时不用时可关闭） */
+const FEATURE_AI_ASSISTANT = false;
 
 /** 未结订单：接单日期超过该月数则高亮 */
 const OPEN_ORDER_STALE_MONTHS = 6;
@@ -40,6 +44,7 @@ const LIST_DETAIL_COLS = (() => {
 /** 出货明细专用列（每条 = 一次出货登记或一条导入记录） */
 const SHIPMENT_LIST_COLS = [
   { f: "customer", label: "客户", type: "text" },
+  { f: "delivery_doc_no", label: "送货单号", type: "text" },
   { f: "order_no", label: "订单号", type: "text" },
   { f: "order_date", label: "接单日期", type: "date" },
   { f: "shipped_at", label: "出货时间", type: "datetime" },
@@ -62,7 +67,7 @@ const LIST_DETAIL_COL_WEIGHTS = [
 const LIST_CLOSED_EXTRA_WEIGHTS = [1.15, 1.25];
 
 const LIST_SHIPMENT_COL_WEIGHTS = [
-  1.15, 1.35, 1.05, 1.2, 1.15, 2.1, 0.85, 0.85, 0.85,
+  1.15, 1.25, 1.35, 1.05, 1.2, 1.15, 2.1, 0.85, 0.85, 0.85,
 ];
 
 /** 对账明细列：客户→出货→订单→料号→数量→单价→金额→单号→应收→收款 */
@@ -131,6 +136,13 @@ const LIST_RECONCILE_SUMMARY_COL_WIDTHS = buildListColPercents(LIST_RECONCILE_SU
 
 /** 订单管理子模块 */
 const SUBMODULES = {
+  home: {
+    title: "首页",
+    desc: "订单模块数据总览：未结、结案、出货与客户分布可视化",
+    listTitle: "",
+    view: null,
+    summary: "",
+  },
   entry: {
     title: "订单录入",
     desc: "支持 OCR 识别、手动录入",
@@ -147,7 +159,7 @@ const SUBMODULES = {
   },
   shipped: {
     title: "出货明细",
-    desc: "仅显示「未结订单·出货」登记与「历史出货导入」；表头可按列筛选",
+    desc: "未结出货登记与历史导入；误出货可对「未结出货」记录点「一键返回」回到未结订单",
     listTitle: "出货明细",
     view: "shipped",
     summary: "出货记录",
@@ -181,8 +193,15 @@ const SUBMODULES = {
     summary: "强制结案料号行",
   },
   delivery: {
-    title: "送货单维护",
-    desc: "维护客户地址、联系人、账期、对账周期及送货单收货信息；表格内编辑后点「保存」",
+    title: "客户信息维护",
+    desc: "维护客户地址、联系人、账期；对账周期二选一；送货单为可选项（威可特统一模板或专用模板）",
+    listTitle: "",
+    view: null,
+    summary: "",
+  },
+  supplier: {
+    title: "供应商信息维护",
+    desc: "维护供应商地址、联系人、电话、邮箱、账期与备注",
     listTitle: "",
     view: null,
     summary: "",
@@ -547,13 +566,13 @@ const LIST_TH_LABEL = {
   shipped_qty_after: "累计出货",
   last_shipped_at: "出货时间",
   last_delivery_doc_no: "出货单号",
+  delivery_doc_no: "送货单号",
   ship_month: "出货月",
   receivable_date: "应收日期",
   collection_time: "收款时间",
   line_count: "明细行数",
   total_amount: "应收金额",
   amount: "出货金额",
-  delivery_doc_no: "出货单号",
   rmb_tax_incl_price: "含税单价",
 };
 
@@ -678,7 +697,7 @@ function renderHead(elId, extraCols) {
       : showActions
         ? '<th scope="col" class="list-th-action action-cell">操作</th>'
         : showShippedDn
-          ? '<th scope="col" class="list-th-action action-cell">送货单</th>'
+          ? '<th scope="col" class="list-th-action action-cell">操作</th>'
           : showReconcileSummaryAction
             ? '<th scope="col" class="list-th-action action-cell">明细</th>'
             : "") +
@@ -1271,13 +1290,17 @@ async function switchToDetailWithNewLines(ids, hintText) {
 /* ========== 订单管理子模块切换 ========== */
 function resolveSubmoduleKey(key) {
   const k = (key || "").trim();
+  if (k === "home" && !FEATURE_HOME_DASHBOARD) return "entry";
+  if (k === "ai" && !FEATURE_AI_ASSISTANT) return "entry";
   if (k === "customerInfo") return "delivery";
+  if (k === "customer") return "delivery";
   if (k === "shipped" && !FEATURE_SHIPPED_MODULE) return "detail";
   return SUBMODULES[k] ? k : "entry";
 }
 
 function parseSubmoduleFromHash() {
   const key = (location.hash || "").replace(/^#/, "").trim();
+  if (!key) return FEATURE_HOME_DASHBOARD ? "home" : "entry";
   return resolveSubmoduleKey(key);
 }
 
@@ -1285,15 +1308,19 @@ async function switchSubmodule(key) {
   key = resolveSubmoduleKey(key);
   currentSubmodule = key;
   const meta = SUBMODULES[key];
+  const isHome = FEATURE_HOME_DASHBOARD && key === "home";
   const isEntry = key === "entry";
   const isDelivery = key === "delivery";
+  const isSupplier = key === "supplier";
   const isAi = key === "ai";
   const isReconcile = key === "reconcile";
-  const isList = !isEntry && !isDelivery && !isAi && !isReconcile;
+  const isList = !isHome && !isEntry && !isDelivery && !isSupplier && !isAi && !isReconcile;
 
+  document.getElementById("submoduleHome")?.classList.toggle("is-hidden", !isHome);
   document.getElementById("submoduleEntry")?.classList.toggle("is-hidden", !isEntry);
   document.getElementById("submoduleList")?.classList.toggle("is-hidden", !isList && !isReconcile);
   document.getElementById("submoduleDelivery")?.classList.toggle("is-hidden", !isDelivery);
+  document.getElementById("submoduleSupplier")?.classList.toggle("is-hidden", !isSupplier);
   document.getElementById("submoduleAi")?.classList.toggle("is-hidden", !isAi);
   document.getElementById("reconcileToolbar")?.classList.toggle("is-hidden", !isReconcile);
 
@@ -1332,8 +1359,12 @@ async function switchSubmodule(key) {
     renderHead("listHead", ["序号"]);
     if (isReconcile) await initReconcileFilters();
     await loadLines();
+  } else if (isHome && typeof loadOrderDashboard === "function") {
+    await loadOrderDashboard(false);
   } else if (isDelivery && typeof loadDeliveryNoteAdmin === "function") {
     await loadDeliveryNoteAdmin();
+  } else if (isSupplier && typeof loadSupplierAdmin === "function") {
+    await loadSupplierAdmin();
   } else if (isAi && typeof window.focusAiAssistant === "function") {
     window.focusAiAssistant();
   }
@@ -1341,6 +1372,8 @@ async function switchSubmodule(key) {
     window.updateSidebarOrdersActiveState();
   }
 }
+
+window.switchSubmodule = switchSubmodule;
 
 document.querySelectorAll("[data-submodule]").forEach((el) => {
   el.addEventListener("click", (e) => {
@@ -2141,7 +2174,176 @@ function renderListActions(ln, viewKey) {
 let _shipDnLine = null;
 let _shipDnMode = "single";
 let _shipDnBatchLines = [];
+let _shipDnUiMode = "wkt_standard";
+let _shipDnCustomUrl = "";
 const openShipSelectedIds = new Set();
+
+async function fetchShipUiMode(customer) {
+  const res = await fetch(
+    "/api/delivery-templates/ship-ui?customer=" + encodeURIComponent(customer || "")
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "无法读取送货单配置");
+  return data;
+}
+
+function applyShipDnUiMode(ui) {
+  _shipDnUiMode = ui.mode || "wkt_standard";
+  _shipDnCustomUrl = ui.raw_download_url || "";
+  const frame = document.getElementById("shipDnFrame");
+  const customPanel = document.getElementById("shipDnCustomPanel");
+  const simplePanel = document.getElementById("shipDnSimplePanel");
+  const reloadBtn = document.getElementById("shipDnReloadDraft");
+  const confirmBtn = document.getElementById("shipDnConfirm");
+  const tplName = document.getElementById("shipDnCustomTplName");
+  const previewLink = document.getElementById("shipDnCustomOpenTpl");
+  const msg = document.getElementById("shipDnMsg");
+
+  const isWkt = _shipDnUiMode === "wkt_standard";
+  const isCustom = _shipDnUiMode === "custom_excel";
+
+  frame?.classList.toggle("is-hidden", !isWkt);
+  customPanel?.classList.toggle("is-hidden", !isCustom);
+  simplePanel?.classList.toggle("is-hidden", _shipDnUiMode !== "none");
+  reloadBtn?.classList.toggle("is-hidden", !isWkt);
+
+  if (confirmBtn) {
+    if (isCustom) confirmBtn.textContent = "确认出货并打开模板";
+    else if (_shipDnUiMode === "none") confirmBtn.textContent = "确认出货";
+    else confirmBtn.textContent = "确认出货并生成送货单";
+  }
+
+  if (tplName) tplName.textContent = ui.template_file || "—";
+  if (previewLink) {
+    previewLink.href = ui.raw_download_url || "#";
+    previewLink.classList.toggle("is-hidden", !isCustom || !ui.raw_download_url || ui.template_missing);
+  }
+
+  if (msg) {
+    if (isCustom && ui.template_missing) {
+      msg.textContent = "专用模板尚未上传，请先在「客户信息维护」上传 Excel 模板。";
+      msg.className = "msg ship-dn-msg error";
+    } else if (!isWkt) {
+      msg.textContent = "";
+      msg.className = "msg ship-dn-msg";
+    }
+  }
+}
+
+function openDeliveryNoteAfterShip(data) {
+  if (data.delivery_note_mode === "custom_excel") {
+    const eventId = data.shipment_event_id || (data.shipment_event_ids && data.shipment_event_ids[0]);
+    if (eventId) {
+      openCustomExcelLocally(eventId, data.shipment_event_ids).catch((err) => {
+        alert(err.message || "无法打开 Excel 模板");
+      });
+    }
+    return;
+  }
+  const dnUrl = data.delivery_note_print_url || data.delivery_note_download_url;
+  if (dnUrl) window.open(dnUrl, "_blank", "noopener");
+}
+
+async function openCustomExcelLocally(eventId, batchEventIds, regenerate) {
+  const res = await fetch("/api/delivery-notes/" + eventId + "/open-local", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      batch_event_ids: (batchEventIds || []).map((x) => Number(x)).filter((x) => x > 0),
+      regenerate: regenerate !== false,
+    }),
+  });
+  const data = await readApiJson(res, "无法打开 Excel");
+  if (!res.ok) throw new Error(data.error || "无法打开 Excel");
+  showListMsg(data.message || "已在 Excel 中打开；保存后将自动写入出货明细", true);
+  watchCustomExcelSaved(eventId);
+  return data;
+}
+
+function watchCustomExcelSaved(eventId) {
+  let elapsed = 0;
+  const poll = async () => {
+    elapsed += 2;
+    if (elapsed > 600) return;
+    try {
+      const res = await fetch("/api/delivery-notes/" + eventId + "/attachment-status");
+      const data = await res.json();
+      if (res.ok && data.saved_at) {
+        showListMsg("✓ 送货单已保存到出货明细", true);
+        if (currentSubmodule === "shipped") await loadLines();
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+    setTimeout(poll, 2000);
+  };
+  setTimeout(poll, 2000);
+}
+
+function shipmentDeliveryAction(ev) {
+  if (ev.delivery_note_mode === "none") return "";
+  if (ev.delivery_note_mode === "custom_excel") {
+    const label = ev.saved_at ? "打开送货单" : "打开Excel";
+    return `<button type="button" class="btn btn-sm btn-outline custom-excel-open-btn" data-event-id="${ev.id}" data-regenerate="${ev.saved_at ? "0" : "1"}">${label}</button>`;
+  }
+  return `<a class="btn btn-sm btn-outline" href="/delivery-note/print/${ev.id}" target="_blank" rel="noopener">送货单</a>`;
+}
+
+function shipmentRowActions(ev) {
+  const parts = [];
+  const dn = shipmentDeliveryAction(ev);
+  if (dn) parts.push(dn);
+  parts.push(
+    `<button type="button" class="btn btn-sm btn-outline shipment-return-btn" data-event-id="${ev.id}" title="撤销本次出货，料号回到未结订单">一键返回</button>`
+  );
+  return parts.join(" ");
+}
+
+async function returnShipmentToOpen(eventId) {
+  const ev = listRowsCache.find((row) => Number(row.id) === Number(eventId));
+  if (!ev) {
+    alert("找不到出货记录");
+    return;
+  }
+  const lines = [
+    "确认撤销本次出货？",
+    "",
+    `客户：${ev.customer || ""}`,
+    `订单号：${ev.order_no || ""}`,
+    `本次出货：${ev.ship_qty || ""}`,
+    ev.source_label ? `来源：${ev.source_label}` : "",
+    "",
+    "撤销后该料号回到「未结订单」，本条出货明细会删除。",
+    "已保存的送货单附件不再关联此记录。",
+  ].filter(Boolean);
+  if (!confirm(lines.join("\n"))) return;
+  let res;
+  try {
+    res = await fetch(`/api/shipment-events/${eventId}/return-open`, { method: "POST" });
+  } catch (err) {
+    alert(err.message || "无法连接服务器，请确认服务已启动");
+    return;
+  }
+  const raw = await res.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = {};
+  }
+  if (!res.ok) {
+    const hint =
+      res.status === 404
+        ? "接口不存在，请重启 Web 服务后再试（python test_impl/web/app.py）"
+        : "";
+    alert([data.error || `撤销失败（HTTP ${res.status}）`, hint].filter(Boolean).join("\n\n"));
+    return;
+  }
+  const openQty = data.open_qty != null ? data.open_qty : "";
+  showListMsg(`✓ 已撤销出货，未结数量 ${openQty}，料号已回到「未结订单」`, true);
+  await loadLines();
+}
 
 function getOpenShipSelectedLines() {
   const ids = new Set(openShipSelectedIds);
@@ -2246,10 +2448,18 @@ function closeShipDnModal() {
   _shipDnLine = null;
   _shipDnMode = "single";
   _shipDnBatchLines = [];
+  _shipDnUiMode = "wkt_standard";
+  _shipDnCustomUrl = "";
   document.getElementById("shipDnSinglePanel")?.classList.remove("is-hidden");
   document.getElementById("shipDnBatchPanel")?.classList.add("is-hidden");
+  document.getElementById("shipDnCustomPanel")?.classList.add("is-hidden");
+  document.getElementById("shipDnSimplePanel")?.classList.add("is-hidden");
+  document.getElementById("shipDnFrame")?.classList.remove("is-hidden");
+  document.getElementById("shipDnReloadDraft")?.classList.remove("is-hidden");
   const title = document.getElementById("shipDnTitle");
   if (title) title.textContent = "出货确认 · 送货单";
+  const confirmBtn = document.getElementById("shipDnConfirm");
+  if (confirmBtn) confirmBtn.textContent = "确认出货并生成送货单";
 }
 
 function loadShipDnDraft(lineId, qty) {
@@ -2387,9 +2597,16 @@ async function openShipDnModal(lineId, ln) {
   document.getElementById("shipDnMsg").textContent = "";
   document.getElementById("shipDnBackdrop")?.classList.remove("is-hidden");
   try {
-    await loadShipDnDraft(lineId, document.getElementById("shipDnQty").value.trim() || openVal);
+    const ui = await fetchShipUiMode(ln.customer);
+    applyShipDnUiMode(ui);
+    if (ui.mode === "custom_excel" && ui.template_missing) {
+      return;
+    }
+    if (_shipDnUiMode === "wkt_standard") {
+      await loadShipDnDraft(lineId, document.getElementById("shipDnQty").value.trim() || openVal);
+    }
   } catch (err) {
-    alert(err.message || "无法载入送货单草稿");
+    alert(err.message || "无法载入送货单配置");
   }
 }
 
@@ -2419,9 +2636,16 @@ async function openBatchShipModal() {
   renderShipDnBatchTable(lines);
   document.getElementById("shipDnBackdrop")?.classList.remove("is-hidden");
   try {
-    await loadShipDnDraftBatch();
+    const ui = await fetchShipUiMode(lines[0].customer);
+    applyShipDnUiMode(ui);
+    if (ui.mode === "custom_excel" && ui.template_missing) {
+      return;
+    }
+    if (_shipDnUiMode === "wkt_standard") {
+      await loadShipDnDraftBatch();
+    }
   } catch (err) {
-    alert(err.message || "无法载入送货单草稿");
+    alert(err.message || "无法载入送货单配置");
   }
 }
 
@@ -2440,7 +2664,17 @@ async function confirmShipFromModal() {
     }
     return;
   }
-  const delivery_note = collectShipDnPayload();
+  if (_shipDnUiMode === "custom_excel") {
+    const ui = await fetchShipUiMode(_shipDnLine?.customer || "").catch(() => ({}));
+    if (ui.template_missing) {
+      if (msg) {
+        msg.textContent = "请先上传专用 Excel 模板";
+        msg.className = "msg ship-dn-msg error";
+      }
+      return;
+    }
+  }
+  const delivery_note = _shipDnUiMode === "wkt_standard" ? collectShipDnPayload() : undefined;
   const btn = document.getElementById("shipDnConfirm");
   if (btn) btn.disabled = true;
   if (msg) {
@@ -2450,10 +2684,12 @@ async function confirmShipFromModal() {
   let res;
   let data;
   try {
+    const body = { qty };
+    if (delivery_note !== undefined) body.delivery_note = delivery_note;
     res = await fetch("/api/lines/" + lineId + "/ship", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ qty, delivery_note }),
+      body: JSON.stringify(body),
     });
     data = await readApiJson(res, SHIP_API_STALE_MSG);
   } catch (err) {
@@ -2481,10 +2717,7 @@ async function confirmShipFromModal() {
     showListMsg(`✓ 已出货；剩余未结 ${fmtSmart(data.open_qty, QTY_DP)}`, true);
   }
   await loadLines();
-  const dnUrl = data.delivery_note_print_url;
-  if (dnUrl) {
-    window.open(dnUrl, "_blank", "noopener");
-  }
+  openDeliveryNoteAfterShip(data);
 }
 
 async function confirmBatchShipFromModal() {
@@ -2497,7 +2730,17 @@ async function confirmBatchShipFromModal() {
     }
     return;
   }
-  const delivery_note = collectShipDnPayload();
+  if (_shipDnUiMode === "custom_excel") {
+    const ui = await fetchShipUiMode(_shipDnBatchLines[0]?.customer || "").catch(() => ({}));
+    if (ui.template_missing) {
+      if (msg) {
+        msg.textContent = "请先上传专用 Excel 模板";
+        msg.className = "msg ship-dn-msg error";
+      }
+      return;
+    }
+  }
+  const delivery_note = _shipDnUiMode === "wkt_standard" ? collectShipDnPayload() : undefined;
   const btn = document.getElementById("shipDnConfirm");
   if (btn) btn.disabled = true;
   if (msg) {
@@ -2507,10 +2750,12 @@ async function confirmBatchShipFromModal() {
   let res;
   let data;
   try {
+    const body = { items };
+    if (delivery_note !== undefined) body.delivery_note = delivery_note;
     res = await fetch("/api/lines/batch-ship", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items, delivery_note }),
+      body: JSON.stringify(body),
     });
     data = await readApiJson(res, SHIP_API_STALE_MSG);
   } catch (err) {
@@ -2539,10 +2784,7 @@ async function confirmBatchShipFromModal() {
     true
   );
   await loadLines();
-  const dnUrl = data.delivery_note_print_url;
-  if (dnUrl) {
-    window.open(dnUrl, "_blank", "noopener");
-  }
+  openDeliveryNoteAfterShip(data);
 }
 
 function bindShipDnModal() {
@@ -2555,6 +2797,7 @@ function bindShipDnModal() {
     if (e.target?.id === "shipDnBackdrop") closeShipDnModal();
   });
   document.getElementById("shipDnReloadDraft")?.addEventListener("click", async () => {
+    if (_shipDnUiMode !== "wkt_standard") return;
     if (_shipDnMode === "batch") {
       try {
         await loadShipDnDraftBatch();
@@ -2821,7 +3064,7 @@ function renderListFromCache() {
         const rowCls = isShipmentTodayHighlight(ev) ? "row-today-highlight" : "";
         return `<tr data-shipment-id="${ev.id}"${rowCls ? ` class="${rowCls}"` : ""}><td class="list-td-seq">${idx + 1}</td>${cols
           .map((c) => `<td class="${listTdClass(c)}">${shipmentCellValue(ev, c)}</td>`)
-          .join("")}<td class="action-cell"><a class="btn btn-sm btn-outline" href="/delivery-note/print/${ev.id}" target="_blank" rel="noopener">送货单</a></td></tr>`;
+          .join("")}<td class="action-cell">${shipmentRowActions(ev)}</td></tr>`;
       })
       .join("");
     tbody.querySelectorAll("tr td:not(:first-child)").forEach(bindHoverTip);
@@ -2921,6 +3164,25 @@ document.getElementById("reconcileBackBtn")?.addEventListener("click", () => {
   if (currentSubmodule === "reconcile" && reconcileDetailMode) closeReconcileDetail();
 });
 document.getElementById("lineListBody")?.addEventListener("click", (e) => {
+  const returnBtn = e.target.closest(".shipment-return-btn");
+  if (returnBtn && currentSubmodule === "shipped") {
+    e.preventDefault();
+    const eventId = Number(returnBtn.dataset.eventId);
+    if (eventId) {
+      returnShipmentToOpen(eventId).catch((err) => alert(err.message || "撤销失败"));
+    }
+    return;
+  }
+  const openBtn = e.target.closest(".custom-excel-open-btn");
+  if (openBtn && currentSubmodule === "shipped") {
+    e.preventDefault();
+    const eventId = Number(openBtn.dataset.eventId);
+    const regenerate = openBtn.dataset.regenerate !== "0";
+    if (eventId) {
+      openCustomExcelLocally(eventId, null, regenerate).catch((err) => alert(err.message || "无法打开 Excel"));
+    }
+    return;
+  }
   const btn = e.target.closest(".reconcile-detail-btn");
   if (!btn || currentSubmodule !== "reconcile") return;
   e.preventDefault();

@@ -23,7 +23,6 @@ CUSTOMER_LAYOUT: Dict[str, dict] = {
             "ZHEJIANG JINBANG SPORTS EQUIPMENT CO., LTD.",
         ),
         "footer_note": "（一式2份，金棒一份，如需要供应商可带回一份）",
-        "doc_prefix_default": "JB",
         "material_label": "金棒物料号/供应商料号",
     },
     "上海金脉电子科技有限公司": {
@@ -32,7 +31,6 @@ CUSTOMER_LAYOUT: Dict[str, dict] = {
             "SHANGHAI G-PULSE ELECTRONICS TECHNOLOGY CO., LTD.",
         ),
         "footer_note": "（一式2份，金脉一份，如需要供应商可带回一份）",
-        "doc_prefix_default": "JM",
         "material_label": "金脉物料号/供应商料号",
     },
 }
@@ -40,7 +38,6 @@ CUSTOMER_LAYOUT: Dict[str, dict] = {
 DEFAULT_LAYOUT = {
     "brand_lines": ("", ""),
     "footer_note": "",
-    "doc_prefix_default": "WKT",
     "material_label": "物料号/供应商料号",
 }
 

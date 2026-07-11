@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Dict, List
 
-from .models import PROCESS_LIST, RAW_MATERIALS, CostQuote
+from .models import PROCESS_LIST, RAW_MATERIALS, CostQuote, list_process_options
 
 
 class CostAnalysisService:
@@ -15,7 +15,10 @@ class CostAnalysisService:
     def get_processes(self) -> List[str]:
         return list(PROCESS_LIST)
 
-    def build_quote(self, payload: dict) -> CostQuote:
+    def get_process_options(self) -> List[dict]:
+        return [opt.to_dict() for opt in list_process_options()]
+
+    def build_quote(self, payload: dict, *, strict_material: bool = True) -> CostQuote:
         raw_prices = payload.get("process_prices", {}) or {}
         process_prices: Dict[str, Decimal] = {}
         for name, price in raw_prices.items():
@@ -31,7 +34,7 @@ class CostAnalysisService:
             quantity=Decimal(str(payload.get("quantity", "1") or "1")),
             markup_rate=Decimal(str(payload.get("markup_rate", "0") or "0")),
         )
-        quote.validate()
+        quote.validate(strict_material=strict_material)
         return quote
 
     def quote_to_dict(self, quote: CostQuote) -> dict:

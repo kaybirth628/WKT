@@ -1,0 +1,110 @@
+/* 订单首页 · 数据可视化 */
+.dash-card {
+  padding: 1rem 1.1rem 1.25rem;
+}
+
+.dash-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.dash-updated {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.dash-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1.15rem;
+}
+
+.dash-kpi {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.65rem 0.75rem;
+  min-height: 4.5rem;
+}
+
+.dash-kpi-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.dash-kpi-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  word-break: break-all;
+}
+
+.dash-kpi-sub {
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.dash-kpi.is-warn .dash-kpi-value {
+  color: var(--warning);
+}
+
+.dash-kpi.is-danger .dash-kpi-value {
+  color: var(--danger);
+}
+
+.dash-kpi.is-primary .dash-kpi-value {
+  color: var(--primary);
+}
+
+.dash-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.dash-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.85rem 0.9rem 0.75rem;
+  min-height: 16rem;
+}
+
+.dash-chart-card h4 {
+  margin: 0 0 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dash-chart-card canvas {
+  width: 100% !important;
+  height: 220px !important;
+}
+
+.dash-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.dash-quick-links .btn {
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 900px) {
+  .dash-chart-grid {
+    grid-template-columns: 1fr;
+  }
+}

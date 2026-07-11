@@ -253,6 +253,46 @@ class TestOrderLineService(unittest.TestCase):
         self.assertEqual(forced_rows[0].id, line.id)
         self.assertEqual(len(self.svc.list_shipment_events()), 0)
 
+    def test_reverse_shipment_event_returns_to_open(self) -> None:
+        line = self.svc.create_line(
+            {
+                "customer": "返回测",
+                "order_date": "2026-05-30",
+                "order_no": "PO-RET",
+                "product_spec": "件R",
+                "po_qty": "1300",
+                "shipped_qty": "0",
+            }
+        )
+        mid, ev = self.svc.ship_line(line.id, "1049")
+        self.assertEqual(mid.open_qty(), Decimal("251"))
+        self.assertEqual(len(self.svc.list_lines(view="open")), 1)
+        self.assertEqual(len(self.svc.list_shipment_events()), 1)
+
+        restored, removed_id = self.svc.reverse_shipment_event(ev.id)
+        self.assertEqual(removed_id, ev.id)
+        self.assertEqual(restored.shipped_qty, Decimal("0"))
+        self.assertEqual(restored.open_qty(), Decimal("1300"))
+        self.assertEqual(len(self.svc.list_shipment_events()), 0)
+        self.assertEqual(len(self.svc.list_lines(view="open")), 1)
+
+    def test_reverse_shipment_import_source(self) -> None:
+        line = self.svc.create_line(
+            {
+                "customer": "导入测",
+                "order_date": "2026-05-30",
+                "order_no": "PO-IMP",
+                "product_spec": "件I",
+                "po_qty": "10",
+                "shipped_qty": "5",
+            }
+        )
+        ev = self.svc._store.insert_shipment_event(line.id, "5", source="import")
+        restored, removed_id = self.svc.reverse_shipment_event(ev.id)
+        self.assertEqual(removed_id, ev.id)
+        self.assertEqual(restored.shipped_qty, Decimal("0"))
+        self.assertEqual(len(self.svc.list_shipment_events()), 0)
+
     def test_ship_line_with_duplicate_sibling_rows(self) -> None:
         """库中存在同客户·订单号·品名重复行时，出货仍应成功。"""
         base = {

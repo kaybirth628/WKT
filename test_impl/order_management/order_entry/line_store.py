@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS order_lines (
 );
 CREATE INDEX IF NOT EXISTS idx_lines_customer ON order_lines(customer);
 CREATE INDEX IF NOT EXISTS idx_lines_order_date ON order_lines(order_date);
+CREATE INDEX IF NOT EXISTS idx_lines_part_no ON order_lines(customer_part_no);
 CREATE TABLE IF NOT EXISTS shipment_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     line_id INTEGER NOT NULL,
@@ -67,6 +68,25 @@ def default_db_path() -> Path:
     if env:
         return Path(env)
     return _DEFAULT_DB
+
+
+class DuplicatePartNoError(ValueError):
+    """料号已绑定其他客户。"""
+
+    def __init__(self, part_no: str, owner_customer: str) -> None:
+        self.part_no = part_no
+        self.owner_customer = owner_customer
+        super().__init__(f"料号「{part_no}」已绑定客户「{owner_customer}」，不能分配给其他客户")
+
+
+def _meaningful_unit_weight(value: str) -> bool:
+    raw = str(value or "").strip()
+    if not raw:
+        return False
+    try:
+        return float(raw) > 0
+    except ValueError:
+        return True
 
 
 def _parse_dt(value: str) -> datetime:
@@ -154,6 +174,11 @@ class LineStore:
         if "delivery_note_json" not in ship_cols:
             self._conn.execute(
                 "ALTER TABLE shipment_events ADD COLUMN delivery_note_json TEXT NOT NULL DEFAULT ''"
+            )
+        ship_cols = {r[1] for r in self._conn.execute("PRAGMA table_info(shipment_events)")}
+        if "delivery_note_attachment" not in ship_cols:
+            self._conn.execute(
+                "ALTER TABLE shipment_events ADD COLUMN delivery_note_attachment TEXT NOT NULL DEFAULT ''"
             )
         line_cols = {r[1] for r in self._conn.execute("PRAGMA table_info(order_lines)")}
         if "closure_type" not in line_cols:
@@ -458,6 +483,34 @@ class LineStore:
             raise ValueError(f"出货记录不存在: {event_id}")
         return str(row["delivery_note_json"] or "")
 
+    def delete_shipment_event(self, event_id: int) -> None:
+        cur = self._conn.execute("DELETE FROM shipment_events WHERE id = ?", (event_id,))
+        self._conn.commit()
+        if cur.rowcount == 0:
+            raise ValueError(f"出货记录不存在: {event_id}")
+
+    def save_shipment_attachment(self, event_id: int, rel_path: str) -> None:
+        self._conn.execute(
+            "UPDATE shipment_events SET delivery_note_attachment = ? WHERE id = ?",
+            ((rel_path or "").strip(), event_id),
+        )
+        self._conn.commit()
+
+    def save_shipment_attachment_batch(self, event_ids: List[int], rel_path: str) -> None:
+        rel = (rel_path or "").strip()
+        for eid in event_ids:
+            if int(eid) > 0:
+                self.save_shipment_attachment(int(eid), rel)
+
+    def get_shipment_attachment(self, event_id: int) -> str:
+        row = self._conn.execute(
+            "SELECT delivery_note_attachment FROM shipment_events WHERE id = ?",
+            (event_id,),
+        ).fetchone()
+        if row is None:
+            raise ValueError(f"出货记录不存在: {event_id}")
+        return str(row["delivery_note_attachment"] or "").strip()
+
     def get_shipment_event(self, event_id: int) -> ShipmentEvent:
         sql = """
             SELECT e.id, e.line_id, e.ship_qty, e.source, e.shipped_at,
@@ -492,6 +545,7 @@ class LineStore:
         """出货明细：仅未结出货登记与历史导入，不含订单录入时的已出货字段。"""
         sql = """
             SELECT e.id, e.line_id, e.ship_qty, e.source, e.shipped_at,
+                   e.delivery_note_json,
                    l.customer, l.order_date, l.order_no, l.product_spec,
                    l.customer_part_no, l.po_qty, l.shipped_qty
             FROM shipment_events e
@@ -530,6 +584,7 @@ class LineStore:
                     po_qty=po,
                     shipped_qty_after=sh,
                     open_qty_after=round_qty(po - sh),
+                    delivery_note_json=str(r["delivery_note_json"] or ""),
                 )
             )
         return out
@@ -641,6 +696,146 @@ class LineStore:
             "SELECT DISTINCT customer FROM order_lines WHERE TRIM(customer) <> '' ORDER BY customer COLLATE NOCASE"
         ).fetchall()
         return [r["customer"] for r in rows]
+
+    def search_part_numbers(self, q: str = "", limit: int = 20) -> List[dict]:
+        """按料号模糊搜索订单行，用于成本录入联想。"""
+        limit = max(1, min(int(limit), 50))
+        q = (q or "").strip()
+        params: list = []
+        sql = """
+            SELECT customer_part_no, customer, product_spec, unit_weight_g, updated_at
+            FROM order_lines
+            WHERE TRIM(customer_part_no) <> ''
+        """
+        if q:
+            sql += " AND LOWER(customer_part_no) LIKE ?"
+            params.append(f"%{q.lower()}%")
+        sql += " ORDER BY updated_at DESC, id DESC LIMIT ?"
+        params.append(limit * 4)
+
+        rows = self._conn.execute(sql, params).fetchall()
+        results: List[dict] = []
+        seen: set = set()
+        for row in rows:
+            part_no = str(row["customer_part_no"] or "").strip()
+            customer = str(row["customer"] or "").strip()
+            if not part_no:
+                continue
+            dedupe_key = part_no.casefold()
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            results.append(
+                {
+                    "product_part_no": part_no,
+                    "customer_name": customer,
+                    "product_name": str(row["product_spec"] or "").strip(),
+                    "unit_weight_g": str(row["unit_weight_g"] or "").strip(),
+                    "source": "order_line",
+                }
+            )
+            if len(results) >= limit:
+                break
+        return results
+
+    def get_part_no_binding(
+        self,
+        product_part_no: str,
+        *,
+        exclude_line_id: Optional[int] = None,
+    ) -> Optional[dict]:
+        """返回料号绑定的唯一客户及最新订单行信息。"""
+        part_no = (product_part_no or "").strip()
+        if not part_no:
+            return None
+
+        sql = """
+            SELECT DISTINCT customer FROM order_lines
+            WHERE LOWER(TRIM(customer_part_no)) = LOWER(?)
+        """
+        params: list = [part_no]
+        if exclude_line_id is not None:
+            sql += " AND id <> ?"
+            params.append(int(exclude_line_id))
+        customer_rows = self._conn.execute(sql, params).fetchall()
+        customers = [str(r["customer"] or "").strip() for r in customer_rows if str(r["customer"] or "").strip()]
+        if not customers:
+            return None
+        if len(customers) > 1:
+            return {
+                "conflict": True,
+                "product_part_no": part_no,
+                "customers": customers,
+            }
+
+        row = self._conn.execute(
+            """
+            SELECT customer, product_spec, unit_weight_g, material, updated_at, id
+            FROM order_lines
+            WHERE LOWER(TRIM(customer_part_no)) = LOWER(?)
+            ORDER BY updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (part_no,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "conflict": False,
+            "product_part_no": part_no,
+            "customer_name": str(row["customer"] or "").strip(),
+            "product_name": str(row["product_spec"] or "").strip(),
+            "unit_weight_g": self.find_unit_weight_by_part_no(part_no),
+            "material": str(row["material"] or "").strip(),
+            "source": "order_line",
+        }
+
+    def find_unit_weight_by_part_no(self, product_part_no: str) -> str:
+        """取该料号在订单中最近一条有效单重（忽略空值与 0）。"""
+        part_no = (product_part_no or "").strip()
+        if not part_no:
+            return ""
+        rows = self._conn.execute(
+            """
+            SELECT unit_weight_g
+            FROM order_lines
+            WHERE LOWER(TRIM(customer_part_no)) = LOWER(?)
+            ORDER BY updated_at DESC, id DESC
+            """,
+            (part_no,),
+        ).fetchall()
+        for row in rows:
+            weight = str(row["unit_weight_g"] or "").strip()
+            if _meaningful_unit_weight(weight):
+                return weight
+        return ""
+
+    def validate_part_no_assignment(
+        self,
+        product_part_no: str,
+        customer: str,
+        *,
+        exclude_line_id: Optional[int] = None,
+    ) -> None:
+        part_no = (product_part_no or "").strip()
+        cust = (customer or "").strip()
+        if not part_no:
+            return
+        binding = self.get_part_no_binding(part_no, exclude_line_id=exclude_line_id)
+        if binding is None:
+            return
+        if binding.get("conflict"):
+            joined = "、".join(binding.get("customers") or [])
+            raise ValueError(f"料号「{part_no}」在订单中存在多个客户（{joined}），请先修正数据")
+        owner = str(binding.get("customer_name") or "").strip()
+        if owner and owner.casefold() != cust.casefold():
+            raise DuplicatePartNoError(part_no, owner)
+
+    def find_order_by_part_no(self, product_part_no: str) -> Optional[dict]:
+        binding = self.get_part_no_binding(product_part_no)
+        if binding is None or binding.get("conflict"):
+            return None
+        return binding
 
     @staticmethod
     def reset_database(db_path: Optional[str | Path] = None) -> Path:

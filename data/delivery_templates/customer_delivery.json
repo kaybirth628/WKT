@@ -3,8 +3,8 @@
     "receiver_company": "怡利电子科技（江苏）有限公司",
     "receiver_address": "江苏省苏州市吴江市运东经济开发区锦湖西路167号",
     "receiver_contact": "赵艳杰",
-    "doc_no_prefix": "",
-    "receiver_phone": "15250512188"
+    "receiver_phone": "15250512188",
+    "doc_no_prefix": ""
   },
   "苏州鑫福泰电子科技有限公司-东硕": {
     "receiver_company": "苏州鑫福泰电子科技有限公司-东硕",
@@ -199,8 +199,8 @@
     "receiver_company": "浙江金棒运动器材有限公司",
     "receiver_address": "浙江省丽水市缙云县壶镇镇聚贤路1号",
     "receiver_contact": "虞培",
-    "doc_no_prefix": "",
-    "receiver_phone": "15005786840"
+    "receiver_phone": "15005786840",
+    "doc_no_prefix": ""
   },
   "海鑫精密电子（常熟）有限公司": {
     "receiver_company": "海鑫精密电子（常熟）有限公司",
@@ -276,8 +276,8 @@
     "receiver_company": "迅铂科技（常州）有限公司",
     "receiver_address": "江苏省无锡市新吴区新荣路26号无锡荣志电子有限公司",
     "receiver_contact": "徐海兵",
-    "doc_no_prefix": "",
-    "receiver_phone": "13222928097"
+    "receiver_phone": "13222928097",
+    "doc_no_prefix": ""
   },
   "镇江鸿福泰电子科技有限公司": {
     "receiver_company": "镇江鸿福泰电子科技有限公司",
@@ -285,5 +285,12 @@
     "receiver_contact": "胡长戈",
     "doc_no_prefix": "",
     "receiver_phone": "13862608372"
+  },
+  "新客户A": {
+    "receiver_company": "新客户A",
+    "receiver_address": "苏州",
+    "receiver_contact": "李四",
+    "receiver_phone": "",
+    "doc_no_prefix": ""
   }
 }

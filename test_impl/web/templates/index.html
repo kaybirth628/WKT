@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · 订单管理</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260530-page-footer-full" />
+  <link rel="stylesheet" href="/static/style.css?v=20260623-noto-font" />
+  <link rel="stylesheet" href="/static/dashboard.css?v=20260623-order-dashboard" />
 </head>
 <body>
   <div class="app-layout">
@@ -14,6 +15,44 @@
 
     <div class="app-main">
       <main class="content-stack">
+        <!-- 子模块：首页（FEATURE_HOME_DASHBOARD=false 时隐藏，见 app.js） -->
+        <div id="submoduleHome" class="submodule-panel is-hidden" hidden aria-hidden="true">
+          <section class="card dash-card">
+            <div class="dash-toolbar">
+              <button type="button" class="btn btn-outline btn-sm" id="dashRefreshBtn">刷新数据</button>
+              <span id="dashUpdatedAt" class="dash-updated"></span>
+            </div>
+            <div id="dashKpis" class="dash-kpi-grid" aria-live="polite"></div>
+            <div class="dash-chart-grid">
+              <div class="dash-chart-card">
+                <h4>订单状态分布</h4>
+                <canvas id="dashChartStatus" aria-label="订单状态分布"></canvas>
+              </div>
+              <div class="dash-chart-card">
+                <h4>未结数量 TOP 客户</h4>
+                <canvas id="dashChartTopCustomers" aria-label="未结数量 TOP 客户"></canvas>
+              </div>
+              <div class="dash-chart-card">
+                <h4>近 6 个月出货趋势</h4>
+                <canvas id="dashChartMonthly" aria-label="近 6 个月出货趋势"></canvas>
+              </div>
+              <div class="dash-chart-card">
+                <h4>出货来源</h4>
+                <canvas id="dashChartSources" aria-label="出货来源"></canvas>
+              </div>
+            </div>
+            <div class="dash-quick-links">
+              <span class="dash-kpi-label" style="align-self:center;margin-right:0.25rem;">快捷入口</span>
+              <button type="button" class="btn btn-outline btn-sm" data-dash-link="open">未结订单</button>
+              <button type="button" class="btn btn-outline btn-sm" data-dash-link="shipped">出货明细</button>
+              <button type="button" class="btn btn-outline btn-sm" data-dash-link="closed">正常结案</button>
+              <button type="button" class="btn btn-outline btn-sm" data-dash-link="reconcile">对账</button>
+              <button type="button" class="btn btn-outline btn-sm" data-dash-link="entry">订单录入</button>
+            </div>
+          </section>
+          <p id="dashMsg" class="msg"></p>
+        </div>
+
         <!-- 子模块：订单录入 -->
         <div id="submoduleEntry" class="submodule-panel">
         <section class="card mode-card">
@@ -238,20 +277,54 @@
         </section>
         </div>
 
-        <!-- 子模块：送货单维护（含客户档案） -->
+        <!-- 子模块：客户信息维护 -->
         <div id="submoduleDelivery" class="submodule-panel is-hidden">
+          <section class="card list-card dn-maint-card">
+            <h3 class="section-h3">新增客户</h3>
+            <p class="dn-maint-hint">录入新客户档案；保存后可在下方一览中继续编辑。送货单为可选项。</p>
+            <form id="dnNewCustomerForm" class="dn-form dn-new-form">
+              <label>客户名称 <input type="text" id="dnNewName" required placeholder="公司全称" /></label>
+              <label>地址 <input type="text" id="dnNewAddress" placeholder="收货/公司地址" /></label>
+              <label>联系人 <input type="text" id="dnNewContact" placeholder="联系人" /></label>
+              <label>电话 <input type="text" id="dnNewPhone" placeholder="电话" /></label>
+              <label>邮箱 <input type="email" id="dnNewEmail" placeholder="邮箱" /></label>
+              <label>账期 <input type="text" id="dnNewPaymentTerms" placeholder="如：月结60天" /></label>
+              <label>对账周期
+                <select id="dnNewReconcilePeriod" required>
+                  <option value="">请选择</option>
+                  <option value="calendar_month">自然月（1日～月末）</option>
+                  <option value="month_21_20">21日～次月20日</option>
+                </select>
+              </label>
+              <label>送货单
+                <select id="dnNewDeliveryMode">
+                  <option value="off">不使用</option>
+                  <option value="wkt" selected>威可特统一模板</option>
+                  <option value="custom">专用模板</option>
+                </select>
+              </label>
+              <label id="dnNewCustomUploadWrap" class="dn-custom-tpl-wrap is-hidden">上传 Excel 模板
+                <input type="file" id="dnNewCustomUpload" accept=".xlsx,.xlsm" />
+              </label>
+              <div class="dn-form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">添加客户</button>
+              </div>
+            </form>
+            <p id="dnNewMsg" class="msg dn-msg"></p>
+          </section>
+
           <section class="card list-card dn-maint-card">
             <div class="dn-list-head">
               <h3 class="section-h3">客户一览</h3>
               <button type="button" class="btn btn-outline btn-sm" id="dnRefreshBtn">刷新</button>
             </div>
-            <p class="dn-maint-hint" id="dnMaintHint">维护客户地址、联系人、电话、邮箱、账期、对账周期及送货收货信息；编辑后点「保存」，地址与联系人同步用于送货单。</p>
+            <p class="dn-maint-hint" id="dnMaintHint">维护客户地址、联系人、电话、邮箱、账期；对账周期二选一（已有客户默认未设置，请业务员逐一维护）。送货单可选「不使用 / 威可特统一模板 / 专用模板」。点「编辑」修改后保存。</p>
             <div class="table-wrap dn-table-scroll">
               <table class="data-table dn-customer-table dn-customer-table-wide">
                 <thead>
                   <tr>
                     <th>客户</th>
-                    <th>送货单模板</th>
+                    <th>送货单</th>
                     <th>地址</th>
                     <th>联系人</th>
                     <th>电话</th>
@@ -269,19 +342,66 @@
 
           <section class="card dn-maint-card" id="dnPreviewSection">
             <h3 class="section-h3">送货单预览</h3>
-            <p class="dn-maint-hint">以下为<strong>示例数据</strong>；正式出货时自动填入真实订单。</p>
+            <p class="dn-maint-hint" id="dnPreviewHint">威可特统一模板可网页预览；专用模板请在 Excel 单元格写 <code>{{占位符}}</code>，预览/出货时自动填入。</p>
             <p id="dnPreviewStatus" class="dn-preview-status"></p>
             <p id="dnPreviewEmpty" class="dn-preview-empty">请在一览表点「预览」查看送货单示例</p>
             <div id="dnPreviewActions" class="dn-preview-actions is-hidden">
               <span id="dnPreviewTemplateLabel" class="dn-preview-label"></span>
               <a id="dnPreviewOpenTab" class="btn btn-outline btn-sm" href="#" target="_blank" rel="noopener">新窗口打开</a>
-              <a id="dnPreviewDownload" class="btn btn-primary btn-sm" href="#" target="_blank" rel="noopener">下载 Excel 示例</a>
+              <a id="dnPreviewDownload" class="btn btn-primary btn-sm" href="#" target="_blank" rel="noopener">打开模板</a>
             </div>
             <iframe id="dnPreviewFrame" class="dn-preview-frame is-hidden" title="送货单预览"></iframe>
           </section>
         </div>
 
-        <!-- 子模块：AI 数据助手 -->
+        <!-- 子模块：供应商信息维护 -->
+        <div id="submoduleSupplier" class="submodule-panel is-hidden">
+          <section class="card list-card dn-maint-card">
+            <h3 class="section-h3">新增供应商</h3>
+            <p class="dn-maint-hint">录入新供应商档案；保存后可在下方一览中继续编辑。</p>
+            <form id="spNewSupplierForm" class="dn-form dn-new-form">
+              <label>供应商名称 <input type="text" id="spNewName" required placeholder="公司全称" /></label>
+              <label>地址 <input type="text" id="spNewAddress" placeholder="公司地址" /></label>
+              <label>联系人 <input type="text" id="spNewContact" placeholder="联系人" /></label>
+              <label>电话 <input type="text" id="spNewPhone" placeholder="电话" /></label>
+              <label>邮箱 <input type="email" id="spNewEmail" placeholder="邮箱" /></label>
+              <label>账期 <input type="text" id="spNewPaymentTerms" placeholder="如：月结60天" /></label>
+              <label>备注 <input type="text" id="spNewNotes" placeholder="备注（可选）" /></label>
+              <div class="dn-form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">添加供应商</button>
+              </div>
+            </form>
+            <p id="spNewMsg" class="msg dn-msg"></p>
+          </section>
+
+          <section class="card list-card dn-maint-card">
+            <div class="dn-list-head">
+              <h3 class="section-h3">供应商一览</h3>
+              <button type="button" class="btn btn-outline btn-sm" id="spRefreshBtn">刷新</button>
+            </div>
+            <p class="dn-maint-hint">维护供应商地址、联系人、电话、邮箱、账期与备注；点「编辑」修改后保存。</p>
+            <div class="table-wrap dn-table-scroll">
+              <table class="data-table dn-customer-table dn-customer-table-wide">
+                <thead>
+                  <tr>
+                    <th>供应商</th>
+                    <th>地址</th>
+                    <th>联系人</th>
+                    <th>电话</th>
+                    <th>邮箱</th>
+                    <th>账期</th>
+                    <th>备注</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="spSupplierBody"></tbody>
+              </table>
+            </div>
+            <p id="spMapMsg" class="msg dn-msg"></p>
+          </section>
+        </div>
+
+        <!-- 子模块：AI 数据助手（FEATURE_AI_ASSISTANT=false 时隐藏，见 app.js） -->
         <div id="submoduleAi" class="submodule-panel is-hidden">
           {% include '_ai_assistant_panel.html' %}
         </div>
@@ -325,6 +445,14 @@
           <tbody id="shipDnBatchBody"></tbody>
         </table>
       </div>
+      <div id="shipDnCustomPanel" class="ship-dn-custom-panel is-hidden">
+        <p class="ship-dn-custom-hint">该客户使用<strong>专用 Excel 送货单</strong>。确认出货后系统将<strong>自动填入</strong>订单数据并在 Excel 中打开；模板单元格需预先写好 <code>{{占位符}}</code>，核对后 Ctrl+S 保存即可写入出货明细。</p>
+        <p class="ship-dn-custom-meta">模板文件：<code id="shipDnCustomTplName">—</code></p>
+        <a id="shipDnCustomOpenTpl" class="btn btn-outline btn-sm" href="#" target="_blank" rel="noopener">先打开模板查看</a>
+      </div>
+      <div id="shipDnSimplePanel" class="ship-dn-simple-panel is-hidden">
+        <p class="ship-dn-custom-hint">该客户未启用送货单，仅登记出货数量。</p>
+      </div>
       <input type="hidden" id="shipDnLineId" />
       <p id="shipDnMsg" class="msg ship-dn-msg"></p>
       <iframe id="shipDnFrame" class="ship-dn-frame" title="送货单确认（与正式版式一致）"></iframe>
@@ -332,8 +460,9 @@
   </div>
 
   <script src="/static/save-feedback.js?v=20260530"></script>
-  <script src="/static/delivery-note-admin.js?v=20260530-merged-customer"></script>
+  <script src="/static/delivery-note-admin.js?v=20260711-reconcile-empty"></script>
+  <script src="/static/supplier-admin.js?v=20260711-partner"></script>
   <script src="/static/ai-assistant.js?v=20260530-ai-sidebar"></script>
-  <script src="/static/app.js?v=20260530-shipped-cols2"></script>
+  <script src="/static/app.js?v=20260711-partner"></script>
 </body>
 </html>

@@ -3,9 +3,8 @@
   --sidebar-width: 240px;
   --sidebar-width-slim: 3.5rem;
   --sidebar-icon-size: 34px;
-  /* Mac/iOS 用 -apple-system → 苹方；Windows 用 Segoe UI + 微软雅黑；不嵌入 SF 字体文件 */
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei UI", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  /* ERP 全局字体栈（见 docs/design/ui-style-guide-v1.md §4） */
+  --font: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --type-nav-brand-size: 0.9375rem;
   --type-nav-brand-weight: 700;
   --type-nav-brand-color: var(--text);
@@ -3423,6 +3422,11 @@ body {
   display: none;
 }
 
+.dn-customer-table .dn-cell-delivery .dn-delivery-display.is-custom {
+  color: var(--primary, #024ad8);
+  font-weight: 500;
+}
+
 .dn-customer-table .dn-tpl-name {
   margin-left: 0.25rem;
 }
@@ -3443,6 +3447,23 @@ body {
   min-width: 10rem;
   max-width: 14rem;
   word-break: break-all;
+}
+
+.dn-customer-table tr:not(.is-editing) .dn-inline-input:disabled,
+.dn-customer-table tr:not(.is-editing) .dn-inline-select:disabled {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text, #1f2328);
+  cursor: default;
+  opacity: 1;
+  -webkit-text-fill-color: var(--text, #1f2328);
+}
+
+.dn-customer-table tr.is-editing .dn-inline-input,
+.dn-customer-table tr.is-editing .dn-inline-select {
+  background: var(--surface, #fff);
+  border-color: var(--border, #d0d7de);
 }
 
 .dn-customer-table .dn-inline-input {
@@ -3473,12 +3494,117 @@ body {
   overflow-x: auto;
 }
 
+.ship-dn-frame.is-hidden {
+  display: none;
+}
+
+.ship-dn-custom-panel,
+.ship-dn-simple-panel {
+  padding: 0.75rem 1rem 0.25rem;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+
+.ship-dn-custom-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text, #1f2328);
+}
+
+.ship-dn-custom-meta {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--muted, #64748b);
+}
+
+.dn-upload-label {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--muted, #64748b);
+}
+
+.dn-upload-label input[type="file"] {
+  display: block;
+  margin-top: 0.25rem;
+  max-width: 100%;
+  font-size: 0.75rem;
+}
+
 .dn-customer-table-wide {
   min-width: 72rem;
 }
 
 .dn-customer-table-wide .dn-inline-input {
   min-width: 6rem;
+}
+
+.dn-inline-select {
+  width: 100%;
+  min-width: 7.5rem;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--border, #d0d7de);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+}
+
+.dn-cell-delivery {
+  min-width: 11rem;
+}
+
+.dn-delivery-display {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text, #1f2328);
+  word-break: break-all;
+}
+
+.dn-delivery-edit.is-hidden {
+  display: none;
+}
+
+.dn-delivery-display.is-hidden {
+  display: none;
+}
+
+.dn-period-display {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text, #1f2328);
+}
+
+.dn-period-edit.is-hidden,
+.dn-period-display.is-hidden {
+  display: none;
+}
+
+.dn-cell-delivery .dn-custom-tpl-select {
+  margin-top: 0.35rem;
+}
+
+.dn-new-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.65rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.dn-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.dn-custom-tpl-wrap.is-hidden {
+  display: none;
+}
+
+.dn-custom-tpl-select.is-hidden {
+  display: none;
 }
 
 .wkt-save-toast {

@@ -29,10 +29,23 @@ class DeliveryTemplateStore:
             self.mapping_file.write_text("{}", encoding="utf-8")
 
     def load_mapping(self) -> Dict[str, str]:
+        from test_impl.common.filename_encoding import repair_utf8_mojibake
+
         try:
             data = json.loads(self.mapping_file.read_text(encoding="utf-8"))
             if isinstance(data, dict):
-                return {str(k).strip(): str(v).strip() for k, v in data.items() if str(k).strip()}
+                out: Dict[str, str] = {}
+                changed = False
+                for k, v in data.items():
+                    key = str(k).strip()
+                    val = repair_utf8_mojibake(str(v).strip())
+                    if val != str(v).strip():
+                        changed = True
+                    if key and val:
+                        out[key] = val
+                if changed:
+                    self.save_mapping(out)
+                return out
         except (json.JSONDecodeError, OSError):
             pass
         return {}
@@ -58,12 +71,14 @@ class DeliveryTemplateStore:
         self.save_mapping(mapping)
 
     def list_template_files(self) -> List[str]:
+        from test_impl.common.filename_encoding import repair_utf8_mojibake
+
         out: List[str] = []
         if not self.files_dir.is_dir():
             return out
         for p in sorted(self.files_dir.iterdir()):
             if p.is_file() and p.suffix.lower() in (".xlsx", ".xlsm"):
-                out.append(p.name)
+                out.append(repair_utf8_mojibake(p.name))
         return out
 
     def resolve_template_name(self, customer: str) -> str:
@@ -78,13 +93,25 @@ class DeliveryTemplateStore:
         return name not in (WKT_STANDARD, BUILTIN_HTML)
 
     def resolve_template_path(self, customer: str) -> Optional[Path]:
+        from test_impl.common.filename_encoding import repair_utf8_mojibake
+
         name = self.resolve_template_name(customer)
         if name in (WKT_STANDARD, BUILTIN_HTML):
             return None
+        name = repair_utf8_mojibake(name)
         path = self.files_dir / name
-        return path if path.is_file() else None
+        if path.is_file():
+            return path
+        # 兼容磁盘上仍为误编码文件名的情况
+        if self.files_dir.is_dir():
+            for p in self.files_dir.iterdir():
+                if p.is_file() and repair_utf8_mojibake(p.name) == name:
+                    return p
+        return None
 
     def template_status(self, customer: str) -> dict:
+        from test_impl.common.filename_encoding import repair_utf8_mojibake
+
         customer = (customer or "").strip()
         name = self.resolve_template_name(customer)
         if name in (WKT_STANDARD, BUILTIN_HTML):
@@ -95,18 +122,22 @@ class DeliveryTemplateStore:
                 "is_custom_excel": False,
                 "template_missing": False,
             }
-        path = self.files_dir / name
+        name = repair_utf8_mojibake(name)
+        path = self.resolve_template_path(customer)
         return {
             "template": name,
             "template_file": name,
             "is_wkt_standard": False,
             "is_custom_excel": True,
-            "template_missing": not path.is_file(),
+            "template_missing": path is None,
         }
 
     def save_upload(self, filename: str, data: bytes) -> str:
+        from test_impl.common.filename_encoding import normalize_upload_filename
+
         if not data:
             raise ValueError("文件为空")
+        filename = normalize_upload_filename(filename)
         ext = Path(filename).suffix.lower()
         if ext not in (".xlsx", ".xlsm"):
             raise ValueError("仅支持 .xlsx / .xlsm 送货单模板")

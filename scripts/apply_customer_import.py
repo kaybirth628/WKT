@@ -27,7 +27,7 @@ def main() -> None:
             "phone": p["phone"],
             "email": p.get("email", ""),
             "payment_terms": p["payment_terms"],
-            "reconciliation_cycle": p["reconciliation_cycle"],
+            "reconciliation_period": p.get("reconciliation_period") or "month_21_20",
         }
     PROFILES.write_text(
         json.dumps(profiles_out, ensure_ascii=False, indent=2),

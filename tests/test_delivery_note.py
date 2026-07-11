@@ -106,6 +106,39 @@ class TestDeliveryNote(unittest.TestCase):
         self.assertEqual(wb2.active["A1"].value, "专用客")
         self.assertEqual(wb2.active["A2"].value, "PO-S")
 
+    def test_ship_ui_mode_custom(self) -> None:
+        files_dir = self.tpl_root / "files"
+        files_dir.mkdir(parents=True, exist_ok=True)
+        tpl_name = "专用客.xlsx"
+        (files_dir / tpl_name).write_bytes(b"fake")
+        self.templates.set_customer_template("专用客", tpl_name)
+        ui = self.dn.ship_ui_mode("专用客")
+        self.assertEqual(ui["mode"], "custom_excel")
+        self.assertIn("/api/delivery-templates/raw", ui["raw_download_url"])
+
+    def test_open_custom_excel_local(self) -> None:
+        from unittest.mock import patch
+
+        if Workbook is None:
+            self.skipTest("openpyxl not installed")
+        files_dir = self.tpl_root / "files"
+        files_dir.mkdir(parents=True, exist_ok=True)
+        tpl_name = "本地客.xlsx"
+        wb = Workbook()
+        wb.active["A1"] = "{{客户}}"
+        wb.save(files_dir / tpl_name)
+        self.templates.set_customer_template("本地客", tpl_name)
+        line = self.svc.create_line(
+            {"customer": "本地客", "order_no": "PO-L", "product_spec": "件", "po_qty": "1"}
+        )
+        _, ev = self.svc.ship_line(line.id, "1")
+        with patch("test_impl.order_management.delivery_note.custom_excel_attachment.open_in_excel"):
+            out = self.dn.open_custom_excel_local(ev.id)
+        self.assertTrue(out.get("ok"))
+        self.assertTrue(out.get("auto_filled"))
+        rel = self.svc._store.get_shipment_attachment(ev.id)
+        self.assertTrue(rel.endswith(".xlsx"))
+
     def test_default_wkt_for_unmapped_customer(self) -> None:
         meta = self.dn.template_info("普通客户")
         self.assertTrue(meta["is_wkt_standard"])
@@ -135,6 +168,208 @@ class TestDeliveryNote(unittest.TestCase):
         self.assertEqual(snap["lines"][0]["batch_no"], "B001")
         doc = self.dn.build_wkt_document(ev.id)
         self.assertEqual(doc.warehouse_manager, "张三")
+
+    def test_jinmai_custom_excel_uses_wkt_doc_prefix(self) -> None:
+        if Workbook is None:
+            self.skipTest("openpyxl not installed")
+        customer = "上海金脉电子科技有限公司"
+        files_dir = self.tpl_root / "files"
+        files_dir.mkdir(parents=True, exist_ok=True)
+        tpl_name = "金脉.xlsx"
+        wb = Workbook()
+        wb.active["A1"] = "{{送货单号}}"
+        wb.save(files_dir / tpl_name)
+        self.templates.set_customer_template(customer, tpl_name)
+        line = self.svc.create_line(
+            {
+                "customer": customer,
+                "order_no": "PO-JM",
+                "product_spec": "测试件",
+                "po_qty": "5",
+                "unit": "PCS",
+            }
+        )
+        _, ev = self.svc.ship_line(line.id, "2")
+        ctx = self.dn.build_context(ev)
+        self.assertTrue(str(ctx.get("送货单号") or "").startswith("WKT"))
+
+    def test_resolve_doc_no_ignores_legacy_jm_prefix(self) -> None:
+        import json
+
+        customer = "上海金脉电子科技有限公司"
+        line = self.svc.create_line(
+            {
+                "customer": customer,
+                "order_no": "PO-LEG",
+                "product_spec": "测试件",
+                "po_qty": "1",
+                "unit": "PCS",
+            }
+        )
+        _, ev = self.svc.ship_line(line.id, "1")
+        self.svc._store.save_shipment_delivery_note(
+            ev.id,
+            json.dumps({"doc_no": "JM202606230025"}, ensure_ascii=False),
+        )
+        doc_no = self.dn.resolve_delivery_doc_no(ev.id)
+        self.assertTrue(doc_no.startswith("WKT"))
+        self.assertNotEqual(doc_no, "JM202606230025")
+
+    def test_batch_custom_excel_expands_detail_rows(self) -> None:
+        if Workbook is None:
+            self.skipTest("openpyxl not installed")
+        import io
+
+        from openpyxl import load_workbook
+
+        customer = "合并客"
+        files_dir = self.tpl_root / "files"
+        files_dir.mkdir(parents=True, exist_ok=True)
+        tpl_name = "batch.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        ws["A1"] = "{{送货单号}}"
+        ws["A2"] = "{{序号}}"
+        ws["B2"] = "{{客户料号}}"
+        ws["C2"] = "{{订单号}}"
+        ws["D2"] = "{{本次出货}}"
+        ws["A3"] = "合计"
+        ws["D3"] = "{{合计}}"
+        wb.save(files_dir / tpl_name)
+        self.templates.set_customer_template(customer, tpl_name)
+
+        line_a = self.svc.create_line(
+            {
+                "customer": customer,
+                "order_no": "PO-A",
+                "customer_part_no": "P-A",
+                "product_spec": "件A",
+                "po_qty": "10",
+                "unit": "PCS",
+            }
+        )
+        line_b = self.svc.create_line(
+            {
+                "customer": customer,
+                "order_no": "PO-B",
+                "customer_part_no": "P-B",
+                "product_spec": "件B",
+                "po_qty": "10",
+                "unit": "PCS",
+            }
+        )
+        _, ev_a = self.svc.ship_line(line_a.id, "1")
+        _, ev_b = self.svc.ship_line(line_b.id, "2")
+        header, line_ctxs = self.dn.build_batch_fill_contexts([ev_a.id, ev_b.id])
+        data = self.dn.fill_excel_bytes(self.templates.resolve_template_path(customer), header, line_ctxs)
+        out = load_workbook(io.BytesIO(data)).active
+        self.assertEqual(out["C2"].value, "PO-A")
+        self.assertEqual(out["C3"].value, "PO-B")
+        self.assertEqual(out["B2"].value, "P-A")
+        self.assertEqual(out["B3"].value, "P-B")
+        self.assertEqual(out["D4"].value, header["合计"])
+
+    def test_batch_bilingual_template_keeps_total_row(self) -> None:
+        if Workbook is None:
+            self.skipTest("openpyxl not installed")
+        import io
+
+        from openpyxl import load_workbook
+
+        from test_impl.order_management.delivery_note.bilingual_template import save_bilingual_template
+
+        customer = "上海金脉电子科技有限公司"
+        files_dir = self.tpl_root / "files"
+        files_dir.mkdir(parents=True, exist_ok=True)
+        tpl_name = "jinmai_batch.xlsx"
+        save_bilingual_template(customer, files_dir / tpl_name)
+        self.templates.set_customer_template(customer, tpl_name)
+
+        line_a = self.svc.create_line(
+            {
+                "customer": customer,
+                "order_no": "PO-A",
+                "customer_part_no": "P-A",
+                "product_spec": "件A",
+                "po_qty": "10",
+                "unit": "PCS",
+            }
+        )
+        line_b = self.svc.create_line(
+            {
+                "customer": customer,
+                "order_no": "PO-B",
+                "customer_part_no": "P-B",
+                "product_spec": "件B",
+                "po_qty": "10",
+                "unit": "PCS",
+            }
+        )
+        _, ev_a = self.svc.ship_line(line_a.id, "1")
+        _, ev_b = self.svc.ship_line(line_b.id, "2")
+        header, line_ctxs = self.dn.build_batch_fill_contexts([ev_a.id, ev_b.id])
+        data = self.dn.fill_excel_bytes(self.templates.resolve_template_path(customer), header, line_ctxs)
+        ws = load_workbook(io.BytesIO(data)).active
+        self.assertEqual(ws["B13"].value, "P-A")
+        self.assertEqual(ws["B14"].value, "P-B")
+        self.assertEqual(ws["A15"].value, "合计 Total")
+        self.assertEqual(ws["F15"].value, header["合计"])
+        self.assertEqual(header["合计"], "3")
+        for row_idx in (13, 14):
+            for col in range(1, 8):
+                border = ws.cell(row_idx, col).border
+                self.assertEqual(border.left.style, "thin")
+                self.assertEqual(border.right.style, "thin")
+        for col in (1, 6):
+            border = ws.cell(15, col).border
+            self.assertEqual(border.left.style, "thin")
+            self.assertEqual(border.right.style, "thin")
+        self.assertTrue(any(str(m) == "A16:G16" for m in ws.merged_cells.ranges))
+        self.assertEqual(ws.cell(16, 1).border.left.style, "thin")
+
+    def test_xunbo_custom_placeholders_filled(self) -> None:
+        if Workbook is None:
+            self.skipTest("openpyxl not installed")
+        import io
+
+        from openpyxl import load_workbook
+
+        customer = "迅铂科技（常州）有限公司"
+        tpl_path = self.tpl_root / "files" / "迅铂送货单.xlsx"
+        tpl_path.parent.mkdir(parents=True, exist_ok=True)
+        if not tpl_path.is_file():
+            src = Path(__file__).resolve().parents[1] / "data" / "delivery_templates" / "files" / "迅铂送货单.xlsx"
+            if src.is_file():
+                tpl_path.write_bytes(src.read_bytes())
+            else:
+                wb = Workbook()
+                ws = wb.active
+                ws["B7"] = "{{订单号}}"
+                wb.save(tpl_path)
+        wb = load_workbook(tpl_path)
+        ws = wb.active
+        ws["B2"] = "{{送货地点}}"
+        ws["B3"] = "{{订单下发抬头}}"
+        wb.save(tpl_path)
+        self.templates.set_customer_template(customer, "迅铂送货单.xlsx")
+        line = self.svc.create_line(
+            {
+                "customer": customer,
+                "order_no": "PO-XB",
+                "customer_part_no": "P-XB",
+                "product_spec": "测试件",
+                "po_qty": "5",
+                "unit": "PCS",
+            }
+        )
+        _, ev = self.svc.ship_line(line.id, "2")
+        ctx = self.dn.build_context(ev)
+        data = self.dn.fill_excel_bytes(tpl_path, ctx)
+        ws = load_workbook(io.BytesIO(data)).active
+        self.assertIn("无锡", str(ws["B2"].value or ""))
+        self.assertIn("迅铂", str(ws["B3"].value or ""))
+        self.assertEqual(ctx.get("送货地点"), ctx.get("收货地址"))
+        self.assertEqual(ctx.get("订单下发抬头"), ctx.get("收货公司"))
 
 
 if __name__ == "__main__":

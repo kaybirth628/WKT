@@ -9,7 +9,7 @@ from decimal import Decimal
 from test_impl.common.money import round_qty, serialize_qty, to_decimal
 
 from .line_models import CustomerMaster, OrderLine, PartMapping, normalize_line_fields
-from .line_store import CLOSURE_FORCED, LineStore, default_db_path
+from .line_store import CLOSURE_FORCED, DuplicatePartNoError, LineStore, default_db_path
 from .shipment_models import SHIP_SOURCE_OPEN, ShipmentEvent
 
 
@@ -101,6 +101,22 @@ class OrderLineService:
     def lookup_customer_part(self, product_spec: str) -> str:
         return self._store.lookup_part_no(product_spec)
 
+    def _validate_part_no_assignment(
+        self,
+        customer_part_no: str,
+        customer: str,
+        *,
+        exclude_line_id: Optional[int] = None,
+    ) -> None:
+        part_no = (customer_part_no or "").strip()
+        if not part_no:
+            return
+        self._store.validate_part_no_assignment(
+            part_no,
+            customer,
+            exclude_line_id=exclude_line_id,
+        )
+
     def create_line(self, data: dict) -> OrderLine:
         fields = normalize_line_fields(self.enrich_line_dict(data))
         self._ensure_customer(fields["customer"])
@@ -114,6 +130,7 @@ class OrderLineService:
             )
         spec = fields.get("product_spec", "")
         cpn = fields.get("customer_part_no", "")
+        self._validate_part_no_assignment(cpn, fields["customer"])
         if spec and cpn:
             self._store.upsert_part(spec, cpn)
         line = self._store.insert_line(fields)
@@ -148,7 +165,7 @@ class OrderLineService:
                             "data": data,
                         }
                     )
-                except ValueError as exc:
+                except (DuplicatePartNoError, ValueError) as exc:
                     failed.append({"index": idx, "error": str(exc), "data": data})
         return {
             "imported": len(imported),
@@ -281,6 +298,26 @@ class OrderLineService:
     def get_shipment_event(self, event_id: int):
         return self._store.get_shipment_event(event_id)
 
+    def reverse_shipment_event(self, event_id: int) -> tuple[OrderLine, int]:
+        """撤销出货明细：扣减已出货、删除记录，料号回到未结订单。"""
+        from decimal import Decimal
+
+        from test_impl.common.money import round_qty, serialize_qty, to_decimal
+
+        event = self.get_shipment_event(event_id)
+        line = self.get_line(event.line_id)
+
+        delta = round_qty(to_decimal(event.ship_qty, field="本次出货"))
+        if delta <= 0:
+            raise ValueError("出货数量无效")
+
+        current = round_qty(line.shipped_qty)
+        new_shipped = round_qty(max(Decimal("0"), current - delta))
+        updated = self._store.update_shipped_qty(line.id, str(new_shipped))
+        updated.validate()
+        self._store.delete_shipment_event(event_id)
+        return updated, event_id
+
     def list_shipment_events(self, q: str = "", customer: str = "") -> List[ShipmentEvent]:
         return self._store.list_shipment_events(q=q, customer=customer)
 
@@ -302,6 +339,7 @@ class OrderLineService:
         self._ensure_customer(fields["customer"])
         spec = fields.get("product_spec", "")
         cpn = fields.get("customer_part_no", "")
+        self._validate_part_no_assignment(cpn, fields["customer"], exclude_line_id=line_id)
         if spec and cpn:
             self._store.upsert_part(spec, cpn)
         updated = self._store.update_line(line_id, fields)

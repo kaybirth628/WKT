@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT 销售管理系统 · 成本录入</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260623-noto-font" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260531-process-align" />
+</head>
+<body>
+  <div class="app-layout">
+    {% include '_order_sidebar.html' %}
+
+    <div class="app-main">
+      <main class="content-stack cost-stack">
+        <div class="cost-entry-layout">
+          <section class="card cost-form-card">
+            <form id="costEntryForm" class="form">
+              <div class="cost-header-table">
+                <div class="cost-header-row">
+                  <label class="field">
+                    <span>客户名称</span>
+                    <input name="customer_name" id="customerNameInput" list="customerOptions" required placeholder="如：凯泰" />
+                    <datalist id="customerOptions"></datalist>
+                  </label>
+                  <label class="field">
+                    <span>产品名称</span>
+                    <input name="product_name" required placeholder="如：PL9-01050-00-0A-前挡板" />
+                  </label>
+                  <label class="field">
+                    <span>模具编号</span>
+                    <input name="mold_no" required placeholder="如：WKT-MJ-LV-24027" />
+                  </label>
+                  <label class="field field--part-no">
+                    <span>产品料号</span>
+                    <input
+                      name="product_part_no"
+                      id="productPartNoInput"
+                      list="partNoOptions"
+                      required
+                      placeholder="如：PL9-01050-00-0A"
+                      autocomplete="off"
+                    />
+                    <datalist id="partNoOptions"></datalist>
+                    <p id="partLookupHint" class="field-hint" hidden></p>
+                  </label>
+                </div>
+                <div class="cost-header-row">
+                  <label class="field">
+                    <span>模穴</span>
+                    <input name="cavity" required placeholder="如：1*2" />
+                  </label>
+                  <label class="field">
+                    <span>产品单重 (g)</span>
+                    <input name="unit_weight_g" type="number" step="0.01" min="0" required placeholder="如：88" />
+                  </label>
+                  <label class="field">
+                    <span>材质</span>
+                    <input name="material" list="materialOptions" required placeholder="如：ADC12" />
+                    <datalist id="materialOptions"></datalist>
+                  </label>
+                  <label class="field">
+                    <span>机台吨位</span>
+                    <input name="machine_tonnage" required placeholder="如：280T" />
+                  </label>
+                </div>
+                <div class="cost-header-row cost-header-row--calc">
+                  <label class="field">
+                    <span>原材单价（用于成本计算）</span>
+                    <input name="material_unit_price" type="number" step="0.0001" min="0" value="0" />
+                  </label>
+                </div>
+              </div>
+
+              <div class="items-block">
+                <div class="items-head">
+                  <h4>工序选择</h4>
+                  <p id="processSelectionSummary" class="card-desc">请勾选本料号适用的工序</p>
+                </div>
+                <div id="processGrid" class="process-grid process-pick-grid"></div>
+              </div>
+
+              <div class="form-actions cost-entry-actions">
+                <button type="button" id="previewBtn" class="btn btn-secondary">预览成本</button>
+                <button type="submit" class="btn btn-primary">提交保存</button>
+                <p id="costMsg" class="msg"></p>
+              </div>
+            </form>
+          </section>
+        </div>
+      </main>
+
+      <footer class="page-footer">
+        <h2 class="page-title">成本分析 · 成本录入</h2>
+        <p class="page-desc">基础信息 → 勾选工序 → 提交后在「成本查询」中检索</p>
+      </footer>
+    </div>
+  </div>
+
+  <div id="costPreviewModal" class="cost-modal" hidden>
+    <div class="cost-modal-panel" role="dialog" aria-modal="true" aria-labelledby="costPreviewTitle">
+      <div class="cost-modal-head">
+        <h3 id="costPreviewTitle">成本预览</h3>
+        <button type="button" id="costPreviewClose" class="btn btn-ghost">关闭</button>
+      </div>
+      <div id="previewBody" class="cost-modal-body"></div>
+    </div>
+  </div>
+
+  <script src="/static/cost_common.js?v=20260530-cost-codes"></script>
+  <script src="/static/cost_entry.js?v=20260530-part-weight"></script>
+</body>
+</html>

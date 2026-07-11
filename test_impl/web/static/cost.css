@@ -8,7 +8,20 @@
   width: 100%;
   max-width: none;
   min-height: 0;
-  padding: 0.75rem 1rem 0.75rem;
+  padding: 0.45rem 0.85rem 0.45rem;
+}
+
+.app-main:has(.cost-stack) .page-footer {
+  padding: 0.5rem 1rem 0.65rem;
+}
+
+.app-main:has(.cost-stack) .page-footer .page-title {
+  font-size: 0.95rem;
+  margin-bottom: 0.1rem;
+}
+
+.app-main:has(.cost-stack) .page-footer .page-desc {
+  font-size: 0.8125rem;
 }
 
 .cost-layout {
@@ -71,6 +84,10 @@ select:focus {
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   gap: 0.75rem 0.85rem;
   width: 100%;
+}
+
+.process-pick-grid {
+  align-items: stretch;
 }
 
 .process-item {
@@ -211,5 +228,368 @@ select:focus {
 @media (min-width: 1400px) {
   .process-grid {
     grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  }
+}
+
+/* 成本录入：单列铺满，无右侧预览占位 */
+.cost-entry-layout {
+  display: block;
+  width: 100%;
+}
+
+.cost-entry-layout .cost-form-card {
+  width: 100%;
+  height: auto;
+}
+
+.cost-entry-layout .cost-form-card.card {
+  padding: 0.85rem 1rem;
+  gap: 0.65rem;
+}
+
+.cost-entry-layout .cost-form-card .form {
+  padding-top: 0;
+}
+
+.cost-header-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.65rem;
+}
+
+.cost-header-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.cost-header-row--calc {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 260px;
+}
+
+.cost-entry-layout .items-block {
+  padding: 0.75rem;
+  gap: 0.55rem;
+}
+
+.cost-entry-layout .items-head {
+  gap: 0.25rem;
+}
+
+.cost-entry-layout .items-head h4 {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.cost-entry-layout .process-pick-grid {
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  align-items: stretch;
+  gap: 0.45rem 0.55rem;
+}
+
+.cost-entry-layout .process-pick-grid .process-pick-item {
+  padding: 0.4rem 0.5rem;
+  gap: 0.3rem;
+  min-height: 3.55rem;
+}
+
+.cost-entry-layout .field {
+  gap: 0.28rem;
+}
+
+.cost-entry-layout .field span {
+  font-size: 0.8125rem;
+}
+
+.cost-entry-layout .field input,
+.cost-entry-layout .field select {
+  padding: 0.48rem 0.62rem;
+  font-size: 0.875rem;
+}
+
+.cost-entry-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding-top: 0.65rem;
+  margin-top: 0.15rem;
+  border-top: 1px solid var(--border);
+}
+
+.cost-entry-actions .btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.cost-entry-actions .msg {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.process-pick-grid .process-pick-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 3.75rem;
+  height: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+
+.process-pick-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.process-pick-head .process-code {
+  flex-shrink: 0;
+  min-width: 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--primary);
+}
+
+.process-pick-head .process-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.process-pick-item .process-price {
+  margin-top: auto;
+  width: 100%;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.8125rem;
+}
+
+.process-pick-item:has(.process-pick:checked) {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.process-pick-item .process-price:disabled {
+  opacity: 0.45;
+}
+
+/* 成本查询 */
+.cost-query-stack {
+  padding-bottom: 1rem;
+}
+
+.cost-query-card {
+  width: 100%;
+}
+
+.cost-query-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 0.8fr)) auto;
+  gap: 0.85rem;
+  align-items: end;
+  margin-bottom: 0.85rem;
+}
+
+.cost-query-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-bottom: 0.1rem;
+}
+
+.cost-query-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.cost-query-table tbody tr {
+  cursor: pointer;
+}
+
+.cost-query-table tbody tr:hover {
+  background: var(--primary-soft);
+}
+
+.cost-query-actions {
+  white-space: nowrap;
+}
+
+.cost-query-actions .btn-sm {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8125rem;
+  margin-right: 0.25rem;
+}
+
+.cost-modal-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.cost-edit-panel {
+  width: min(920px, 100%);
+}
+
+.cost-edit-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.cost-edit-form-actions .msg {
+  flex: 1 1 100%;
+}
+
+.empty-hint {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--muted);
+}
+
+.cost-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.cost-modal[hidden] {
+  display: none;
+}
+
+.cost-modal-panel {
+  width: min(720px, 100%);
+  max-height: min(88vh, 900px);
+  overflow: auto;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+}
+
+.cost-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.cost-modal-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.cost-modal-body {
+  padding: 1rem 1.1rem 1.2rem;
+}
+
+.cost-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.cost-detail-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.cost-detail-costs {
+  margin-bottom: 0.75rem;
+}
+
+.detail-meta {
+  margin: 0.85rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.field-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.field-hint.ok {
+  color: var(--success);
+}
+
+.field-hint.warn {
+  color: #b45309;
+}
+
+.field-hint.error {
+  color: var(--danger);
+}
+
+input.is-auto-filled {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.part-customer-picker {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary-soft);
+  max-width: 420px;
+}
+
+.part-customer-picker select {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  font-family: inherit;
+}
+
+@media (max-width: 960px) {
+  .cost-header-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cost-query-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .cost-detail-grid {
+    grid-template-columns: 1fr;
   }
 }

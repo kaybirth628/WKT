@@ -25,7 +25,7 @@
 | 变更日志 | `docs/change/CHANGELOG.md` |
 | 操作 SOP | `docs/SOP/系统操作SOP.md` |
 | 版本记录 | `docs/VERSION.md` |
-| **版本回退** | `docs/RESTORE.md` |
+| 版本回退 | `docs/RESTORE.md`（含小改/大改区分、一键推送） |
 | **会话摘要（长对话续接）** | `docs/handoff/SESSION-*.md` |
 | **数据结构** | `docs/architecture/data-model.md` |
 | 代码地图（CodeGraph） | `.codegraph/` 索引；CLI `codegraph`；MCP 见 `.cursor/mcp.json` |

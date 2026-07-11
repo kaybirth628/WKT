@@ -5,6 +5,7 @@
     "phone": "13800000000",
     "email": "zhangsan@example.com",
     "payment_terms": "月结90天",
-    "reconciliation_cycle": "月结90天·每月25日对账"
+    "reconciliation_period": "month_21_20",
+    "delivery_enabled": "1"
   }
 }

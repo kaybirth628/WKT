@@ -14,6 +14,7 @@ from .payment_schedule import (
     parse_ship_local_date,
     payment_due_month_label,
 )
+from .period import PERIOD_OPTIONS, reconciliation_period_label
 
 _TWO = Decimal("0.01")
 
@@ -94,6 +95,7 @@ class ReconciliationService:
     def get_config(self) -> Dict[str, Any]:
         cfg = load_reconciliation_config()
         cfg["terms_display"] = format_terms_label(cfg)
+        cfg["reconciliation_period_options"] = PERIOD_OPTIONS
         return cfg
 
     def list_lines(

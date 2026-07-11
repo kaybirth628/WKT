@@ -2,6 +2,7 @@ from .models import OrderStatus, SalesOrder, SalesOrderItem
 from .service import OrderEntryService
 from .line_models import CustomerMaster, OrderLine
 from .line_service import OrderLineService, DuplicateLineError
+from .line_store import DuplicatePartNoError
 from .line_mapper import intake_to_lines
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "CustomerMaster",
     "OrderLineService",
     "DuplicateLineError",
+    "DuplicatePartNoError",
     "intake_to_lines",
 ]

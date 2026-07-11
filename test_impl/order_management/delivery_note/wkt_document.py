@@ -136,6 +136,13 @@ def get_customer_delivery_info(customer: str) -> dict:
     return out
 
 
+def delivery_doc_prefix(customer: str) -> str:
+    """送货单号前缀：客户维护 doc_no_prefix，否则全公司默认 WKT。"""
+    cust_cfg = get_customer_delivery_info(customer)
+    company = load_company_config()
+    return (cust_cfg.get("doc_no_prefix") or "").strip() or company.get("doc_no_prefix", "WKT")
+
+
 def save_customer_delivery_info(customer: str, info: dict) -> None:
     customer = (customer or "").strip()
     if not customer:
@@ -244,7 +251,7 @@ def build_batch_draft_document(items: List[tuple]) -> WktDeliveryDocument:
     receiver_company = (cust_cfg.get("receiver_company") or "").strip() or customer
     receiver_address = (cust_cfg.get("receiver_address") or "").strip()
     receiver_contact = (cust_cfg.get("receiver_contact") or "").strip()
-    prefix = (cust_cfg.get("doc_no_prefix") or "").strip() or company.get("doc_no_prefix", "WKT")
+    prefix = delivery_doc_prefix(customer)
 
     doc_lines: List[WktDeliveryLine] = []
     total = Decimal("0")
@@ -404,9 +411,7 @@ def finalize_doc_no(
     """出货登记后写入正式送货单号（保留用户手改的单号）。"""
     if event_id <= 0 or monthly_seq <= 0:
         return
-    cust_cfg = get_customer_delivery_info(doc.receiver_company)
-    company = load_company_config()
-    prefix = (cust_cfg.get("doc_no_prefix") or "").strip() or company.get("doc_no_prefix", "WKT")
+    prefix = delivery_doc_prefix(doc.receiver_company)
     auto = _gen_doc_no(prefix, shipped_at, monthly_seq)
     current = (doc.doc_no or "").strip()
     if not current or (current.endswith("01") and event_id > 0):
@@ -427,7 +432,7 @@ def build_document_from_event(
     receiver_company = (cust_cfg.get("receiver_company") or "").strip() or customer_key
     receiver_address = (cust_cfg.get("receiver_address") or "").strip()
     receiver_contact = (cust_cfg.get("receiver_contact") or "").strip()
-    prefix = (cust_cfg.get("doc_no_prefix") or "").strip() or company.get("doc_no_prefix", "WKT")
+    prefix = delivery_doc_prefix(customer_key)
 
     shipped_at = event.shipped_at
     if not isinstance(shipped_at, datetime):

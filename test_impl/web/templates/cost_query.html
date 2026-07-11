@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT 销售管理系统 · 成本查询</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260623-noto-font" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260531-process-align" />
+</head>
+<body>
+  <div class="app-layout">
+    {% include '_order_sidebar.html' %}
+
+    <div class="app-main">
+      <main class="content-stack cost-stack cost-query-stack">
+        <section class="card cost-query-card">
+          <div class="card-head">
+            <div class="card-icon list-icon">⌕</div>
+            <div class="card-head-text">
+              <h3>成本查询</h3>
+              <p class="card-desc">按客户、料号或关键字检索已录入的成本记录，支持修改与删除</p>
+            </div>
+          </div>
+
+          <form id="costQueryForm" class="form cost-query-filters">
+            <label class="field">
+              <span>关键字</span>
+              <input name="q" placeholder="客户 / 产品 / 料号 / 模具 / 材质" />
+            </label>
+            <label class="field">
+              <span>客户名称</span>
+              <input name="customer" placeholder="精确匹配" />
+            </label>
+            <label class="field">
+              <span>产品料号</span>
+              <input name="product_part_no" placeholder="模糊匹配" />
+            </label>
+            <div class="cost-query-filter-actions">
+              <button type="submit" class="btn btn-primary">查询</button>
+              <button type="button" id="costQueryReset" class="btn btn-secondary">重置</button>
+            </div>
+          </form>
+
+          <div class="cost-query-meta">
+            <span id="costQueryCount">共 0 条</span>
+            <span class="card-desc">点击行查看详情，或使用右侧操作按钮</span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table cost-query-table">
+              <thead>
+                <tr>
+                  <th>客户</th>
+                  <th>产品名称</th>
+                  <th>产品料号</th>
+                  <th>材质</th>
+                  <th>单重(g)</th>
+                  <th>机台</th>
+                  <th>工序数</th>
+                  <th>单件成本</th>
+                  <th>录入时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="costQueryBody"></tbody>
+            </table>
+            <p id="costQueryEmpty" class="empty-hint" hidden>暂无记录，请先在「成本录入」中保存</p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="page-footer">
+        <h2 class="page-title">成本分析 · 成本查询</h2>
+        <p class="page-desc">检索、修改与删除历史成本录入</p>
+      </footer>
+    </div>
+  </div>
+
+  <div id="costDetailModal" class="cost-modal" hidden>
+    <div class="cost-modal-panel" role="dialog" aria-modal="true" aria-labelledby="costDetailTitle">
+      <div class="cost-modal-head">
+        <h3 id="costDetailTitle">成本详情</h3>
+        <div class="cost-modal-actions">
+          <button type="button" id="costDetailEdit" class="btn btn-secondary btn-sm">修改</button>
+          <button type="button" id="costDetailDelete" class="btn btn-danger btn-sm">删除</button>
+          <button type="button" id="costDetailClose" class="btn btn-ghost btn-sm">关闭</button>
+        </div>
+      </div>
+      <div id="costDetailBody" class="cost-modal-body"></div>
+    </div>
+  </div>
+
+  <div id="costEditModal" class="cost-modal" hidden>
+    <div class="cost-modal-panel cost-edit-panel" role="dialog" aria-modal="true" aria-labelledby="costEditTitle">
+      <div class="cost-modal-head">
+        <h3 id="costEditTitle">修改成本记录</h3>
+        <button type="button" id="costEditClose" class="btn btn-ghost btn-sm">关闭</button>
+      </div>
+      <form id="costEditForm" class="form cost-modal-body">
+        <div class="cost-header-table">
+          <div class="cost-header-row">
+            <label class="field">
+              <span>客户名称</span>
+              <input name="customer_name" required />
+            </label>
+            <label class="field">
+              <span>产品名称</span>
+              <input name="product_name" required />
+            </label>
+            <label class="field">
+              <span>模具编号</span>
+              <input name="mold_no" required />
+            </label>
+            <label class="field">
+              <span>产品料号</span>
+              <input name="product_part_no" required />
+            </label>
+          </div>
+          <div class="cost-header-row">
+            <label class="field">
+              <span>模穴</span>
+              <input name="cavity" required />
+            </label>
+            <label class="field">
+              <span>产品单重 (g)</span>
+              <input name="unit_weight_g" type="number" step="0.01" min="0" required />
+            </label>
+            <label class="field">
+              <span>材质</span>
+              <input name="material" list="editMaterialOptions" required />
+              <datalist id="editMaterialOptions"></datalist>
+            </label>
+            <label class="field">
+              <span>机台吨位</span>
+              <input name="machine_tonnage" required />
+            </label>
+          </div>
+          <div class="cost-header-row cost-header-row--calc">
+            <label class="field">
+              <span>原材单价</span>
+              <input name="material_unit_price" type="number" step="0.0001" min="0" value="0" />
+            </label>
+          </div>
+        </div>
+        <div class="items-block">
+          <div class="items-head"><h4>工序选择</h4></div>
+          <div id="editProcessGrid" class="process-grid process-pick-grid"></div>
+        </div>
+        <div class="cost-edit-form-actions">
+          <button type="submit" class="btn btn-primary">保存修改</button>
+          <button type="button" id="costEditCancel" class="btn btn-secondary">取消</button>
+          <p id="costEditMsg" class="msg"></p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/cost_common.js?v=20260530-cost-query-crud"></script>
+  <script src="/static/cost_query.js?v=20260530-cost-query-crud"></script>
+</body>
+</html>

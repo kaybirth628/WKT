@@ -15,13 +15,19 @@ class TestCostAnalysisService(unittest.TestCase):
 
     def test_processes_match_corrected_list(self) -> None:
         processes = self.service.get_processes()
-        # 修正后应包含的项
-        for name in ["压铸", "埋轴", "去毛边", "抛光", "铆合", "皮模钝化", "化镍", "喷粉", "镭雕", "剥漆", "外购磁铁", "外购销钉", "外购轴套", "管销", "利润"]:
+        for name in ["压铸", "去毛边", "抛光", "铆合", "皮模钝化", "化镍", "喷粉", "镭雕", "剥漆", "外购磁铁", "外购销钉", "外购轴套", "管销", "利润"]:
             self.assertIn(name, processes)
-        # 旧的错误名称应已移除
+        for merged in ["埋轴", "下料", "精冲"]:
+            self.assertNotIn(merged, processes)
         for old in ["理料", "锚铜", "铝合", "皮模化料", "管制"]:
             self.assertNotIn(old, processes)
-        self.assertEqual(len(processes), 39)
+        self.assertEqual(len(processes), 36)
+
+    def test_process_options_have_codes(self) -> None:
+        options = self.service.get_process_options()
+        self.assertEqual(len(options), 36)
+        self.assertEqual(options[0], {"code": "01", "name": "压铸"})
+        self.assertEqual(options[-1]["code"], "36")
 
     def test_build_quote_and_total(self) -> None:
         quote = self.service.build_quote(

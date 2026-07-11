@@ -1,0 +1,228 @@
+/** 供应商信息维护 */
+(function () {
+  let profileMap = {};
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function showMsg(el, text, ok) {
+    if (!el) return;
+    el.textContent = text;
+    el.className = "msg dn-msg " + (ok ? "ok" : "error");
+  }
+
+  async function parseJsonResponse(res) {
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (!ct.includes("application/json")) {
+      throw new Error("服务器返回异常，请重启服务后 Ctrl+F5 刷新。HTTP " + res.status);
+    }
+    return res.json();
+  }
+
+  function rowProfile(row) {
+    const p = profileMap[row.supplier] || {};
+    return {
+      address: row.address || p.address || "",
+      contact: row.contact || p.contact || "",
+      phone: row.phone || p.phone || "",
+      email: row.email || p.email || "",
+      payment_terms: row.payment_terms || p.payment_terms || "",
+      notes: row.notes || p.notes || "",
+    };
+  }
+
+  function readRowInputs(tr) {
+    const val = (field) => tr.querySelector(`[data-field="${field}"]`)?.value.trim() || "";
+    return {
+      address: val("address"),
+      contact: val("contact"),
+      phone: val("phone"),
+      email: val("email"),
+      payment_terms: val("payment_terms"),
+      notes: val("notes"),
+    };
+  }
+
+  async function saveSupplierRow(supplier, inputs) {
+    const res = await fetch("/api/supplier-profiles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ supplier, profile: inputs }),
+    });
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || "供应商档案保存失败");
+  }
+
+  function rowEditableFields(tr) {
+    return tr.querySelectorAll("[data-field]");
+  }
+
+  function storeRowSnapshot(tr) {
+    const snap = {};
+    rowEditableFields(tr).forEach((el) => {
+      snap[el.dataset.field || ""] = el.value;
+    });
+    tr.dataset.snapshot = JSON.stringify(snap);
+  }
+
+  function restoreRowSnapshot(tr) {
+    try {
+      const snap = JSON.parse(tr.dataset.snapshot || "{}");
+      rowEditableFields(tr).forEach((el) => {
+        const key = el.dataset.field || "";
+        if (Object.prototype.hasOwnProperty.call(snap, key)) {
+          el.value = snap[key];
+        }
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function setRowEditing(tr, editing) {
+    tr.classList.toggle("is-editing", editing);
+    rowEditableFields(tr).forEach((el) => {
+      el.disabled = !editing;
+    });
+    tr.querySelector(".sp-edit-btn")?.classList.toggle("is-hidden", editing);
+    tr.querySelector(".sp-save-btn")?.classList.toggle("is-hidden", !editing);
+    tr.querySelector(".sp-cancel-btn")?.classList.toggle("is-hidden", !editing);
+  }
+
+  function renderTable(rows) {
+    const tbody = document.getElementById("spSupplierBody");
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">暂无供应商，请在上方添加</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows
+      .map((row) => {
+        const p = rowProfile(row);
+        const supplier = row.supplier || "";
+        return `
+      <tr data-supplier="${esc(supplier)}">
+        <td class="sp-name-cell">${esc(supplier)}</td>
+        <td><input data-field="address" value="${esc(p.address)}" disabled /></td>
+        <td><input data-field="contact" value="${esc(p.contact)}" disabled /></td>
+        <td><input data-field="phone" value="${esc(p.phone)}" disabled /></td>
+        <td><input data-field="email" value="${esc(p.email)}" disabled /></td>
+        <td><input data-field="payment_terms" value="${esc(p.payment_terms)}" disabled /></td>
+        <td><input data-field="notes" value="${esc(p.notes)}" disabled /></td>
+        <td class="sp-actions">
+          <button type="button" class="btn btn-outline btn-sm sp-edit-btn">编辑</button>
+          <button type="button" class="btn btn-primary btn-sm sp-save-btn is-hidden">保存</button>
+          <button type="button" class="btn btn-outline btn-sm sp-cancel-btn is-hidden">取消</button>
+        </td>
+      </tr>`;
+      })
+      .join("");
+
+    tbody.querySelectorAll("tr[data-supplier]").forEach((tr) => {
+      storeRowSnapshot(tr);
+      tr.querySelector(".sp-edit-btn")?.addEventListener("click", () => {
+        storeRowSnapshot(tr);
+        setRowEditing(tr, true);
+      });
+      tr.querySelector(".sp-cancel-btn")?.addEventListener("click", () => {
+        restoreRowSnapshot(tr);
+        setRowEditing(tr, false);
+      });
+      tr.querySelector(".sp-save-btn")?.addEventListener("click", async () => {
+        const supplier = tr.dataset.supplier || "";
+        const msg = document.getElementById("spMapMsg");
+        const btn = tr.querySelector(".sp-save-btn");
+        if (btn) btn.disabled = true;
+        try {
+          await saveSupplierRow(supplier, readRowInputs(tr));
+          profileMap[supplier] = readRowInputs(tr);
+          storeRowSnapshot(tr);
+          setRowEditing(tr, false);
+          showMsg(msg, "✓ 已保存", true);
+          if (window.showSaveSuccess) window.showSaveSuccess("✓ 已保存");
+        } catch (err) {
+          showMsg(msg, err.message || "保存失败", false);
+          if (window.showSaveError) window.showSaveError(err.message || "保存失败");
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  function bindNewSupplierForm() {
+    const form = document.getElementById("spNewSupplierForm");
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = "1";
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("spNewMsg");
+      const name = document.getElementById("spNewName")?.value.trim() || "";
+      if (!name) {
+        showMsg(msg, "请填写供应商名称", false);
+        return;
+      }
+      const profile = {
+        address: document.getElementById("spNewAddress")?.value.trim() || "",
+        contact: document.getElementById("spNewContact")?.value.trim() || "",
+        phone: document.getElementById("spNewPhone")?.value.trim() || "",
+        email: document.getElementById("spNewEmail")?.value.trim() || "",
+        payment_terms: document.getElementById("spNewPaymentTerms")?.value.trim() || "",
+        notes: document.getElementById("spNewNotes")?.value.trim() || "",
+      };
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch("/api/supplier-profiles/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ supplier: name, profile }),
+        });
+        const data = await parseJsonResponse(res);
+        if (!res.ok) throw new Error(data.error || "添加失败");
+        form.reset();
+        showMsg(msg, "✓ 已添加供应商", true);
+        if (window.showSaveSuccess) window.showSaveSuccess("✓ 已添加供应商");
+        await loadSupplierAdmin();
+      } catch (err) {
+        showMsg(msg, err.message || "添加失败", false);
+        if (window.showSaveError) window.showSaveError(err.message || "添加失败");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+  }
+
+  async function loadSupplierAdmin() {
+    const res = await fetch("/api/supplier-profiles");
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || "加载失败");
+    profileMap = {};
+    (data.rows || []).forEach((row) => {
+      profileMap[row.supplier] = row;
+    });
+    renderTable(data.rows || []);
+    bindNewSupplierForm();
+  }
+
+  function bindRefreshBtn() {
+    const btn = document.getElementById("spRefreshBtn");
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      loadSupplierAdmin().catch((err) => {
+        showMsg(document.getElementById("spMapMsg"), err.message || "刷新失败", false);
+      });
+    });
+  }
+
+  bindRefreshBtn();
+
+  window.loadSupplierAdmin = loadSupplierAdmin;
+})();

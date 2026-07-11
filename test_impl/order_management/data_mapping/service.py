@@ -12,7 +12,7 @@ from test_impl.order_management.delivery_note.wkt_document import load_customer_
 from test_impl.order_management.order_entry.line_store import default_db_path
 
 ROOT = Path(__file__).resolve().parents[3]
-PROFILE_FIELDS = ("address", "contact", "phone", "email", "payment_terms", "reconciliation_cycle")
+PROFILE_FIELDS = ("address", "contact", "phone", "email", "payment_terms", "reconciliation_period")
 DELIVERY_FIELDS = ("receiver_company", "receiver_address", "receiver_contact", "doc_no_prefix")
 
 

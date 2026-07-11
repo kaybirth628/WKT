@@ -1,8 +1,8 @@
-{# 顶部导航；active: entry | shipped | open | closed | closedForced | reconcile | delivery | ai | cost #}
+{# 顶部导航；active: home | entry | shipped | open | closed | closedForced | reconcile | delivery | supplier | ai | cost_entry | cost_query #}
 {% from '_nav_icons.html' import nav_icon %}
 <header class="top-nav" id="appTopNav">
   <div class="top-nav-inner">
-    <a class="top-nav-brand" href="/">
+    <a class="top-nav-brand" href="/#entry">
       <div class="logo">WKT</div>
       <div class="brand-text">
         <h1>销售管理系统</h1>
@@ -10,6 +10,7 @@
     </a>
 
     <nav class="top-nav-menu" aria-label="业务模块">
+      {# 首页：FEATURE_HOME_DASHBOARD=true 时恢复下方链接 #}
       <div
         class="top-nav-dropdown{% if active in ('entry', 'shipped', 'open', 'closed', 'closedForced') %} is-module-active{% endif %}"
         id="topNavOrders"
@@ -51,34 +52,115 @@
         <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('reconcile') }}</span>
         <span class="top-nav-label">对账</span>
       </a>
-      <a class="top-nav-link top-nav-head-link{% if active == 'delivery' %} is-active{% endif %}" href="/#delivery" data-submodule="delivery">
-        <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('delivery') }}</span>
-        <span class="top-nav-label">送货单维护</span>
-      </a>
-      <a class="top-nav-link top-nav-head-link{% if active == 'cost' %} is-active{% endif %}" href="/cost">
-        <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('cost') }}</span>
-        <span class="top-nav-label">成本分析</span>
-      </a>
-      <a class="top-nav-link top-nav-head-link{% if active == 'ai' %} is-active{% endif %}" href="/#ai" data-submodule="ai">
-        <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('ai') }}</span>
-        <span class="top-nav-label">AI 数据助手</span>
-      </a>
+      <div
+        class="top-nav-dropdown{% if active in ('delivery', 'supplier') %} is-module-active{% endif %}"
+        id="topNavPartner"
+      >
+        <button
+          type="button"
+          class="top-nav-link top-nav-dropdown-trigger"
+          id="topNavPartnerTrigger"
+          aria-expanded="false"
+          aria-controls="topNavPartnerMenu"
+          aria-haspopup="menu"
+        >
+          <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('customerInfo') }}</span>
+          <span class="top-nav-label">客商信息维护</span>
+          <span class="top-nav-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="top-nav-dropdown-menu" id="topNavPartnerMenu" role="menu">
+          <a class="top-nav-dropdown-item module-sub{% if active == 'delivery' %} active{% endif %}" href="/#delivery" data-submodule="delivery" role="menuitem">
+            <span class="module-icon">{{ nav_icon('customerInfo') }}</span><span class="module-name">客户信息维护</span>
+          </a>
+          <a class="top-nav-dropdown-item module-sub{% if active == 'supplier' %} active{% endif %}" href="/#supplier" data-submodule="supplier" role="menuitem">
+            <span class="module-icon">{{ nav_icon('supplier') }}</span><span class="module-name">供应商信息维护</span>
+          </a>
+        </div>
+      </div>
+      <div
+        class="top-nav-dropdown{% if active in ('cost_entry', 'cost_query') %} is-module-active{% endif %}"
+        id="topNavCost"
+      >
+        <button
+          type="button"
+          class="top-nav-link top-nav-dropdown-trigger"
+          id="topNavCostTrigger"
+          aria-expanded="false"
+          aria-controls="topNavCostMenu"
+          aria-haspopup="menu"
+        >
+          <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('cost') }}</span>
+          <span class="top-nav-label">成本分析</span>
+          <span class="top-nav-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="top-nav-dropdown-menu" id="topNavCostMenu" role="menu">
+          <a class="top-nav-dropdown-item module-sub{% if active == 'cost_entry' %} active{% endif %}" href="/cost/entry" role="menuitem">
+            <span class="module-icon">{{ nav_icon('entry') }}</span><span class="module-name">成本录入</span>
+          </a>
+          <a class="top-nav-dropdown-item module-sub{% if active == 'cost_query' %} active{% endif %}" href="/cost/query" role="menuitem">
+            <span class="module-icon">{{ nav_icon('open') }}</span><span class="module-name">成本查询</span>
+          </a>
+        </div>
+      </div>
+      {# AI 数据助手：FEATURE_AI_ASSISTANT=true 时恢复下方链接 #}
     </nav>
   </div>
 </header>
 
 <script>
 (function () {
-  var ordersDropdown = document.getElementById("topNavOrders");
-  var ordersTrigger = document.getElementById("topNavOrdersTrigger");
-  var ordersMenu = document.getElementById("topNavOrdersMenu");
-  if (!ordersDropdown || !ordersTrigger || !ordersMenu) return;
+  function setupDropdown(dropdownId, triggerId, menuId) {
+    var dropdown = document.getElementById(dropdownId);
+    var trigger = document.getElementById(triggerId);
+    var menu = document.getElementById(menuId);
+    if (!dropdown || !trigger || !menu) return null;
 
-  function positionOrdersMenu() {
-    var rect = ordersTrigger.getBoundingClientRect();
-    ordersMenu.style.top = Math.round(rect.bottom + 6) + "px";
-    ordersMenu.style.left = Math.round(rect.left) + "px";
-    ordersMenu.style.minWidth = Math.max(Math.round(rect.width), 184) + "px";
+    function positionMenu() {
+      var rect = trigger.getBoundingClientRect();
+      menu.style.top = Math.round(rect.bottom + 6) + "px";
+      menu.style.left = Math.round(rect.left) + "px";
+      menu.style.minWidth = Math.max(Math.round(rect.width), 184) + "px";
+    }
+
+    function updateActiveState() {
+      dropdown.classList.toggle(
+        "is-module-active",
+        Boolean(menu.querySelector(".module-sub.active"))
+      );
+    }
+
+    trigger.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var open = dropdown.classList.contains("is-open");
+      closeAllDropdowns();
+      if (!open) {
+        dropdown.classList.add("is-open");
+        trigger.setAttribute("aria-expanded", "true");
+        positionMenu();
+      }
+    });
+
+    menu.addEventListener("click", function (e) {
+      if (e.target.closest("a[href]")) {
+        closeAllDropdowns();
+      }
+    });
+
+    window.addEventListener("resize", function () {
+      if (dropdown.classList.contains("is-open")) positionMenu();
+    });
+
+    window.addEventListener(
+      "scroll",
+      function () {
+        if (dropdown.classList.contains("is-open")) positionMenu();
+      },
+      true
+    );
+
+    updateActiveState();
+    return { dropdown: dropdown, updateActiveState: updateActiveState };
   }
 
   function closeAllDropdowns() {
@@ -89,38 +171,12 @@
     });
   }
 
-  function openOrdersDropdown() {
-    closeAllDropdowns();
-    ordersDropdown.classList.add("is-open");
-    ordersTrigger.setAttribute("aria-expanded", "true");
-    positionOrdersMenu();
-  }
-
-  function updateOrdersActiveState() {
-    ordersDropdown.classList.toggle(
-      "is-module-active",
-      Boolean(ordersMenu.querySelector(".module-sub.active"))
-    );
-  }
-
-  ordersTrigger.addEventListener("click", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (ordersDropdown.classList.contains("is-open")) {
-      closeAllDropdowns();
-    } else {
-      openOrdersDropdown();
-    }
-  });
-
-  ordersMenu.addEventListener("click", function (e) {
-    if (e.target.closest("[data-submodule]")) {
-      closeAllDropdowns();
-    }
-  });
+  var orders = setupDropdown("topNavOrders", "topNavOrdersTrigger", "topNavOrdersMenu");
+  var cost = setupDropdown("topNavCost", "topNavCostTrigger", "topNavCostMenu");
+  var partner = setupDropdown("topNavPartner", "topNavPartnerTrigger", "topNavPartnerMenu");
 
   document.addEventListener("click", function (e) {
-    if (!e.target.closest("#topNavOrders")) {
+    if (!e.target.closest(".top-nav-dropdown")) {
       closeAllDropdowns();
     }
   });
@@ -129,25 +185,15 @@
     if (e.key === "Escape") closeAllDropdowns();
   });
 
-  window.addEventListener("resize", function () {
-    if (ordersDropdown.classList.contains("is-open")) positionOrdersMenu();
-  });
-
-  window.addEventListener(
-    "scroll",
-    function () {
-      if (ordersDropdown.classList.contains("is-open")) positionOrdersMenu();
-    },
-    true
-  );
-
   window.syncSidebarSubgroups = function () {
-    updateOrdersActiveState();
+    if (orders) orders.updateActiveState();
+    if (cost) cost.updateActiveState();
+    if (partner) partner.updateActiveState();
   };
-  window.updateSidebarOrdersActiveState = updateOrdersActiveState;
+  window.updateSidebarOrdersActiveState = function () {
+    if (orders) orders.updateActiveState();
+  };
   window.collapseSidebarForNavigation = function () {};
   window.expandSidebarMenu = function () {};
-
-  updateOrdersActiveState();
 })();
 </script>

@@ -2,31 +2,38 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>专用送货单预览 · {{ customer }}</title>
+  {% include '_font_links.html' %}
   <style>
-    body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; margin: 1.5rem; color: #1e293b; line-height: 1.5; }
-    .box { max-width: 520px; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
+    body { font-family: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; margin: 1.5rem; color: #1e293b; line-height: 1.5; }
+    .box { max-width: 560px; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
     h1 { font-size: 1.1rem; margin: 0 0 0.75rem; }
     p { margin: 0.35rem 0; font-size: 0.9rem; }
     code { background: #e2e8f0; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85rem; }
     .warn { color: #b45309; }
+    ul { margin: 0.5rem 0 0.25rem 1.1rem; padding: 0; font-size: 0.85rem; }
     a.btn { display: inline-block; margin-top: 0.75rem; padding: 0.4rem 0.85rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-size: 0.85rem; }
   </style>
 </head>
 <body>
   <div class="box">
-    <h1>专用 Excel 送货单</h1>
+    <h1>专用 Excel 送货单（自动填入）</h1>
     <p><strong>{{ customer }}</strong></p>
     <p>模板文件：<code>{{ template_file }}</code></p>
     {% if template_missing %}
-    <p class="warn">模板文件尚未放入 <code>data/delivery_templates/files/</code>，请先制作并上传。</p>
+    <p class="warn">请先在「客户信息维护」中上传该客户的 Excel 模板。</p>
     {% else %}
-    <p>此客户不使用网页版统一送货单，出货与预览均生成专用 Excel。</p>
-    <p>请下载下方示例 Excel 查看占位/版式（正式版式替换同文件名即可）。</p>
+    <p>在 Excel 模板的单元格中写入占位符，出货时系统<strong>自动替换</strong>为订单数据，例如：</p>
+    <ul>
+      <li>{% raw %}{{客户}}{% endraw %} {% raw %}{{订单号}}{% endraw %} {% raw %}{{品名规格}}{% endraw %}</li>
+      <li>{% raw %}{{客户料号}}{% endraw %} {% raw %}{{本次出货}}{% endraw %} {% raw %}{{出货日期}}{% endraw %}</li>
+      <li>{% raw %}{{收货地址}}{% endraw %} {% raw %}{{收货联系人}}{% endraw %} {% raw %}{{送货单号}}{% endraw %}</li>
+    </ul>
+    <p>下方下载为<strong>已填入示例数据</strong>的 Excel，用于核对占位符位置是否正确。</p>
     {% endif %}
     {% if download_url and not template_missing %}
-    <a class="btn" href="{{ download_url }}" target="_blank" rel="noopener">下载 Excel 示例</a>
+    <a class="btn" href="{{ download_url }}" target="_blank" rel="noopener">下载预览（已自动填入示例）</a>
     {% endif %}
   </div>
 </body>

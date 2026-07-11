@@ -6,9 +6,9 @@
 
 ## 当前发布版本
 
-**v0.5.1** · 2026-05-30 · 顶部导航 UI 基线（CL-0103）  
-上一里程碑：**v0.5.0** · Git `e5f73b9` · 左侧栏布局（已 superseded）  
-详见 `docs/VERSION.md` · 回退见 `docs/RESTORE.md` · 会话摘要见 `docs/handoff/SESSION-20260530-ui-baseline.md`
+**v0.6.0** · 2026-07-11 · 成本分析拆分与客商维护（CL-0108）  
+上一里程碑：**v0.5.1** · 2026-05-30 · 顶部导航 UI 基线（CL-0103）  
+详见 `docs/VERSION.md` · 回退见 `docs/RESTORE.md`
 
 ## 登记格式说明
 
@@ -26,6 +26,55 @@
 ---
 
 ## 变更记录
+
+### CL-0108 · 2026-07-11 · 新增（B）
+
+- 涉及模块：成本分析、客商信息维护、客户档案、对账周期、订单料号、`cost_entry`/`cost_query`、导航
+- 变更内容：
+  - **成本分析**拆为 **成本录入** + **成本查询**（SQLite 持久化、编辑/删除、料号联想与单重回填）；
+  - **客商信息维护**下拉：**客户信息维护** + **供应商信息维护**；
+  - 客户 **对账周期** 改为二选一（自然月 / 21日～次月20日），已有客户默认未设置；
+  - 供应商默认 21日～次月20日；工艺选择卡片对齐优化；AI 助手入口暂隐藏。
+- 验证：`scripts/verify.ps1` 单元测试通过。
+- SOP 同步：待后续补全（本次以代码发布为主）。
+
+---
+
+### CL-0107 · 2026-05-30 · 修复（A）
+
+- 涉及模块：专用 Excel 送货单、`delivery_note/service.py`
+- 变更内容：恢复 **占位符自动填入**；出货/预览时用 `{{字段}}` 替换订单数据后再打开 Excel；合并出货汇总订单号与数量。
+- 验证：`tests/test_delivery_note.py`；专用客户预览下载应含已填示例值。
+- SOP 同步：已更新 §3.5.2 占位符说明。
+
+---
+
+### CL-0106 · 2026-05-30 · 优化（A）
+
+- 涉及模块：专用 Excel 出货、`custom_excel_attachment.py`、`app.js`
+- 变更内容：专用模板出货时 **本地直接打开 Excel**（`os.startfile`）；用户保存后 **自动写入出货明细附件**（`data/delivery_notes/attachments/` + 后台监听）。
+- 验证：专用客户合并出货 → 确认 → Excel 打开 → 保存 → 出货明细可打开附件。
+- SOP 同步：已更新 §3.5.2。
+
+---
+
+### CL-0105 · 2026-05-30 · 优化（A）
+
+- 涉及模块：专用送货单流程、`delivery_note/service.py`、`app.js`、`delivery-note-admin.js`、SOP
+- 变更内容：**专用 Excel 送货单简化为手动填写**：客户信息维护中**直接上传**模板；出货时**自动打开空白模板**（不再自动填占位符）；新增 `upload-for-customer`、`/raw` 接口。
+- 验证：`python -m unittest discover -s tests -p "test_*.py"`；专用客户上传模板后出货应打开 Excel。
+- SOP 同步：已更新 §3.5.2 专用模板说明。
+
+---
+
+### CL-0104 · 2026-05-30 · 优化（A）
+
+- 涉及模块：客户信息维护（原送货单维护）、`customer_profile`、`delivery-note-admin.js`
+- 变更内容：模块更名为 **客户信息维护**；新增 **新客户录入** 表单；**送货单改为可选项**（不使用 / 威可特统一模板 / 专用模板）；档案增加 `delivery_enabled` 字段。
+- 验证：`python -m unittest discover -s tests -p "test_*.py"`；浏览器进入 `/#delivery` 新增客户并保存送货单选项。
+- SOP 同步：已更新 §2 导航说明、§3.5.2。
+
+---
 
 ### CL-0103 · 2026-05-30 · 重构（B）
 - 涉及模块：`_order_sidebar.html`（顶栏）、`index.html`、`cost_analysis.html`、`style.css`、`cost.css`、`app.js`、`delivery-note-admin.js`、SOP、`docs/RESTORE.md`、`snapshots/ui-baseline-20260530/`

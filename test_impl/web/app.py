@@ -25,7 +25,11 @@ from test_impl.order_management.order_entry import (
     DuplicateLineError,
     intake_to_lines,
 )
-from test_impl.order_management.cost_analysis import CostAnalysisService
+from test_impl.order_management.cost_analysis import (
+    CostAnalysisService,
+    CostLookupService,
+    CostRecordService,
+)
 from test_impl.order_management.order_intake.source_preview import render_document_preview_pages
 from test_impl.order_management.order_intake import (
     IntakeService,
@@ -48,7 +52,9 @@ from test_impl.common.money import (
 from test_impl.web.design_catalog import catalog_summary, load_design_catalog
 from test_impl.order_management.delivery_note import DeliveryNoteService
 from test_impl.order_management.customer_profile import CustomerProfileService
+from test_impl.order_management.supplier_profile import SupplierProfileService
 from test_impl.order_management.reconciliation import ReconciliationService
+from test_impl.order_management.dashboard import OrderDashboardService
 from test_impl.integrations.feishu import public_feishu_config, save_feishu_config
 from test_impl.integrations.db_assistant import DatabaseAssistant, DatabaseAssistantError
 from test_impl.integrations.deepseek_client import DeepSeekChatClient
@@ -60,6 +66,7 @@ from test_impl.integrations.ai_memory import (
     memory_to_api_dict,
     save_memory,
 )
+from test_impl.common.filename_encoding import normalize_upload_filename
 from test_impl.integrations.wkt_events import (
     notify_import_completed,
     notify_line_created,
@@ -79,10 +86,24 @@ service = OrderEntryService()
 line_service = OrderLineService()
 delivery_note_service = DeliveryNoteService(line_service)
 customer_profile_service = CustomerProfileService(line_service)
+supplier_profile_service = SupplierProfileService()
 reconciliation_service = ReconciliationService(line_service._store)
+dashboard_service = OrderDashboardService(line_service)
 cost_service = CostAnalysisService()
+cost_record_service = CostRecordService(line_store=line_service._store)
+cost_lookup_service = CostLookupService(
+    line_store=line_service._store,
+    cost_store=cost_record_service._store,
+    record_service=cost_record_service,
+)
 intake_service = IntakeService(line_service=line_service)
 db_assistant = DatabaseAssistant(db_path=line_service.db_path)
+
+from test_impl.order_management.delivery_note.custom_excel_attachment import register_save_hook
+
+register_save_hook(
+    lambda event_ids, rel_path: delivery_note_service.persist_attachment_saved(event_ids, rel_path)
+)
 
 # 识别任务（内存，重启清空）
 _recognize_jobs: dict = {}
@@ -166,7 +187,17 @@ def index():
 
 @app.route("/cost")
 def cost_page():
-    return render_template("cost_analysis.html")
+    return redirect("/cost/entry")
+
+
+@app.route("/cost/entry")
+def cost_entry_page():
+    return render_template("cost_entry.html", active="cost_entry")
+
+
+@app.route("/cost/query")
+def cost_query_page():
+    return render_template("cost_query.html", active="cost_query")
 
 
 @app.route("/themes")
@@ -184,7 +215,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260530-ui-baseline-v051",
+            "build": "20260623-order-dashboard",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -206,10 +237,17 @@ def api_health():
                 "ai_business_memory",
                 "reconciliation",
                 "customer_profiles",
+                "supplier_profiles",
+                "order_dashboard",
             ],
             "feishu": public_feishu_config(),
         }
     )
+
+
+@app.route("/api/dashboard/overview", methods=["GET"])
+def dashboard_overview():
+    return jsonify(dashboard_service.build_overview())
 
 
 @app.route("/api/design-catalog")
@@ -254,7 +292,7 @@ def lookup_master():
 def _shipment_to_dict(ev) -> dict:
     from test_impl.common.money import serialize_qty
 
-    return {
+    payload = {
         "id": ev.id,
         "line_id": ev.line_id,
         "ship_qty": serialize_qty(ev.ship_qty),
@@ -270,6 +308,33 @@ def _shipment_to_dict(ev) -> dict:
         "shipped_qty_after": serialize_qty(ev.shipped_qty_after),
         "open_qty_after": serialize_qty(ev.open_qty_after),
     }
+    payload["delivery_doc_no"] = delivery_note_service.resolve_delivery_doc_no(
+        ev.id,
+        getattr(ev, "delivery_note_json", "") or "",
+    )
+    try:
+        ui = delivery_note_service.ship_ui_mode(ev.customer or "")
+        payload["delivery_note_mode"] = ui.get("mode", "wkt_standard")
+        if ui.get("mode") == "custom_excel":
+            payload["delivery_note_download_url"] = f"/api/delivery-notes/{ev.id}/download"
+            payload["delivery_note_open_local_url"] = f"/api/delivery-notes/{ev.id}/open-local"
+            rel = line_service._store.get_shipment_attachment(ev.id)
+            payload["delivery_note_attachment"] = rel
+            payload["has_delivery_note_attachment"] = bool(rel)
+            if rel:
+                try:
+                    st = delivery_note_service.attachment_status(ev.id)
+                    payload["saved_at"] = st.get("saved_at", "")
+                except ValueError:
+                    payload["saved_at"] = ""
+        elif ui.get("raw_download_url"):
+            payload["delivery_note_download_url"] = ui["raw_download_url"]
+        elif ui.get("mode") == "wkt_standard":
+            payload["delivery_note_print_url"] = f"/delivery-note/print/{ev.id}"
+            payload["delivery_note_download_url"] = f"/api/delivery-notes/{ev.id}/download"
+    except ValueError:
+        payload["delivery_note_mode"] = "none"
+    return payload
 
 
 @app.route("/api/shipment-events", methods=["GET"])
@@ -279,6 +344,22 @@ def list_shipment_events():
     customer = request.args.get("customer", "")
     events = line_service.list_shipment_events(q=q, customer=customer)
     return jsonify([_shipment_to_dict(ev) for ev in events])
+
+
+@app.route("/api/shipment-events/<int:event_id>/return-open", methods=["POST"])
+def return_shipment_to_open(event_id: int):
+    """撤销误出货：删除出货明细记录，已出货数量回退，料号回到未结订单。"""
+    try:
+        line, removed_id = line_service.reverse_shipment_event(event_id)
+        payload = _line_to_dict(line)
+        payload["removed_shipment_event_id"] = removed_id
+        payload["open_qty"] = serialize_qty(line.open_qty())
+        payload["returned_to_open"] = line.open_qty() > 0
+        return jsonify(payload)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc) or "撤销失败"}), 500
 
 
 @app.route("/api/lines", methods=["GET"])
@@ -433,16 +514,15 @@ def batch_ship_lines():
                 delivery_doc_no=doc_no,
             )
         first_event_id = events[0].id
-        return jsonify(
-            {
-                "ok": True,
-                "customer": updated_lines[0].customer,
-                "shipment_event_ids": [ev.id for ev in events],
-                "delivery_note_print_url": f"/delivery-note/print/{first_event_id}",
-                "delivery_note_download_url": f"/api/delivery-notes/{first_event_id}/download",
-                "lines": line_payloads,
-            }
-        )
+        batch_payload = {
+            "ok": True,
+            "customer": updated_lines[0].customer,
+            "shipment_event_id": first_event_id,
+            "shipment_event_ids": [ev.id for ev in events],
+            "lines": line_payloads,
+        }
+        _enrich_ship_delivery_urls(batch_payload, updated_lines[0].customer, first_event_id)
+        return jsonify(batch_payload)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -459,6 +539,28 @@ def ship_delivery_draft(line_id: int):
         return jsonify({"error": str(exc)}), 400
 
 
+def _enrich_ship_delivery_urls(payload: dict, customer: str, event_id: int) -> None:
+    try:
+        ui = delivery_note_service.ship_ui_mode(customer)
+    except ValueError:
+        return
+    mode = ui.get("mode")
+    if mode == "none":
+        payload.pop("delivery_note_print_url", None)
+        payload.pop("delivery_note_download_url", None)
+        payload["delivery_note_mode"] = "none"
+        return
+    if mode == "custom_excel":
+        payload["delivery_note_mode"] = "custom_excel"
+        payload.pop("delivery_note_print_url", None)
+        payload["delivery_note_download_url"] = f"/api/delivery-notes/{event_id}/download"
+        payload["delivery_note_open_local_url"] = f"/api/delivery-notes/{event_id}/open-local"
+        return
+    payload["delivery_note_mode"] = "wkt_standard"
+    payload["delivery_note_print_url"] = f"/delivery-note/print/{event_id}"
+    payload["delivery_note_download_url"] = f"/api/delivery-notes/{event_id}/download"
+
+
 @app.route("/api/lines/<int:line_id>/ship", methods=["POST"])
 def ship_line(line_id: int):
     data = request.get_json(force=True) or {}
@@ -473,8 +575,7 @@ def ship_line(line_id: int):
         payload = _line_to_dict(line)
         payload["closed"] = line.open_qty() <= 0
         payload["shipment_event_id"] = event.id
-        payload["delivery_note_print_url"] = f"/delivery-note/print/{event.id}"
-        payload["delivery_note_download_url"] = f"/api/delivery-notes/{event.id}/download"
+        _enrich_ship_delivery_urls(payload, line.customer, event.id)
         doc_no = ""
         if isinstance(delivery_note, dict):
             doc_no = str(delivery_note.get("doc_no") or "").strip()
@@ -526,6 +627,35 @@ def delivery_note_download(event_id: int):
         return jsonify({"error": str(exc)}), 400
 
 
+@app.route("/api/delivery-notes/<int:event_id>/open-local", methods=["POST"])
+def delivery_note_open_local(event_id: int):
+    data = request.get_json(force=True, silent=True) or {}
+    batch_ids = data.get("batch_event_ids") or data.get("event_ids") or []
+    if not isinstance(batch_ids, list):
+        batch_ids = []
+    regenerate = data.get("regenerate", True)
+    if isinstance(regenerate, str):
+        regenerate = regenerate.lower() not in ("0", "false", "no")
+    try:
+        return jsonify(
+            delivery_note_service.open_custom_excel_local(
+                event_id,
+                [int(x) for x in batch_ids if str(x).strip().isdigit()],
+                regenerate=bool(regenerate),
+            )
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/delivery-notes/<int:event_id>/attachment-status", methods=["GET"])
+def delivery_note_attachment_status(event_id: int):
+    try:
+        return jsonify(delivery_note_service.attachment_status(event_id))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 @app.route("/delivery-note/preview-sample")
 def delivery_note_preview_sample():
     customer = (request.args.get("customer") or "").strip()
@@ -540,7 +670,7 @@ def delivery_note_preview_sample():
                 customer=customer,
                 template_file=info.get("template_file") or "",
                 template_missing=info.get("template_missing"),
-                download_url=info.get("preview_download_url"),
+                download_url=info.get("raw_download_url") or info.get("preview_download_url"),
                 embed=embed,
             )
         doc = delivery_note_service.render_sample_html_doc(customer)
@@ -574,9 +704,49 @@ def delivery_template_preview_download():
         return send_file(
             io.BytesIO(data),
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            as_attachment=True,
+            as_attachment=False,
             download_name=fname,
         )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/delivery-templates/raw", methods=["GET"])
+def delivery_template_raw():
+    customer = (request.args.get("customer") or "").strip()
+    try:
+        data, fname = delivery_note_service.raw_template_bytes(customer)
+        return send_file(
+            io.BytesIO(data),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=False,
+            download_name=fname,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/delivery-templates/ship-ui", methods=["GET"])
+def delivery_template_ship_ui():
+    customer = (request.args.get("customer") or "").strip()
+    try:
+        return jsonify({"ok": True, **delivery_note_service.ship_ui_mode(customer)})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/delivery-templates/upload-for-customer", methods=["POST"])
+def upload_delivery_template_for_customer():
+    customer = (request.form.get("customer") or "").strip()
+    f = request.files.get("file")
+    if not customer:
+        return jsonify({"error": "客户名称不能为空"}), 400
+    if not f or not f.filename:
+        return jsonify({"error": "请选择 Excel 模板文件"}), 400
+    try:
+        name = delivery_note_service.upload_template_file(normalize_upload_filename(f.filename), f.read())
+        delivery_note_service.set_customer_template(customer, name)
+        return jsonify({"ok": True, "customer": customer, "filename": name})
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -613,7 +783,7 @@ def upload_delivery_template():
     if not f or not f.filename:
         return jsonify({"error": "请选择文件"}), 400
     try:
-        name = delivery_note_service.upload_template_file(f.filename, f.read())
+        name = delivery_note_service.upload_template_file(normalize_upload_filename(f.filename), f.read())
         return jsonify({"ok": True, "filename": name})
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
@@ -668,6 +838,65 @@ def save_customer_profile():
     try:
         profile = customer_profile_service.save(customer, data.get("profile") or {})
         return jsonify({"ok": True, "customer": customer, "profile": profile})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/customer-profiles/create", methods=["POST"])
+def create_customer_profile():
+    data = request.get_json(force=True) or {}
+    customer = (data.get("customer") or "").strip()
+    if not customer:
+        return jsonify({"error": "客户名称不能为空"}), 400
+    try:
+        profile = customer_profile_service.create(customer, data.get("profile") or {})
+        return jsonify({"ok": True, "customer": customer, "profile": profile})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/supplier-profiles", methods=["GET"])
+def list_supplier_profiles():
+    rows = supplier_profile_service.list_rows()
+    return jsonify({"ok": True, "rows": rows, "count": len(rows)})
+
+
+@app.route("/api/supplier-profiles/detail", methods=["GET"])
+def get_supplier_profile():
+    supplier = request.args.get("supplier", "").strip()
+    if not supplier:
+        return jsonify({"error": "请选择供应商"}), 400
+    return jsonify(
+        {
+            "ok": True,
+            "supplier": supplier,
+            "profile": supplier_profile_service.get(supplier),
+        }
+    )
+
+
+@app.route("/api/supplier-profiles", methods=["POST"])
+def save_supplier_profile():
+    data = request.get_json(force=True) or {}
+    supplier = (data.get("supplier") or "").strip()
+    if not supplier:
+        return jsonify({"error": "供应商名称不能为空"}), 400
+    try:
+        profile = supplier_profile_service.save(supplier, data.get("profile") or {})
+        return jsonify({"ok": True, "supplier": supplier, "profile": profile})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/supplier-profiles/create", methods=["POST"])
+def create_supplier_profile():
+    data = request.get_json(force=True) or {}
+    supplier = (data.get("supplier") or "").strip()
+    if not supplier:
+        return jsonify({"error": "供应商名称不能为空"}), 400
+    try:
+        profile = supplier_profile_service.create(supplier, data.get("profile") or {})
+        return jsonify({"ok": True, "supplier": supplier, "profile": profile})
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -966,6 +1195,7 @@ def cost_options():
         {
             "materials": cost_service.get_materials(),
             "processes": cost_service.get_processes(),
+            "process_options": cost_service.get_process_options(),
         }
     )
 
@@ -977,6 +1207,82 @@ def cost_quote():
         quote = cost_service.build_quote(data)
         return jsonify(cost_service.quote_to_dict(quote))
     except (KeyError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/cost/records", methods=["GET"])
+def cost_records_list():
+    q = request.args.get("q", "")
+    customer = request.args.get("customer", "")
+    product_part_no = request.args.get("product_part_no", "")
+    records = cost_record_service.list_records(
+        q=q,
+        customer=customer,
+        product_part_no=product_part_no,
+    )
+    return jsonify(
+        {
+            "records": [cost_record_service.record_to_dict(r) for r in records],
+            "total": len(records),
+        }
+    )
+
+
+@app.route("/api/cost/records", methods=["POST"])
+def cost_records_create():
+    data = request.get_json(force=True) or {}
+    try:
+        record = cost_record_service.create_record(data)
+        return jsonify(cost_record_service.record_to_dict(record)), 201
+    except (KeyError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/cost/records/<int:record_id>", methods=["GET"])
+def cost_records_get(record_id: int):
+    try:
+        record = cost_record_service.get_record(record_id)
+        return jsonify(cost_record_service.record_to_dict(record))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+
+@app.route("/api/cost/records/<int:record_id>", methods=["PUT"])
+def cost_records_update(record_id: int):
+    data = request.get_json(force=True) or {}
+    try:
+        record = cost_record_service.update_record(record_id, data)
+        return jsonify(cost_record_service.record_to_dict(record))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/cost/records/<int:record_id>", methods=["DELETE"])
+def cost_records_delete(record_id: int):
+    try:
+        cost_record_service.delete_record(record_id)
+        return jsonify({"ok": True})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+
+
+@app.route("/api/cost/part-numbers", methods=["GET"])
+def cost_part_numbers():
+    q = request.args.get("q", "")
+    try:
+        limit = int(request.args.get("limit", "20"))
+    except ValueError:
+        limit = 20
+    items = cost_lookup_service.suggest_part_numbers(q=q, limit=limit)
+    return jsonify({"items": items, "total": len(items)})
+
+
+@app.route("/api/cost/lookup", methods=["GET"])
+def cost_lookup():
+    product_part_no = request.args.get("product_part_no", "")
+    try:
+        return jsonify(cost_lookup_service.lookup_by_part_no(product_part_no))
+    except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
 

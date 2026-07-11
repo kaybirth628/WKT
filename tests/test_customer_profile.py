@@ -7,7 +7,9 @@ from test_impl.order_management.customer_profile.delivery_sync import (
     format_receiver_contact,
     sync_delivery_from_profile,
 )
+from test_impl.order_management.customer_profile.service import CustomerProfileService
 from test_impl.order_management.delivery_note import wkt_document
+from test_impl.order_management.order_entry import OrderLineService
 
 
 class TestCustomerProfileStore(unittest.TestCase):
@@ -34,12 +36,55 @@ class TestCustomerProfileStore(unittest.TestCase):
                 "phone": "0512-12345678",
                 "email": "a@b.com",
                 "payment_terms": "月结60天",
-                "reconciliation_cycle": "月结60天·每月25日对账",
+                "reconciliation_period": "month_21_20",
             },
         )
         self.assertEqual(row["contact"], "李四")
         loaded = store.get_profile("测试客户")
-        self.assertEqual(loaded["reconciliation_cycle"], "月结60天·每月25日对账")
+        self.assertEqual(loaded["reconciliation_period"], "month_21_20")
+
+    def test_save_requires_reconciliation_period_on_create(self) -> None:
+        with self.assertRaises(ValueError):
+            store.save_profile("测试客户", {"address": "地址A"})
+
+    def test_save_allows_empty_period_on_update(self) -> None:
+        store.save_profile(
+            "测试客户",
+            {
+                "address": "地址A",
+                "reconciliation_period": "month_21_20",
+                "delivery_enabled": "1",
+            },
+        )
+        row = store.save_profile(
+            "测试客户",
+            {
+                "address": "地址B",
+                "reconciliation_period": "",
+                "delivery_enabled": "1",
+            },
+        )
+        self.assertEqual(row["address"], "地址B")
+        self.assertEqual(row["reconciliation_period"], "")
+
+    def test_delivery_enabled_default(self) -> None:
+        self.assertTrue(store.is_delivery_enabled({}))
+        self.assertTrue(store.is_delivery_enabled({"delivery_enabled": "1"}))
+        self.assertFalse(store.is_delivery_enabled({"delivery_enabled": "0"}))
+
+    def test_save_with_delivery_disabled_skips_sync(self) -> None:
+        store.save_profile(
+            "无送货单客户",
+            {
+                "address": "地址",
+                "contact": "张三",
+                "delivery_enabled": "0",
+                "reconciliation_period": "month_21_20",
+            },
+        )
+        sync_delivery_from_profile("无送货单客户", only_if_empty=True)
+        raw = wkt_document.get_raw_customer_delivery_info("无送货单客户")
+        self.assertEqual(raw, {})
 
     def test_format_receiver_contact(self) -> None:
         self.assertEqual(
@@ -51,7 +96,12 @@ class TestCustomerProfileStore(unittest.TestCase):
     def test_sync_delivery_only_if_empty(self) -> None:
         store.save_profile(
             "测试客户",
-            {"address": "公司地址", "contact": "王五", "phone": "111"},
+            {
+                "address": "公司地址",
+                "contact": "王五",
+                "phone": "111",
+                "reconciliation_period": "calendar_month",
+            },
         )
         sync_delivery_from_profile("测试客户", only_if_empty=True)
         info = wkt_document.get_customer_delivery_info("测试客户")
@@ -70,11 +120,49 @@ class TestCustomerProfileStore(unittest.TestCase):
         )
         store.save_profile(
             "测试客户",
-            {"address": "新档案地址", "contact": "王五", "phone": "111"},
+            {
+                "address": "新档案地址",
+                "contact": "王五",
+                "phone": "111",
+                "reconciliation_period": "calendar_month",
+            },
         )
         sync_delivery_from_profile("测试客户", only_if_empty=True)
         raw = wkt_document.get_raw_customer_delivery_info("测试客户")
         self.assertEqual(raw["receiver_address"], "手工送货地址")
+
+
+class TestCustomerProfileService(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.path = Path(self.tmp.name) / "customer_profiles.json"
+        self._orig = store.PROFILES_FILE
+        store.PROFILES_FILE = self.path
+        self.lines = OrderLineService(db_path=":memory:")
+        self.svc = CustomerProfileService(self.lines)
+
+    def tearDown(self) -> None:
+        store.PROFILES_FILE = self._orig
+        self.tmp.cleanup()
+
+    def test_create_customer_registers_master(self) -> None:
+        row = self.svc.create(
+            "新客户A",
+            {
+                "address": "苏州",
+                "contact": "李四",
+                "delivery_enabled": "1",
+                "reconciliation_period": "month_21_20",
+            },
+        )
+        self.assertEqual(row["address"], "苏州")
+        names = self.lines.list_master().get("customers") or []
+        self.assertIn("新客户A", names)
+
+    def test_create_duplicate_raises(self) -> None:
+        self.svc.create("重复客", {"reconciliation_period": "month_21_20"})
+        with self.assertRaises(ValueError):
+            self.svc.create("重复客", {"reconciliation_period": "month_21_20"})
 
 
 if __name__ == "__main__":

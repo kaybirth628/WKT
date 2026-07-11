@@ -29,6 +29,7 @@ class ShipmentEvent:
     po_qty: Decimal = Decimal("0")
     shipped_qty_after: Decimal = Decimal("0")
     open_qty_after: Decimal = Decimal("0")
+    delivery_note_json: str = ""
 
     @property
     def source_label(self) -> str:

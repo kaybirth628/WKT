@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Dict
 
-from test_impl.order_management.customer_profile.store import get_profile
+from test_impl.order_management.customer_profile.store import get_profile, is_delivery_enabled
 from test_impl.order_management.delivery_note.wkt_document import (
     get_raw_customer_delivery_info,
     save_customer_delivery_info,
@@ -29,6 +29,8 @@ def sync_delivery_from_profile(
     if not customer:
         return False
     profile = profile if profile is not None else get_profile(customer)
+    if not is_delivery_enabled(profile):
+        return False
     address = (profile.get("address") or "").strip()
     contact = (profile.get("contact") or "").strip()
     phone = (profile.get("phone") or "").strip()

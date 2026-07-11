@@ -24,6 +24,7 @@ imports/*
 
 # 送货单 Excel 模板（含客户信息，勿提交）
 data/delivery_templates/files/*
+data/delivery_notes/attachments/*
 !data/delivery_templates/files/.gitkeep
 
 # 本地订单 SQLite（勿提交业务数据）
@@ -31,4 +32,8 @@ data/*.db
 data/*.db-journal
 data/*.db-wal
 data/*.db-shm
+data/*.db.bak*
+data/customer_profiles.json
+data/_customer_audit.json
+data/feishu_config.json
 data/ai_assistant_memory.json

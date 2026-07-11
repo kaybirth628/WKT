@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 # ============================================================
 # 原材选项（下拉菜单）。如需增减，在此维护即可。
@@ -12,51 +12,95 @@ RAW_MATERIALS: List[str] = [
 ]
 
 # ============================================================
-# 工艺清单（除原材外的所有项）。
-# 注意：以下名称由图片识别得到，部分字可能需要核对修正。
-# 维护方式：直接增删本列表即可，前端会自动同步。
+# 工艺目录：两位编号 + 显示名称。
+# 压铸类（压铸/埋轴/下料/精冲）合并为 01 压铸，录入与查询只显示一项。
 # ============================================================
-PROCESS_LIST: List[str] = [
-    "压铸",
-    "埋轴",
-    "下料",
-    "精冲",
-    "去毛边",
-    "抛光",
-    "过砂",
-    "打磨",
-    "喷砂",
-    "补土",
-    "抛丸",
-    "震研",
-    "磁力研磨",
-    "钻孔攻牙",
-    "车加工",
-    "CNC",
-    "铆合",
-    "皮模钝化",
-    "洗白",
-    "超声波清洗",
-    "电镀",
-    "化镍",
-    "电泳",
-    "烤漆",
-    "喷粉",
-    "阳极",
-    "镭雕",
-    "整形",
-    "剥漆",
-    "包胶",
-    "全检",
-    "外购磁铁",
-    "外购销钉",
-    "外购轴套",
-    "制程损耗",
-    "包装",
-    "运输",
-    "管销",
-    "利润",
+PROCESS_CATALOG: List[Tuple[str, str]] = [
+    ("01", "压铸"),
+    ("02", "去毛边"),
+    ("03", "抛光"),
+    ("04", "过砂"),
+    ("05", "打磨"),
+    ("06", "喷砂"),
+    ("07", "补土"),
+    ("08", "抛丸"),
+    ("09", "震研"),
+    ("10", "磁力研磨"),
+    ("11", "钻孔攻牙"),
+    ("12", "车加工"),
+    ("13", "CNC"),
+    ("14", "铆合"),
+    ("15", "皮模钝化"),
+    ("16", "洗白"),
+    ("17", "超声波清洗"),
+    ("18", "电镀"),
+    ("19", "化镍"),
+    ("20", "电泳"),
+    ("21", "烤漆"),
+    ("22", "喷粉"),
+    ("23", "阳极"),
+    ("24", "镭雕"),
+    ("25", "整形"),
+    ("26", "剥漆"),
+    ("27", "包胶"),
+    ("28", "全检"),
+    ("29", "外购磁铁"),
+    ("30", "外购销钉"),
+    ("31", "外购轴套"),
+    ("32", "制程损耗"),
+    ("33", "包装"),
+    ("34", "运输"),
+    ("35", "管销"),
+    ("36", "利润"),
 ]
+
+# 已并入 01 压铸的旧工艺名（兼容历史数据）
+LEGACY_PROCESS_ALIASES: Dict[str, str] = {
+    "埋轴": "01",
+    "下料": "01",
+    "精冲": "01",
+}
+
+PROCESS_LIST: List[str] = [name for _, name in PROCESS_CATALOG]
+PROCESS_BY_CODE: Dict[str, str] = {code: name for code, name in PROCESS_CATALOG}
+PROCESS_CODE_BY_NAME: Dict[str, str] = {name: code for code, name in PROCESS_CATALOG}
+
+
+@dataclass
+class ProcessOption:
+    code: str
+    name: str
+
+    def to_dict(self) -> dict:
+        return {"code": self.code, "name": self.name}
+
+
+def list_process_options() -> List[ProcessOption]:
+    return [ProcessOption(code, name) for code, name in PROCESS_CATALOG]
+
+
+def resolve_process_key(key: str) -> Tuple[str, str]:
+    """将工艺编号或名称解析为 (code, name)。"""
+    raw = str(key).strip()
+    if not raw:
+        raise ValueError("工艺不能为空")
+    if raw in PROCESS_BY_CODE:
+        return raw, PROCESS_BY_CODE[raw]
+    if raw in PROCESS_CODE_BY_NAME:
+        return PROCESS_CODE_BY_NAME[raw], raw
+    if raw in LEGACY_PROCESS_ALIASES:
+        code = LEGACY_PROCESS_ALIASES[raw]
+        return code, PROCESS_BY_CODE[code]
+    raise ValueError(f"未知工艺: {key}")
+
+
+def process_prices_to_names(prices: Dict[str, str]) -> Dict[str, str]:
+    """编号键 -> 名称键（报价计算用）。"""
+    out: Dict[str, str] = {}
+    for key, price in prices.items():
+        code, name = resolve_process_key(key)
+        out[name] = price
+    return out
 
 
 def quantize_money(value: Decimal) -> Decimal:
@@ -74,9 +118,11 @@ class CostQuote:
     quantity: Decimal = Decimal("1")
     markup_rate: Decimal = Decimal("0")
 
-    def validate(self) -> None:
-        if self.material_code not in RAW_MATERIALS:
+    def validate(self, *, strict_material: bool = True) -> None:
+        if strict_material and self.material_code not in RAW_MATERIALS:
             raise ValueError(f"未知原材: {self.material_code}")
+        if not (self.material_code or "").strip():
+            raise ValueError("材质不能为空")
         if self.material_unit_price < 0:
             raise ValueError("原材单价不能为负")
         if self.material_weight < 0:
