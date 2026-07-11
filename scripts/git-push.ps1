@@ -1,9 +1,9 @@
-# 一键：提交并推送到 GitHub（master），可选打里程碑版本标签
-# 用法：
+# WKT: commit and push to GitHub (master), optional milestone tag
+# Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\git-push.ps1
-#   powershell -ExecutionPolicy Bypass -File scripts\git-push.ps1 -Message "CL-0104: 简述"
+#   powershell -ExecutionPolicy Bypass -File scripts\git-push.ps1 -Message "CL-0104: summary"
 #   powershell -ExecutionPolicy Bypass -File scripts\git-push.ps1 -PushOnly
-#   powershell -ExecutionPolicy Bypass -File scripts\git-push.ps1 -Version "v0.5.2"
+#   powershell -ExecutionPolicy Bypass -File scripts\git-push.ps1 -Version "v0.6.0"
 
 param(
     [string]$Message = "",
@@ -19,7 +19,7 @@ function Get-DocVersion {
     $path = Join-Path $root "docs\VERSION.md"
     if (!(Test-Path $path)) { return "" }
     $text = Get-Content $path -Raw -Encoding UTF8
-    if ($text -match '\|\s*\*\*版本号\*\*\s*\|\s*\*\*(v[\d.]+)\*\*') {
+    if ($text -match '\*\*(v\d+\.\d+\.\d+)\*\*') {
         return $Matches[1]
     }
     return ""
@@ -36,7 +36,7 @@ function Normalize-VersionTag([string]$raw) {
     if (-not $v) { return "" }
     if ($v -notmatch '^v') { $v = "v$v" }
     if ($v -notmatch '^v\d+\.\d+\.\d+$') {
-        throw "版本号格式应为 v0.5.2 这类（三位数字），当前: $raw"
+        throw "Invalid version tag (use v0.6.0): $raw"
     }
     return $v
 }
@@ -45,11 +45,11 @@ function Show-VersionHelp {
     $docVer = Get-DocVersion
     $gitTag = Get-LatestGitTag
     Write-Host ""
-    Write-Host "=== 版本与变更（推送前）===" -ForegroundColor Cyan
-    Write-Host "  CL-XXXX  ：每次改动的变更编号（写在提交说明 / CHANGELOG，日常推送用这个）"
-    Write-Host "  v0.5.x   ：里程碑大版本（Git 标签，方便回退；不必每次推送都打）"
-    if ($docVer) { Write-Host "  VERSION.md 当前版本: $docVer" -ForegroundColor DarkGray }
-    if ($gitTag) { Write-Host "  Git 最新标签:       $gitTag" -ForegroundColor DarkGray }
+    Write-Host "=== Version / CHANGELOG ===" -ForegroundColor Cyan
+    Write-Host "  CL-XXXX  : daily commit message"
+    Write-Host "  v0.x.x   : optional milestone git tag"
+    if ($docVer) { Write-Host "  VERSION.md: $docVer" -ForegroundColor DarkGray }
+    if ($gitTag) { Write-Host "  Latest tag: $gitTag" -ForegroundColor DarkGray }
     Write-Host ""
 }
 
@@ -66,40 +66,47 @@ if (-not $PushOnly) {
     $pending = git status --porcelain
     if ($pending) {
         if (-not $Message.Trim()) {
-            $Message = Read-Host "【变更记录】提交说明（建议 CL-0104: 简述）"
+            $Message = Read-Host "Commit message (e.g. CL-0108: summary)"
         }
         if (-not $Message.Trim()) {
-            throw "未输入提交说明，已取消。"
+            throw "Commit message required."
         }
-
         git add -A
         git commit -m $Message
-        Write-Host "已提交: $Message" -ForegroundColor Green
-    } else {
-        Write-Host "没有未提交的改动，仅推送。" -ForegroundColor Yellow
+        Write-Host "Committed: $Message" -ForegroundColor Green
+    }
+    else {
+        Write-Host "No local changes; push only." -ForegroundColor Yellow
     }
 }
 
 if (-not $Version.Trim()) {
-    $Version = Read-Host "【里程碑版本】要打 Git 标签吗？留空=只推代码；输入如 v0.5.2=打标签并推送"
+    $Version = Read-Host "Milestone tag? empty=skip, e.g. v0.6.0"
 }
 $Version = Normalize-VersionTag $Version
 
-Write-Host "推送到 origin/master ..." -ForegroundColor Cyan
+Write-Host "Pushing origin/master ..." -ForegroundColor Cyan
 git push origin master
+if ($LASTEXITCODE -ne 0) {
+    throw "git push failed."
+}
 
 if ($Version) {
     $exists = git tag -l $Version
     if ($exists) {
-        Write-Host "标签 $Version 已存在，跳过创建，仅推送标签。" -ForegroundColor Yellow
-    } else {
+        Write-Host "Tag $Version exists; pushing tag only." -ForegroundColor Yellow
+    }
+    else {
         git tag -a $Version -m "Release $Version"
-        Write-Host "已创建标签 $Version" -ForegroundColor Green
+        Write-Host "Created tag $Version" -ForegroundColor Green
     }
     git push origin $Version
-    Write-Host "已推送标签 $Version" -ForegroundColor Green
-    Write-Host "提示: 请同步更新 docs/VERSION.md 与 CHANGELOG「当前发布版本」。" -ForegroundColor DarkYellow
+    if ($LASTEXITCODE -ne 0) {
+        throw "git push tag failed."
+    }
+    Write-Host "Pushed tag $Version" -ForegroundColor Green
+    Write-Host "Update docs/VERSION.md and CHANGELOG if needed." -ForegroundColor DarkYellow
 }
 
 Write-Host ""
-Write-Host "完成。仓库: https://github.com/kaybirth628/WKT" -ForegroundColor Green
+Write-Host "Done: https://github.com/kaybirth628/WKT" -ForegroundColor Green
