@@ -62,24 +62,49 @@ function markAutoFilledWeight(filled) {
   input.classList.toggle("is-auto-filled", Boolean(filled));
 }
 
-function applyProcessPrices(processPrices) {
+function applyProcessPrices(processPrices, processSelections) {
   document.querySelectorAll(".process-pick:checked").forEach((cb) => {
     cb.checked = false;
     cb.dispatchEvent(new Event("change"));
   });
-  if (!processPrices || !Object.keys(processPrices).length) return;
 
-  Object.entries(processPrices).forEach(([code, price]) => {
+  const byCode = {};
+  if (Array.isArray(processSelections) && processSelections.length) {
+    processSelections.forEach((item) => {
+      byCode[item.code] = {
+        price: item.price,
+        supplier: item.supplier || "",
+      };
+    });
+  } else if (processPrices && Object.keys(processPrices).length) {
+    Object.entries(processPrices).forEach(([code, val]) => {
+      if (val && typeof val === "object") {
+        byCode[code] = {
+          price: val.price != null ? val.price : "0",
+          supplier: val.supplier || "",
+        };
+      } else {
+        byCode[code] = { price: val, supplier: "" };
+      }
+    });
+  }
+  if (!Object.keys(byCode).length) return;
+
+  Object.entries(byCode).forEach(([code, entry]) => {
     const cb = document.querySelector(`.process-pick[data-process-code="${code}"]`);
     if (!cb) return;
     cb.checked = true;
     cb.dispatchEvent(new Event("change"));
     const inp = document.querySelector(`input.process-price[data-process-code="${code}"]`);
-    if (inp && price !== "" && price != null) {
-      inp.value = price;
-      inp.classList.toggle("filled", parseFloat(price) > 0);
+    if (inp && entry.price !== "" && entry.price != null) {
+      inp.value = entry.price !== "0" ? entry.price : "";
+      inp.classList.toggle("filled", parseFloat(entry.price) > 0);
     }
+    const sel = document.querySelector(`select.process-supplier[data-process-code="${code}"]`);
+    if (sel && entry.supplier) sel.value = entry.supplier;
   });
+  selectedCount = document.querySelectorAll("#processGrid .process-pick:checked").length;
+  updateProcessSelectionSummary();
 }
 
 function applySuggestedFill(suggested) {
@@ -101,8 +126,8 @@ function applySuggestedFill(suggested) {
     if (form[name]) form[name].value = value;
   });
 
-  if (suggested.process_prices) {
-    applyProcessPrices(suggested.process_prices);
+  if (suggested.process_prices || suggested.process_selections) {
+    applyProcessPrices(suggested.process_prices, suggested.process_selections);
   }
   markAutoFilledWeight(Boolean(suggested.unit_weight_g && parseFloat(suggested.unit_weight_g) > 0));
 }
@@ -202,42 +227,14 @@ function renderProcessPicker(processOptions) {
     processLabelByName[p.name] = `${p.code} ${p.name}`;
   });
 
-  grid.innerHTML = processOptions
-    .map(
-      (p) => `
-    <label class="process-pick-item">
-      <span class="process-pick-head">
-        <input type="checkbox" class="process-pick" data-process-code="${p.code}" data-process="${p.name}" />
-        <span class="process-code">${p.code}</span>
-        <span class="process-name" title="${p.name}">${p.name}</span>
-      </span>
-      <input class="process-price" data-process-code="${p.code}" data-process-price="${p.name}" type="number" step="0.0001" min="0" placeholder="单价（可选）" disabled />
-    </label>`
-    )
-    .join("");
-
+  grid.innerHTML = CostCommon.renderProcessGridHtml(processOptions);
   selectedCount = 0;
   updateProcessSelectionSummary();
-
+  CostCommon.bindProcessPickerGrid(grid);
   grid.querySelectorAll(".process-pick").forEach((cb) => {
     cb.addEventListener("change", () => {
-      const code = cb.dataset.processCode;
-      const priceInput = grid.querySelector(`input.process-price[data-process-code="${code}"]`);
-      if (priceInput) {
-        priceInput.disabled = !cb.checked;
-        if (!cb.checked) {
-          priceInput.value = "";
-          priceInput.classList.remove("filled");
-        }
-      }
       selectedCount = grid.querySelectorAll(".process-pick:checked").length;
       updateProcessSelectionSummary();
-    });
-  });
-
-  grid.querySelectorAll(".process-price").forEach((inp) => {
-    inp.addEventListener("input", () => {
-      inp.classList.toggle("filled", inp.value !== "" && parseFloat(inp.value) > 0);
     });
   });
 }
@@ -263,17 +260,17 @@ function collectBasicForm(form) {
 }
 
 function collectSelectedProcesses() {
-  const byCode = {};
-  const byName = {};
-  document.querySelectorAll(".process-pick:checked").forEach((cb) => {
-    const code = cb.dataset.processCode;
-    const name = cb.dataset.process;
-    const inp = document.querySelector(`input.process-price[data-process-code="${code}"]`);
-    const price = inp && inp.value !== "" ? inp.value : "0";
-    byCode[code] = price;
-    byName[name] = price;
-  });
-  return { byCode, byName };
+  return CostCommon.collectProcessEntries("#processGrid");
+}
+
+function validateSuppliers(msgEl) {
+  const missing = CostCommon.validateProcessSuppliers("#processGrid");
+  if (!missing.length) return true;
+  if (msgEl) {
+    msgEl.textContent = `外发工序请选择供应商：${missing.join("、")}`;
+    msgEl.className = "msg error";
+  }
+  return false;
 }
 
 function buildQuotePayload(basic, processPricesByName) {
@@ -307,6 +304,7 @@ async function previewQuote() {
     msg.className = "msg error";
     return;
   }
+  if (!validateSuppliers(msg)) return;
   const basic = collectBasicForm(form);
   const res = await fetch("/api/cost/quote", {
     method: "POST",
@@ -334,6 +332,7 @@ async function submitRecord() {
     msg.className = "msg error";
     return;
   }
+  if (!validateSuppliers(msg)) return;
   const payload = {
     ...collectBasicForm(form),
     process_prices: byCode,
@@ -382,15 +381,25 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closePreviewModal();
 });
 
-CostCommon.loadOptions().then(({ processOptions, materials }) => {
-  renderProcessPicker(processOptions.length ? processOptions : CostCommon.getProcesses().map((name, i) => ({
-    code: String(i + 1).padStart(2, "0"),
-    name,
-  })));
-  fillMaterialDatalist(materials);
-  setupPartLookup();
-  fetch("/api/master")
-    .then((res) => res.json())
-    .then((data) => fillCustomerOptions((data.customers || []).map((name) => ({ customer_name: name }))))
-    .catch(() => {});
-});
+CostCommon.loadOptions()
+  .then(({ processOptions, materials }) => {
+    fillMaterialDatalist(materials);
+    return CostCommon.loadSuppliers()
+      .catch(() => [])
+      .then(() => processOptions);
+  })
+  .then((processOptions) => {
+    renderProcessPicker(
+      processOptions.length
+        ? processOptions
+        : CostCommon.getProcesses().map((name, i) => ({
+            code: String(i + 1).padStart(2, "0"),
+            name,
+          }))
+    );
+    setupPartLookup();
+    fetch("/api/master")
+      .then((res) => res.json())
+      .then((data) => fillCustomerOptions((data.customers || []).map((name) => ({ customer_name: name }))))
+      .catch(() => {});
+  });

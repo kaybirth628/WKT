@@ -1,0 +1,9 @@
+{
+  "ssh_host": "121.43.162.47",
+  "ssh_port": 22,
+  "ssh_user": "root",
+  "ssh_password": "",
+  "remote_app_dir": "/www/wwwroot/WKT/wkt-sales-system",
+  "supervisor_name": "wkt-sales-system",
+  "health_url": "http://127.0.0.1:5001/api/health"
+}

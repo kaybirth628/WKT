@@ -1,7 +1,11 @@
 # 密钥与本地配置（禁止入库）
 config/secrets.local.json
+config/deploy.local.json
 .env
 .env.local
+
+# 发布包（本地打 zip/tar 上传用）
+release/
 
 # Python
 __pycache__/

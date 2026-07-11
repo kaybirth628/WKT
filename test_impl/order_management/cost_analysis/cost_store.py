@@ -78,7 +78,7 @@ def _row_to_record(row: sqlite3.Row) -> CostRecordRow:
         material=str(row["material"] or ""),
         machine_tonnage=str(row["machine_tonnage"] or ""),
         material_unit_price=str(row["material_unit_price"] or "0"),
-        process_prices={str(k): str(v) for k, v in processes.items()},
+        process_prices={str(k): v for k, v in processes.items()},
         material_cost=str(row["material_cost"] or "0"),
         process_total=str(row["process_total"] or "0"),
         unit_cost=str(row["unit_cost"] or "0"),

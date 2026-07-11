@@ -65,6 +65,13 @@ PROCESS_LIST: List[str] = [name for _, name in PROCESS_CATALOG]
 PROCESS_BY_CODE: Dict[str, str] = {code: name for code, name in PROCESS_CATALOG}
 PROCESS_CODE_BY_NAME: Dict[str, str] = {name: code for code, name in PROCESS_CATALOG}
 
+# 01 压铸为场内自制，其余工序为外发
+INHOUSE_PROCESS_CODE = "01"
+
+
+def is_inhouse_process(code: str) -> bool:
+    return str(code or "").strip() == INHOUSE_PROCESS_CODE
+
 
 @dataclass
 class ProcessOption:
@@ -94,12 +101,22 @@ def resolve_process_key(key: str) -> Tuple[str, str]:
     raise ValueError(f"未知工艺: {key}")
 
 
+def process_entry_price(value) -> str:
+    if isinstance(value, dict):
+        raw = value.get("price", "0")
+    else:
+        raw = value
+    if raw in (None, ""):
+        return "0"
+    return str(raw)
+
+
 def process_prices_to_names(prices: Dict[str, str]) -> Dict[str, str]:
     """编号键 -> 名称键（报价计算用）。"""
     out: Dict[str, str] = {}
     for key, price in prices.items():
         code, name = resolve_process_key(key)
-        out[name] = price
+        out[name] = process_entry_price(price)
     return out
 
 

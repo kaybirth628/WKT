@@ -1,9 +1,12 @@
 import unittest
 from decimal import Decimal
+from unittest.mock import patch
 
 from test_impl.order_management.cost_analysis import CostRecordService
 from test_impl.order_management.cost_analysis.cost_store import CostStore
 from test_impl.order_management.order_entry.line_store import LineStore
+
+_TEST_SUPPLIER = "测试CNC厂"
 
 
 def _sample_payload(**overrides):
@@ -17,7 +20,10 @@ def _sample_payload(**overrides):
         "material": "ADC12",
         "machine_tonnage": "280T",
         "material_unit_price": "0.02",
-        "process_prices": {"01": "1.5", "13": "3.2"},
+        "process_prices": {
+            "01": "1.5",
+            "13": {"price": "3.2", "supplier": _TEST_SUPPLIER},
+        },
     }
     base.update(overrides)
     return base
@@ -28,8 +34,14 @@ class TestCostRecordService(unittest.TestCase):
         self.line_store = LineStore(db_path=":memory:")
         self._store = CostStore(db_path=":memory:")
         self.service = CostRecordService(store=self._store, line_store=self.line_store)
+        self.supplier_patcher = patch(
+            "test_impl.order_management.cost_analysis.record_service.list_profile_suppliers",
+            return_value=[_TEST_SUPPLIER],
+        )
+        self.supplier_patcher.start()
 
     def tearDown(self) -> None:
+        self.supplier_patcher.stop()
         self.line_store.close()
         self._store._conn.close()
 
@@ -49,6 +61,8 @@ class TestCostRecordService(unittest.TestCase):
         self.assertEqual(set(data["selected_processes"]), {"压铸", "CNC"})
         self.assertEqual(data["selected_process_codes"], ["01", "13"])
         self.assertEqual(data["process_selections"][0]["code"], "01")
+        self.assertEqual(data["process_selections"][0]["inhouse"], True)
+        self.assertEqual(data["process_selections"][1]["supplier"], _TEST_SUPPLIER)
 
     def test_list_records_filter(self) -> None:
         self.service.create_record(_sample_payload())
@@ -57,7 +71,7 @@ class TestCostRecordService(unittest.TestCase):
                 customer_name="其他客户",
                 product_name="其他产品",
                 product_part_no="OTHER-001",
-                process_prices={"22": "2"},
+                process_prices={"22": {"price": "2", "supplier": _TEST_SUPPLIER}},
             )
         )
 
@@ -88,6 +102,18 @@ class TestCostRecordService(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "未知工艺"):
             self.service.create_record(payload)
 
+    def test_reject_outsource_without_supplier(self) -> None:
+        payload = _sample_payload(process_prices={"01": "1.5", "13": "3.2"})
+        with self.assertRaisesRegex(ValueError, "请选择供应商"):
+            self.service.create_record(payload)
+
+    def test_reject_unknown_supplier(self) -> None:
+        payload = _sample_payload(
+            process_prices={"13": {"price": "3.2", "supplier": "不存在的供应商"}}
+        )
+        with self.assertRaisesRegex(ValueError, "不在供应商列表"):
+            self.service.create_record(payload)
+
     def test_custom_material_allowed(self) -> None:
         record = self.service.create_record(_sample_payload(material="自定义合金"))
         self.assertEqual(record.material, "自定义合金")
@@ -99,12 +125,16 @@ class TestCostRecordService(unittest.TestCase):
             _sample_payload(
                 product_name="更新产品",
                 unit_weight_g="99",
-                process_prices={"01": "2.0", "13": "4.0"},
+                process_prices={
+                    "01": "2.0",
+                    "13": {"price": "4.0", "supplier": _TEST_SUPPLIER},
+                },
             ),
         )
         self.assertEqual(updated.product_name, "更新产品")
         self.assertEqual(updated.unit_weight_g, "99")
-        self.assertEqual(updated.process_prices["01"], "2.0")
+        data = self.service.record_to_dict(updated)
+        self.assertEqual(data["process_prices"]["01"], "2.0")
         self.assertEqual(Decimal(updated.unit_cost), Decimal("7.9800"))
 
     def test_delete_record(self) -> None:
@@ -133,10 +163,19 @@ class TestCostRecordService(unittest.TestCase):
 
     def test_legacy_process_alias_maps_to_die_cast(self) -> None:
         record = self.service.create_record(_sample_payload(process_prices={"埋轴": "1.0"}))
-        self.assertEqual(record.process_prices, {"01": "1.0"})
         data = self.service.record_to_dict(record)
         self.assertEqual(data["selected_process_codes"], ["01"])
         self.assertEqual(data["selected_processes"], ["压铸"])
+
+    def test_process_suppliers_via_separate_field(self) -> None:
+        record = self.service.create_record(
+            _sample_payload(
+                process_prices={"01": "1.5", "13": "3.2"},
+                process_suppliers={"13": _TEST_SUPPLIER},
+            )
+        )
+        data = self.service.record_to_dict(record)
+        self.assertEqual(data["process_selections"][1]["supplier"], _TEST_SUPPLIER)
 
 
 if __name__ == "__main__":

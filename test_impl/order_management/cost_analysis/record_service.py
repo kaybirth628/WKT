@@ -5,11 +5,17 @@ import json
 from typing import List, Optional
 
 from test_impl.order_management.order_entry.line_store import LineStore
+from test_impl.order_management.supplier_profile.store import list_profile_suppliers
 
 from .cost_store import CostRecordRow, CostStore
-from .models import process_prices_to_names, resolve_process_key
+from .models import (
+    PROCESS_BY_CODE,
+    is_inhouse_process,
+    process_entry_price,
+    process_prices_to_names,
+    resolve_process_key,
+)
 from .service import CostAnalysisService
-
 
 _REQUIRED_BASIC = (
     "customer_name",
@@ -41,12 +47,17 @@ class CostRecordService:
     def create_record(self, payload: dict) -> CostRecordRow:
         basic = self._validate_basic(payload)
         self._validate_part_no_customer(basic["product_part_no"], basic["customer_name"])
-        process_prices = self._normalize_process_prices(payload.get("process_prices") or {})
-        if not process_prices:
+        process_entries = self._normalize_process_entries(
+            payload.get("process_prices") or {},
+            payload.get("process_suppliers") or {},
+        )
+        if not process_entries:
             raise ValueError("请至少选择一道工序")
+        self._validate_process_suppliers(process_entries)
 
         material_unit_price = str(payload.get("material_unit_price", "0") or "0")
-        named_prices = process_prices_to_names(process_prices)
+        price_map = self._price_map(process_entries)
+        named_prices = process_prices_to_names(price_map)
         quote = self._quote.build_quote(
             {
                 "material_code": basic["material"],
@@ -59,18 +70,25 @@ class CostRecordService:
             strict_material=False,
         )
 
-        return self._store.insert(self._build_store_payload(basic, material_unit_price, process_prices, quote))
+        return self._store.insert(
+            self._build_store_payload(basic, material_unit_price, process_entries, quote)
+        )
 
     def update_record(self, record_id: int, payload: dict) -> CostRecordRow:
         self.get_record(record_id)
         basic = self._validate_basic(payload)
         self._validate_part_no_customer(basic["product_part_no"], basic["customer_name"])
-        process_prices = self._normalize_process_prices(payload.get("process_prices") or {})
-        if not process_prices:
+        process_entries = self._normalize_process_entries(
+            payload.get("process_prices") or {},
+            payload.get("process_suppliers") or {},
+        )
+        if not process_entries:
             raise ValueError("请至少选择一道工序")
+        self._validate_process_suppliers(process_entries)
 
         material_unit_price = str(payload.get("material_unit_price", "0") or "0")
-        named_prices = process_prices_to_names(process_prices)
+        price_map = self._price_map(process_entries)
+        named_prices = process_prices_to_names(price_map)
         quote = self._quote.build_quote(
             {
                 "material_code": basic["material"],
@@ -84,17 +102,23 @@ class CostRecordService:
         )
         return self._store.update(
             record_id,
-            self._build_store_payload(basic, material_unit_price, process_prices, quote),
+            self._build_store_payload(basic, material_unit_price, process_entries, quote),
         )
 
     def delete_record(self, record_id: int) -> None:
         self._store.delete(record_id)
 
-    def _build_store_payload(self, basic: dict, material_unit_price: str, process_prices: dict, quote) -> dict:
+    def _build_store_payload(
+        self,
+        basic: dict,
+        material_unit_price: str,
+        process_entries: dict,
+        quote,
+    ) -> dict:
         return {
             **basic,
             "material_unit_price": material_unit_price,
-            "process_prices_json": json.dumps(process_prices, ensure_ascii=False),
+            "process_prices_json": self._entries_to_storage_json(process_entries),
             "material_cost": str(quote.material_cost()),
             "process_total": str(quote.process_total()),
             "unit_cost": str(quote.unit_cost()),
@@ -131,6 +155,9 @@ class CostRecordService:
             "machine_tonnage": record.machine_tonnage,
             "material_unit_price": record.material_unit_price,
             "process_prices": {s["code"]: s["price"] for s in selections},
+            "process_suppliers": {
+                s["code"]: s["supplier"] for s in selections if s.get("supplier")
+            },
             "process_selections": selections,
             "selected_processes": [s["name"] for s in selections],
             "selected_process_codes": [s["code"] for s in selections],
@@ -143,11 +170,21 @@ class CostRecordService:
         }
 
     def _build_process_selections(self, raw_prices: dict) -> list:
+        entries = self._normalize_process_entries(raw_prices)
         selections = []
-        for key, price in raw_prices.items():
-            code, name = resolve_process_key(key)
-            selections.append({"code": code, "name": name, "price": str(price)})
-        selections.sort(key=lambda item: item["code"])
+        for code in sorted(entries.keys()):
+            entry = entries[code]
+            name = PROCESS_BY_CODE[code]
+            supplier = entry.get("supplier", "")
+            selections.append(
+                {
+                    "code": code,
+                    "name": name,
+                    "price": entry["price"],
+                    "supplier": supplier,
+                    "inhouse": is_inhouse_process(code),
+                }
+            )
         return selections
 
     def _validate_basic(self, payload: dict) -> dict:
@@ -183,18 +220,59 @@ class CostRecordService:
                 f"料号「{part_no}」已绑定客户「{binding['customer_name']}」，与所选客户不一致"
             )
 
-    def _normalize_process_prices(self, raw: dict) -> dict:
+    def _parse_process_value(self, value, supplier_override: str = "") -> tuple[str, str]:
+        if isinstance(value, dict):
+            price = process_entry_price(value)
+            supplier = str(value.get("supplier", supplier_override) or "").strip()
+        else:
+            price = process_entry_price(value)
+            supplier = str(supplier_override or "").strip()
+        return price, supplier
+
+    def _normalize_process_entries(self, raw: dict, suppliers: Optional[dict] = None) -> dict:
+        supplier_map = suppliers or {}
         out: dict = {}
-        for name, price in raw.items():
+        for name, value in raw.items():
             key = str(name).strip()
             if not key:
                 continue
             try:
-                code, _ = resolve_process_key(key)
+                code, proc_name = resolve_process_key(key)
             except ValueError as exc:
                 raise ValueError(str(exc)) from exc
-            if price in (None, ""):
-                out[code] = "0"
-            else:
-                out[code] = str(price)
+            supplier_override = str(
+                supplier_map.get(code)
+                or supplier_map.get(proc_name)
+                or supplier_map.get(key)
+                or ""
+            ).strip()
+            price, supplier = self._parse_process_value(value, supplier_override)
+            if is_inhouse_process(code):
+                supplier = ""
+            out[code] = {"price": price, "supplier": supplier}
         return out
+
+    def _validate_process_suppliers(self, entries: dict) -> None:
+        known = {name.casefold(): name for name in list_profile_suppliers()}
+        for code, entry in entries.items():
+            if is_inhouse_process(code):
+                continue
+            supplier = str(entry.get("supplier", "") or "").strip()
+            proc_name = PROCESS_BY_CODE.get(code, code)
+            if not supplier:
+                raise ValueError(f"外发工序「{proc_name}」请选择供应商")
+            if supplier.casefold() not in known:
+                raise ValueError(f"供应商「{supplier}」不在供应商列表中")
+
+    def _price_map(self, entries: dict) -> dict:
+        return {code: entry["price"] for code, entry in entries.items()}
+
+    def _entries_to_storage_json(self, entries: dict) -> str:
+        payload = {
+            code: {
+                "price": entry["price"],
+                "supplier": "" if is_inhouse_process(code) else entry.get("supplier", ""),
+            }
+            for code, entry in entries.items()
+        }
+        return json.dumps(payload, ensure_ascii=False)

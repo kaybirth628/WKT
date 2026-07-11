@@ -388,6 +388,40 @@ select:focus {
   opacity: 0.45;
 }
 
+.process-pick-item .process-supplier {
+  width: 100%;
+  padding: 0.38rem 0.45rem;
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.process-pick-item .process-supplier:disabled {
+  opacity: 0.45;
+}
+
+.process-inhouse-tag {
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.chip .chip-supplier {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.chip .chip-supplier.inhouse {
+  color: var(--text-muted);
+}
+
+.cost-entry-layout .process-pick-grid .process-pick-item,
+.process-pick-grid .process-pick-item {
+  min-height: 4.75rem;
+}
+
 /* 成本查询 */
 .cost-query-stack {
   padding-bottom: 1rem;
