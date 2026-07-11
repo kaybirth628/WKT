@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from .store import EMPTY_PROFILE, get_profile, list_profile_suppliers, save_profile
+from .store import EMPTY_PROFILE, delete_profile, get_profile, list_profile_suppliers, save_profile
 from .store import profile_with_labels as _profile_with_labels
 
 
@@ -32,6 +32,9 @@ class SupplierProfileService:
             dup = existing[supplier.casefold()]
             raise ValueError(f"供应商「{dup}」已存在")
         return self.save(supplier, info)
+
+    def delete(self, supplier: str) -> None:
+        delete_profile(supplier)
 
     def empty_profile(self) -> Dict[str, str]:
         return dict(EMPTY_PROFILE)

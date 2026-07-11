@@ -1,5 +1,5 @@
-# One-click sync local code to cloud (test_impl + scripts only).
-# Server data/config/venv are NOT overwritten.
+# One-click sync local code to cloud (test_impl + scripts + whitelisted master data).
+# Server DB, customer profiles, config, venv are NOT overwritten.
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\sync-to-cloud.ps1
 # Config: copy config\deploy.local.example.json -> config\deploy.local.json
@@ -53,6 +53,20 @@ function Build-Staging {
         & robocopy $srcScripts (Join-Path $StagingDir "scripts") /E /XD __pycache__ /XF *.pyc /NFL /NDL /NJH /NJS /nc /ns /np
         if ($LASTEXITCODE -ge 8) { throw "robocopy scripts failed" }
     }
+
+    # Master data only — never sync DB or customer profiles here.
+    $dataWhitelist = @(
+        "data\supplier_profiles.json"
+    )
+    foreach ($rel in $dataWhitelist) {
+        $src = Join-Path $root $rel
+        if (!(Test-Path $src)) { continue }
+        $dest = Join-Path $StagingDir $rel
+        $destDir = Split-Path $dest -Parent
+        if (!(Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir | Out-Null }
+        Copy-Item $src $dest -Force
+        Write-Host "Pack $rel ..." -ForegroundColor Cyan
+    }
 }
 
 function New-Archive {
@@ -65,7 +79,10 @@ function New-Archive {
     if ($tar) {
         Push-Location $StagingDir
         try {
-            & tar -caf $ArchivePath test_impl scripts 2>$null
+            $items = @("test_impl")
+            if (Test-Path "scripts") { $items += "scripts" }
+            if (Test-Path "data") { $items += "data" }
+            & tar -caf $ArchivePath @items
             if ($LASTEXITCODE -ne 0) {
                 & tar -caf $ArchivePath test_impl
             }
@@ -124,7 +141,7 @@ rm -rf "`$STAGING"
 curl -s '${Cfg.health_url}' || true
 "@
 
-        Write-Host "Merge on server (data/config/venv untouched) ..." -ForegroundColor Cyan
+        Write-Host "Merge on server (DB/customer/config/venv untouched) ..." -ForegroundColor Cyan
         $result = Invoke-SSHCommand -SessionId $session.SessionId -Command $remoteScript -TimeOut 120
         Write-Host $result.Output
         if ($result.ExitStatus -ne 0) {
@@ -138,7 +155,8 @@ curl -s '${Cfg.health_url}' || true
 
 Write-Host ""
 Write-Host "=== WKT sync to cloud ===" -ForegroundColor Cyan
-Write-Host "Only test_impl + scripts. Server data/config/venv NOT touched." -ForegroundColor DarkGray
+Write-Host "Sync: test_impl + scripts + supplier_profiles.json" -ForegroundColor DarkGray
+Write-Host "NOT touched: DB, customer_profiles, config, venv" -ForegroundColor DarkGray
 Write-Host ""
 
 $cfg = Load-Config

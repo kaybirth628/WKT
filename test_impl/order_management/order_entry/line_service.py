@@ -59,6 +59,12 @@ class OrderLineService:
             raise ValueError("客户名称不能为空")
         return self._store.upsert_customer(name)
 
+    def count_lines_for_customer(self, customer: str) -> int:
+        return self._store.count_lines_for_customer(customer)
+
+    def delete_customer_master(self, name: str) -> None:
+        self._store.delete_customer_master(name)
+
     def resolve_customer(self, ocr_name: str) -> Optional[CustomerMaster]:
         """OCR 客户名匹配主数据（精确 → 忽略大小写 → 包含关系）。"""
         name = (ocr_name or "").strip()

@@ -43,6 +43,18 @@ class TestCustomerProfileStore(unittest.TestCase):
         loaded = store.get_profile("测试客户")
         self.assertEqual(loaded["reconciliation_period"], "month_21_20")
 
+    def test_delete_profile(self) -> None:
+        store.save_profile(
+            "测试客户",
+            {
+                "address": "地址A",
+                "reconciliation_period": "month_21_20",
+            },
+        )
+        store.delete_profile("测试客户")
+        with self.assertRaises(ValueError):
+            store.delete_profile("测试客户")
+
     def test_save_requires_reconciliation_period_on_create(self) -> None:
         with self.assertRaises(ValueError):
             store.save_profile("测试客户", {"address": "地址A"})
@@ -136,13 +148,17 @@ class TestCustomerProfileService(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.path = Path(self.tmp.name) / "customer_profiles.json"
+        self.delivery_path = Path(self.tmp.name) / "customer_delivery.json"
         self._orig = store.PROFILES_FILE
+        self._orig_delivery = wkt_document._CUSTOMER_FILE
         store.PROFILES_FILE = self.path
+        wkt_document._CUSTOMER_FILE = self.delivery_path
         self.lines = OrderLineService(db_path=":memory:")
         self.svc = CustomerProfileService(self.lines)
 
     def tearDown(self) -> None:
         store.PROFILES_FILE = self._orig
+        wkt_document._CUSTOMER_FILE = self._orig_delivery
         self.tmp.cleanup()
 
     def test_create_customer_registers_master(self) -> None:
@@ -163,6 +179,47 @@ class TestCustomerProfileService(unittest.TestCase):
         self.svc.create("重复客", {"reconciliation_period": "month_21_20"})
         with self.assertRaises(ValueError):
             self.svc.create("重复客", {"reconciliation_period": "month_21_20"})
+
+    def test_delete_customer_without_orders(self) -> None:
+        self.svc.create(
+            "待删客户",
+            {
+                "address": "苏州",
+                "reconciliation_period": "month_21_20",
+            },
+        )
+        self.svc.delete("待删客户")
+        names = self.lines.list_master().get("customers") or []
+        self.assertNotIn("待删客户", names)
+        self.assertEqual(store.get_profile("待删客户"), store.EMPTY_PROFILE)
+
+    def test_delete_customer_with_orders_blocked(self) -> None:
+        self.svc.create("有单客户", {"reconciliation_period": "month_21_20"})
+        self.lines.create_line(
+            {
+                "customer": "有单客户",
+                "order_date": "2026-01-01",
+                "order_no": "PO-1",
+                "product_spec": "测试品",
+                "po_qty": "10",
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "已有订单"):
+            self.svc.delete("有单客户")
+
+    def test_delete_delivery_only_customer(self) -> None:
+        wkt_document.save_customer_delivery_info(
+            "仅送货单客户",
+            {
+                "receiver_company": "仅送货单客户",
+                "receiver_address": "苏州",
+                "receiver_contact": "李四",
+                "doc_no_prefix": "",
+            },
+        )
+        self.svc.delete("仅送货单客户")
+        self.assertEqual(wkt_document.get_raw_customer_delivery_info("仅送货单客户"), {})
+        self.assertEqual(store.get_profile("仅送货单客户"), store.EMPTY_PROFILE)
 
 
 if __name__ == "__main__":

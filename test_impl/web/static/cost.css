@@ -1,4 +1,4 @@
-/* 成本分析：铺满主内容区 */
+/* 成本分析：布局对齐出货明细 list-table（间距见 style.css --wkt-module-*） */
 .app-main:has(.cost-stack) {
   min-height: calc(100vh - 52px);
 }
@@ -8,20 +8,6 @@
   width: 100%;
   max-width: none;
   min-height: 0;
-  padding: 0.45rem 0.85rem 0.45rem;
-}
-
-.app-main:has(.cost-stack) .page-footer {
-  padding: 0.5rem 1rem 0.65rem;
-}
-
-.app-main:has(.cost-stack) .page-footer .page-title {
-  font-size: 0.95rem;
-  margin-bottom: 0.1rem;
-}
-
-.app-main:has(.cost-stack) .page-footer .page-desc {
-  font-size: 0.8125rem;
 }
 
 .cost-layout {
@@ -29,29 +15,17 @@
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: 1rem;
   width: 100%;
-  flex: 1;
-  align-items: stretch;
-  min-height: 0;
 }
 
-.cost-layout:has(#resultCard[hidden]) {
-  grid-template-columns: 1fr;
-}
-
-.cost-form-card,
-.cost-result-card {
-  min-width: 0;
-  height: 100%;
-}
-
-.cost-stack .form-stack {
-  max-width: none;
-  width: 100%;
+@media (max-width: 1100px) {
+  .cost-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .field-group {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   width: 100%;
 }
@@ -133,105 +107,13 @@ select:focus {
   flex: 1;
 }
 
-/* 报价结果 */
-.result-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.result-row {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-soft);
-}
-
-.result-row .r-label {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  min-width: 0;
-}
-
-.result-row .r-value {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text);
-  flex-shrink: 0;
-}
-
-.result-row.grand {
-  background: var(--primary-soft);
-  border-color: var(--primary);
-}
-
-.result-row.grand .r-label {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.result-row.grand .r-value {
-  color: var(--primary);
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-
-.result-processes {
-  margin-top: 0.5rem;
-  padding: 0.85rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.result-processes h5 {
-  margin: 0 0 0.6rem;
-  font-size: 0.8125rem;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.result-processes .chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.chip {
-  display: inline-flex;
-  gap: 0.35rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 999px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
-  font-size: 0.8125rem;
-}
-
-.chip b {
-  color: var(--primary);
-}
-
-@media (max-width: 960px) {
-  .cost-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .field-group {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 1400px) {
+@media (max-width: 900px) {
   .process-grid {
     grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   }
 }
 
-/* 成本录入：单列铺满，无右侧预览占位 */
+/* 成本录入 */
 .cost-entry-layout {
   display: block;
   width: 100%;
@@ -242,13 +124,9 @@ select:focus {
   height: auto;
 }
 
-.cost-entry-layout .cost-form-card.card {
-  padding: 0.85rem 1rem;
-  gap: 0.65rem;
-}
-
 .cost-entry-layout .cost-form-card .form {
   padding-top: 0;
+  gap: 0.75rem;
 }
 
 .cost-header-table {
@@ -309,26 +187,20 @@ select:focus {
   font-size: 0.875rem;
 }
 
-.cost-entry-actions {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.55rem;
-  width: 100%;
+.cost-entry-layout .form-actions {
   padding-top: 0.65rem;
-  margin-top: 0.15rem;
-  border-top: 1px solid var(--border);
 }
 
-.cost-entry-actions .btn {
-  width: auto;
-  flex: 0 0 auto;
+@media (max-width: 1100px) {
+  .cost-header-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.cost-entry-actions .msg {
-  flex: 1 1 100%;
-  margin: 0;
+@media (max-width: 640px) {
+  .cost-header-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .process-pick-grid .process-pick-item {
@@ -422,54 +294,41 @@ select:focus {
   min-height: 4.75rem;
 }
 
-/* 成本查询 */
-.cost-query-stack {
-  padding-bottom: 1rem;
-}
-
-.cost-query-card {
-  width: 100%;
-}
-
+/* 成本查询：筛选栏对齐出货明细 filter-bar */
 .cost-query-filters {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 0.8fr)) auto;
-  gap: 0.85rem;
-  align-items: end;
-  margin-bottom: 0.85rem;
-}
-
-.cost-query-filter-actions {
   display: flex;
-  gap: 0.5rem;
-  padding-bottom: 0.1rem;
-}
-
-.cost-query-meta {
-  display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
   align-items: center;
-  margin-bottom: 0.65rem;
-  font-size: 0.875rem;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.cost-filter-field {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
-.cost-query-table tbody tr {
-  cursor: pointer;
-}
-
-.cost-query-table tbody tr:hover {
-  background: var(--primary-soft);
-}
-
-.cost-query-actions {
+.cost-filter-field span {
   white-space: nowrap;
 }
 
-.cost-query-actions .btn-sm {
-  padding: 0.25rem 0.55rem;
+.cost-filter-field input[type="text"] {
+  min-width: 160px;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+.list-empty-hint {
+  padding: 1rem;
+  text-align: center;
+  color: var(--muted);
   font-size: 0.8125rem;
-  margin-right: 0.25rem;
 }
 
 .cost-modal-actions {
@@ -496,12 +355,6 @@ select:focus {
   flex: 1 1 100%;
 }
 
-.empty-hint {
-  padding: 2rem 1rem;
-  text-align: center;
-  color: var(--muted);
-}
-
 .cost-modal {
   position: fixed;
   inset: 0;
@@ -519,18 +372,18 @@ select:focus {
 
 .cost-modal-panel {
   width: min(720px, 100%);
-  max-height: min(88vh, 900px);
+  max-height: calc(100vh - 2rem);
   overflow: auto;
   background: var(--surface);
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .cost-modal-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   padding: 1rem 1.1rem;
   border-bottom: 1px solid var(--border);
 }
@@ -544,86 +397,18 @@ select:focus {
   padding: 1rem 1.1rem 1.2rem;
 }
 
-.cost-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem 1rem;
-  margin-bottom: 1rem;
-}
-
-.cost-detail-grid > div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.9rem;
-}
-
-.detail-label {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.cost-detail-costs {
-  margin-bottom: 0.75rem;
-}
-
-.detail-meta {
-  margin: 0.85rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--muted);
-}
-
-.field-hint {
-  margin: 0.35rem 0 0;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-.field-hint.ok {
-  color: var(--success);
-}
-
-.field-hint.warn {
-  color: #b45309;
-}
-
-.field-hint.error {
-  color: var(--danger);
-}
-
-input.is-auto-filled {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.part-customer-picker {
-  margin: 0 0 1rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--primary);
-  border-radius: 8px;
-  background: var(--primary-soft);
-  max-width: 420px;
-}
-
-.part-customer-picker select {
-  width: 100%;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  background: var(--surface);
-  font-family: inherit;
-}
-
-@media (max-width: 960px) {
-  .cost-header-row {
-    grid-template-columns: 1fr 1fr;
-  }
-
+@media (max-width: 900px) {
   .cost-query-filters {
-    grid-template-columns: 1fr;
+    gap: 0.45rem;
   }
 
-  .cost-detail-grid {
-    grid-template-columns: 1fr;
+  .cost-filter-field {
+    flex: 1 1 100%;
+  }
+
+  .cost-filter-field input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
   }
 }

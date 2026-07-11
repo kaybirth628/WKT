@@ -97,8 +97,7 @@
   function deliveryDisplayLabel(mode, customFile) {
     if (mode === "off") return "不使用";
     if (mode === "wkt") return "威可特统一模板";
-    const file = String(customFile || "").trim();
-    return file ? `专用 · ${file}` : "专用模板";
+    return "专用";
   }
 
   function syncDeliveryDisplayStyle(display, mode) {
@@ -250,6 +249,16 @@
     }
   }
 
+  async function deleteCustomerRow(customer) {
+    const res = await fetch("/api/customer-profiles/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customer }),
+    });
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || "删除失败");
+  }
+
   function rowEditableFields(tr) {
     return tr.querySelectorAll("[data-field]:not([data-field='template_upload'])");
   }
@@ -308,6 +317,7 @@
 
   function setRowEditing(tr, editing) {
     tr.classList.toggle("is-editing", editing);
+    tr.classList.toggle("row-editing", editing);
     tr.querySelector(".dn-delivery-edit")?.classList.toggle("is-hidden", !editing);
     tr.querySelector(".dn-delivery-display")?.classList.toggle("is-hidden", editing);
     tr.querySelector(".dn-period-edit")?.classList.toggle("is-hidden", !editing);
@@ -321,6 +331,7 @@
       btn.classList.toggle("btn-primary", editing);
       btn.classList.toggle("btn-outline", !editing);
     }
+    tr.querySelector(".dn-delete-row-btn")?.classList.toggle("is-hidden", editing);
     syncRowDeliveryUi(tr);
   }
 
@@ -354,33 +365,34 @@
         const p = rowProfile(row);
         const customSelected = row.template_file || "";
         return `<tr data-customer="${esc(row.customer)}">
-              <td class="dn-cell-name">${esc(row.customer)}</td>
-              <td class="dn-cell-delivery">
+              <td class="list-td-text dn-cell-name">${esc(row.customer)}</td>
+              <td class="list-td-text dn-cell-delivery">
                 <span class="dn-delivery-display${mode === "custom" ? " is-custom" : ""}">${esc(deliveryDisplayLabel(mode, customSelected))}</span>
                 <div class="dn-delivery-edit is-hidden">
-                  <select class="dn-inline-select" data-field="delivery_mode">
+                  <select class="dn-inline-select le" data-field="delivery_mode">
                     <option value="off"${mode === "off" ? " selected" : ""}>不使用</option>
                     <option value="wkt"${mode === "wkt" ? " selected" : ""}>威可特统一模板</option>
                     <option value="custom"${mode === "custom" ? " selected" : ""}>专用模板</option>
                   </select>
-                  <select class="dn-inline-select dn-custom-tpl-select is-hidden" data-field="custom_template">${customTemplateOptions(customSelected)}</select>
+                  <select class="dn-inline-select dn-custom-tpl-select le is-hidden" data-field="custom_template">${customTemplateOptions(customSelected)}</select>
                   <label class="dn-upload-label${mode === "custom" ? "" : " is-hidden"}" data-role="custom-upload">上传 Excel
                     <input type="file" data-field="template_upload" accept=".xlsx,.xlsm" />
                   </label>
                 </div>
               </td>
-              <td><input type="text" class="dn-inline-input" data-field="address" value="${attrEsc(p.address)}" placeholder="地址" /></td>
-              <td><input type="text" class="dn-inline-input" data-field="contact" value="${attrEsc(p.contact)}" placeholder="联系人" /></td>
-              <td><input type="text" class="dn-inline-input" data-field="phone" value="${attrEsc(p.phone)}" placeholder="电话" /></td>
-              <td><input type="email" class="dn-inline-input" data-field="email" value="${attrEsc(p.email)}" placeholder="邮箱" /></td>
-              <td><input type="text" class="dn-inline-input" data-field="payment_terms" value="${attrEsc(p.payment_terms)}" placeholder="账期" /></td>
-              <td class="dn-cell-period">
+              <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="address" value="${attrEsc(p.address)}" placeholder="地址" /></td>
+              <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="contact" value="${attrEsc(p.contact)}" placeholder="联系人" /></td>
+              <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="phone" value="${attrEsc(p.phone)}" placeholder="电话" /></td>
+              <td class="list-td-text"><input type="email" class="dn-inline-input le" data-field="email" value="${attrEsc(p.email)}" placeholder="邮箱" /></td>
+              <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="payment_terms" value="${attrEsc(p.payment_terms)}" placeholder="账期" /></td>
+              <td class="list-td-text dn-cell-period">
                 <span class="dn-period-display">${esc(reconciliationPeriodLabel(p.reconciliation_period))}</span>
-                <div class="dn-period-edit is-hidden">${reconciliationPeriodSelectHtml(p.reconciliation_period, { selectClass: "dn-inline-select" })}</div>
+                <div class="dn-period-edit is-hidden">${reconciliationPeriodSelectHtml(p.reconciliation_period, { selectClass: "dn-inline-select le" })}</div>
               </td>
-              <td class="dn-cell-actions">
+              <td class="action-cell dn-cell-actions">
                 <button type="button" class="btn btn-sm btn-outline dn-edit-row-btn" data-customer="${esc(row.customer)}">编辑</button>
                 <button type="button" class="btn btn-sm btn-outline dn-preview-row-btn" data-customer="${esc(row.customer)}"${mode === "off" ? " disabled" : ""}>预览</button>
+                <button type="button" class="btn btn-sm btn-danger dn-delete-row-btn" data-customer="${esc(row.customer)}">删除</button>
               </td>
             </tr>`;
       })
@@ -450,6 +462,34 @@
       btn.addEventListener("click", () => {
         if (btn.disabled) return;
         loadDeliveryNotePreview(btn.dataset.customer || "");
+      });
+    });
+
+    tbody.querySelectorAll(".dn-delete-row-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const customer = btn.dataset.customer || "";
+        if (!customer) return;
+        const tr = btn.closest("tr");
+        if (tr?.classList.contains("is-editing")) return;
+        if (
+          !window.confirm(
+            `确定删除客户「${customer}」？\n\n将同时删除客户档案与送货单配置。已有订单的客户无法删除。`
+          )
+        ) {
+          return;
+        }
+        btn.disabled = true;
+        try {
+          await deleteCustomerRow(customer);
+          showMsg(msg, "✓ 已删除", true);
+          if (window.showSaveSuccess) window.showSaveSuccess("✓ 已删除");
+          await loadDeliveryNoteAdmin();
+        } catch (err) {
+          showMsg(msg, err.message || "删除失败", false);
+          if (window.showSaveError) window.showSaveError(err.message || "删除失败");
+        } finally {
+          btn.disabled = false;
+        }
       });
     });
   }
@@ -622,15 +662,7 @@
     });
   }
 
-  async function loadReconcileHint() {
-    const hint = document.getElementById("dnMaintHint");
-    if (!hint) return;
-    hint.textContent =
-      "维护客户地址、联系人、电话、邮箱、账期；对账周期二选一（已有客户默认未设置，请业务员逐一维护）。送货单可选「不使用 / 威可特统一模板 / 专用模板」。点「编辑」修改后保存。";
-  }
-
   async function loadDeliveryNoteAdmin() {
-    await loadReconcileHint();
     const res = await fetch("/api/delivery-templates");
     const data = await parseJsonResponse(res);
     profileMap = data.customer_profiles || {};

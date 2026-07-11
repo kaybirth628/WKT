@@ -91,6 +91,32 @@ def list_profile_suppliers() -> List[str]:
     return sorted(load_all_profiles().keys(), key=lambda x: (x.casefold(), x))
 
 
+def _resolve_profile_key(all_cfg: Dict[str, dict], name: str) -> str | None:
+    target = (name or "").strip().casefold()
+    if not target:
+        return None
+    for key in all_cfg:
+        if str(key).strip().casefold() == target:
+            return str(key)
+    return None
+
+
+def delete_profile(supplier: str) -> None:
+    supplier = (supplier or "").strip()
+    if not supplier:
+        raise ValueError("供应商名称不能为空")
+    all_cfg = load_all_profiles()
+    key = _resolve_profile_key(all_cfg, supplier)
+    if not key:
+        raise ValueError(f"供应商「{supplier}」不存在")
+    del all_cfg[key]
+    PROFILES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    PROFILES_FILE.write_text(
+        json.dumps(all_cfg, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
 def profile_with_labels(profile: Dict[str, str]) -> Dict[str, str]:
     out = dict(profile)
     out["reconciliation_period_label"] = reconciliation_period_label(profile.get("reconciliation_period"))

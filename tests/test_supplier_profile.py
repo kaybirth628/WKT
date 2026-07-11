@@ -39,6 +39,14 @@ class TestSupplierProfileStore(unittest.TestCase):
         with self.assertRaises(ValueError):
             svc.create("供应商a", {})
 
+    def test_delete_supplier(self) -> None:
+        svc = SupplierProfileService()
+        svc.create("待删供应商", {"address": "地址A"})
+        svc.delete("待删供应商")
+        with self.assertRaises(ValueError):
+            svc.delete("待删供应商")
+        self.assertEqual(store.get_profile("待删供应商"), store.EMPTY_PROFILE)
+
 
 if __name__ == "__main__":
     unittest.main()

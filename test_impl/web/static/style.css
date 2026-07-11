@@ -48,6 +48,16 @@
   --wkt-list-cell-px: 0.32rem;
   --wkt-list-head-py: 0.42rem;
   --wkt-list-head-px: 0.32rem;
+
+  /* 业务模块统一间距（订单 / 成本 / 客商维护） */
+  --wkt-module-pad-x: 0.75rem;
+  --wkt-module-pad-y: 0.5rem;
+  --wkt-module-gap: 0;
+  --wkt-module-card-pad: 0.55rem 0.65rem 0.75rem;
+  --wkt-module-card-gap: 0.45rem;
+  --wkt-module-footer-pad: 0.65rem 0.75rem 0.75rem;
+  --wkt-module-desc-size: 0.75rem;
+  --wkt-module-title-margin: 0 0 0.25rem;
 }
 
 * {
@@ -57,6 +67,7 @@
 body {
   margin: 0;
   font-family: var(--font);
+  font-size: 0.9375rem;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -1083,6 +1094,7 @@ body {
   color: var(--type-page-title-color);
   letter-spacing: -0.01em;
   line-height: 1.35;
+  display: none;
 }
 
 .page-footer .page-desc {
@@ -1284,6 +1296,22 @@ body {
   margin: 0 0 0.25rem;
 }
 
+.submodule-page-title {
+  margin: var(--wkt-module-title-margin);
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1.35;
+  font-size: var(--type-section-title-size);
+  font-weight: var(--type-section-title-weight);
+  color: var(--type-section-title-color);
+  background: transparent;
+}
+
+.content-stack > .submodule-page-title,
+.submodule-panel > .submodule-page-title {
+  width: 100%;
+}
+
 .list-card .filter-bar {
   margin-bottom: 0.25rem;
   gap: 0.45rem;
@@ -1352,24 +1380,47 @@ body {
   background: var(--surface);
 }
 
-/* 订单明细等列表：占满主区域，用页面纵向滚动，表格区域不再单独滚动 */
-.app-main:has(#submoduleList:not(.is-hidden)) .page-footer {
-  padding: 0.65rem 0.75rem 0.75rem;
-}
-
-.app-main:has(#submoduleList:not(.is-hidden)) .page-footer .page-title {
-  font-size: 1.0625rem;
-}
-
-.app-main:has(#submoduleList:not(.is-hidden)) .page-footer .page-desc {
-  margin-top: 0.2rem;
-  font-size: 0.75rem;
-}
-
-.app-main:has(#submoduleList:not(.is-hidden)) .content-stack {
+/* ===== 业务模块统一布局（订单 / 成本 / 客商维护） ===== */
+.app-main:has(.submodule-panel) .content-stack,
+.app-main:has(.cost-stack) .content-stack {
   flex: 1;
-  gap: 0;
-  padding: 0.5rem 0.75rem 0.5rem;
+  gap: var(--wkt-module-gap);
+  padding: var(--wkt-module-pad-y) var(--wkt-module-pad-x);
+}
+
+.app-main:has(.submodule-panel) .page-footer,
+.app-main:has(.cost-stack) .page-footer {
+  padding: var(--wkt-module-footer-pad);
+}
+
+.app-main:has(.submodule-panel) .page-footer .page-desc,
+.app-main:has(.cost-stack) .page-footer .page-desc {
+  margin-top: 0.2rem;
+  font-size: var(--wkt-module-desc-size);
+  line-height: 1.45;
+}
+
+.app-main:has(.submodule-panel) .list-card,
+.app-main:has(.cost-stack) .list-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  padding: var(--wkt-module-card-pad);
+  gap: var(--wkt-module-card-gap);
+  border-radius: var(--radius-md, 8px);
+}
+
+.app-main:has(.submodule-panel) #submoduleEntry > .card,
+.app-main:has(.submodule-panel) #submoduleEntry .mode-panel > .card {
+  padding: var(--wkt-module-card-pad);
+  gap: var(--wkt-module-card-gap);
+  border-radius: var(--radius-md, 8px);
+}
+
+.app-main:has(.submodule-panel) #submoduleHome .dash-card {
+  padding: var(--wkt-module-card-pad);
+  gap: var(--wkt-module-card-gap);
 }
 
 .app-main:has(#submoduleList:not(.is-hidden)) #submoduleList {
@@ -1380,19 +1431,26 @@ body {
   min-width: 0;
 }
 
-.app-main:has(#submoduleList:not(.is-hidden)) .list-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: visible;
-  padding: 0.55rem 0.65rem 0.75rem;
-  border-radius: var(--radius-md, 8px);
-}
-
-.app-main:has(#submoduleList:not(.is-hidden)) .list-scroll-host {
+.app-main:has(#submoduleList:not(.is-hidden)) .list-scroll-host,
+.app-main:has(#submoduleDelivery:not(.is-hidden)) .list-scroll-host,
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .list-scroll-host {
   flex: 1;
   width: 100%;
   min-width: 0;
+}
+
+.app-main:has(#submoduleDelivery:not(.is-hidden)) #submoduleDelivery,
+.app-main:has(#submoduleSupplier:not(.is-hidden)) #submoduleSupplier {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+}
+
+.app-main:has(#submoduleDelivery:not(.is-hidden)) .list-card .list-table-wrap,
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .list-card .list-table-wrap {
+  overflow-x: auto;
 }
 
 .list-card .data-table.list-table {
@@ -1429,6 +1487,25 @@ body {
 .list-card .data-table.list-table thead tr.list-header-row th {
   z-index: 6;
   min-height: 2.2rem;
+}
+
+.list-card .data-table.list-table thead th.list-th-text {
+  text-align: left;
+}
+
+.list-card .data-table.list-table thead th.list-th-action,
+.list-card .data-table.list-table thead th.action-cell {
+  text-align: center;
+}
+
+.list-card .data-table.list-table.dn-maint-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.list-card .data-table.list-table.dn-maint-table th,
+.list-card .data-table.list-table.dn-maint-table td:not(.action-cell) {
+  max-width: none;
 }
 
 .list-th-seq,
@@ -1623,16 +1700,21 @@ body {
 
 /* 订单列表斑马纹：相邻行分层，减轻长表炫目 */
 
-.list-card .data-table.list-table tbody tr:nth-child(odd):not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing) td {
+.list-card .data-table.list-table tbody tr:nth-child(odd):not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing):not(.is-editing) td {
   background-color: var(--list-row-bg);
 }
 
-.list-card .data-table.list-table tbody tr:nth-child(even):not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing) td {
+.list-card .data-table.list-table tbody tr:nth-child(even):not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing):not(.is-editing) td {
   background-color: var(--list-row-bg-alt);
 }
 
-.list-card .data-table.list-table tbody tr:not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing):hover td {
+.list-card .data-table.list-table tbody tr:not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing):not(.is-editing):hover td {
   background-color: color-mix(in srgb, var(--success) 20%, var(--surface)) !important;
+}
+
+.list-card .data-table.list-table tbody tr.is-editing td,
+.list-card .data-table.list-table tbody tr.row-editing td {
+  background-color: var(--primary-soft) !important;
 }
 
 .list-card .data-table.list-table tbody tr.row-new-highlight td {
@@ -3351,10 +3433,19 @@ body {
   box-shadow: none;
 }
 
-/* ===== 送货单维护子模块 ===== */
+/* ===== 客商信息维护 ===== */
 .dn-maint-card {
-  margin-bottom: 0.75rem;
-  padding: 1rem 1.1rem;
+  margin-bottom: 0.35rem;
+}
+
+.app-main:has(.submodule-panel) .dn-maint-card:not(.list-card) {
+  padding: var(--wkt-module-card-pad);
+  gap: var(--wkt-module-card-gap);
+  border-radius: var(--radius-md, 8px);
+}
+
+.list-meta-row-end {
+  justify-content: flex-end;
 }
 
 .dn-maint-desc {
@@ -3372,9 +3463,10 @@ body {
 }
 
 .dn-maint-hint {
-  margin: 0.5rem 0 0;
-  font-size: 0.8125rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
   color: var(--muted);
+  line-height: 1.35;
 }
 
 .dn-details {
@@ -3397,7 +3489,7 @@ body {
 .dn-form {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
+  gap: 0.4rem 0.65rem;
   align-items: flex-end;
 }
 
@@ -3422,12 +3514,14 @@ body {
   display: none;
 }
 
-.dn-customer-table .dn-cell-delivery .dn-delivery-display.is-custom {
+.dn-customer-table .dn-cell-delivery .dn-delivery-display.is-custom,
+.list-table.dn-maint-table .dn-cell-delivery .dn-delivery-display.is-custom {
   color: var(--primary, #024ad8);
   font-weight: 500;
 }
 
-.dn-customer-table .dn-tpl-name {
+.dn-customer-table .dn-tpl-name,
+.list-table.dn-maint-table .dn-tpl-name {
   margin-left: 0.25rem;
 }
 
@@ -3436,21 +3530,26 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
 }
 
 .dn-list-head .section-h3 {
   margin: 0;
 }
 
-.dn-customer-table .dn-cell-name {
-  min-width: 10rem;
-  max-width: 14rem;
-  word-break: break-all;
+.dn-customer-table .dn-cell-name,
+.list-table.dn-maint-table .dn-cell-name,
+.list-table.dn-maint-table .sp-name-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.list-table.dn-maint-table tr:not(.is-editing) input.le:disabled,
 .dn-customer-table tr:not(.is-editing) .dn-inline-input:disabled,
-.dn-customer-table tr:not(.is-editing) .dn-inline-select:disabled {
+.list-table.dn-maint-table tr:not(.is-editing) .dn-inline-input:disabled,
+.dn-customer-table tr:not(.is-editing) .dn-inline-select:disabled,
+.list-table.dn-maint-table tr:not(.is-editing) .dn-inline-select:disabled {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
@@ -3461,20 +3560,19 @@ body {
 }
 
 .dn-customer-table tr.is-editing .dn-inline-input,
-.dn-customer-table tr.is-editing .dn-inline-select {
+.list-table.dn-maint-table tr.is-editing .dn-inline-input,
+.dn-customer-table tr.is-editing .dn-inline-select,
+.list-table.dn-maint-table tr.is-editing .dn-inline-select,
+.list-table.dn-maint-table tr.is-editing input.le:not(:disabled) {
   background: var(--surface, #fff);
   border-color: var(--border, #d0d7de);
 }
 
-.dn-customer-table .dn-inline-input {
+.dn-customer-table .dn-inline-input,
+.list-table.dn-maint-table .dn-inline-input {
   width: 100%;
-  min-width: 5rem;
+  min-width: 0;
   box-sizing: border-box;
-  padding: 0.25rem 0.4rem;
-  font-size: 0.8125rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
 }
 
 .dn-customer-table .dn-inline-prefix {
@@ -3482,12 +3580,15 @@ body {
   max-width: 5rem;
 }
 
-.dn-customer-table .dn-cell-actions {
-  white-space: nowrap;
+.dn-customer-table .dn-cell-actions,
+.list-table.dn-maint-table .dn-cell-actions,
+.list-table.dn-maint-table .sp-actions {
+  white-space: normal;
 }
 
-.dn-customer-table .dn-cell-actions .btn + .btn {
-  margin-left: 0.25rem;
+.dn-customer-table .dn-cell-actions .btn + .btn,
+.list-table.dn-maint-table .action-cell .btn + .btn {
+  margin-left: 0;
 }
 
 .dn-table-scroll {
@@ -3535,29 +3636,11 @@ body {
   min-width: 72rem;
 }
 
-.dn-customer-table-wide .dn-inline-input {
-  min-width: 6rem;
-}
-
-.dn-inline-select {
-  width: 100%;
-  min-width: 7.5rem;
-  padding: 0.35rem 0.45rem;
-  font-size: 0.8125rem;
-  border: 1px solid var(--border, #d0d7de);
-  border-radius: 6px;
-  background: var(--surface, #fff);
-}
-
-.dn-cell-delivery {
-  min-width: 11rem;
-}
-
 .dn-delivery-display {
   display: block;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  color: var(--text, #1f2328);
+  font-size: inherit;
+  line-height: 1.35;
+  color: inherit;
   word-break: break-all;
 }
 
@@ -3569,10 +3652,20 @@ body {
   display: none;
 }
 
+.dn-cell-delivery {
+  min-width: 9rem;
+}
+
+.dn-inline-select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .dn-period-display {
   display: block;
-  font-size: 0.8125rem;
-  line-height: 1.45;
+  font-size: inherit;
+  line-height: 1.35;
   color: var(--text, #1f2328);
 }
 

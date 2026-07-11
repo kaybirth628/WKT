@@ -58,6 +58,16 @@
     if (!res.ok) throw new Error(data.error || "供应商档案保存失败");
   }
 
+  async function deleteSupplierRow(supplier) {
+    const res = await fetch("/api/supplier-profiles/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ supplier }),
+    });
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.error || "删除失败");
+  }
+
   function rowEditableFields(tr) {
     return tr.querySelectorAll("[data-field]");
   }
@@ -86,10 +96,12 @@
 
   function setRowEditing(tr, editing) {
     tr.classList.toggle("is-editing", editing);
+    tr.classList.toggle("row-editing", editing);
     rowEditableFields(tr).forEach((el) => {
       el.disabled = !editing;
     });
     tr.querySelector(".sp-edit-btn")?.classList.toggle("is-hidden", editing);
+    tr.querySelector(".sp-delete-btn")?.classList.toggle("is-hidden", editing);
     tr.querySelector(".sp-save-btn")?.classList.toggle("is-hidden", !editing);
     tr.querySelector(".sp-cancel-btn")?.classList.toggle("is-hidden", !editing);
   }
@@ -107,15 +119,16 @@
         const supplier = row.supplier || "";
         return `
       <tr data-supplier="${esc(supplier)}">
-        <td class="sp-name-cell">${esc(supplier)}</td>
-        <td><input data-field="address" value="${esc(p.address)}" disabled /></td>
-        <td><input data-field="contact" value="${esc(p.contact)}" disabled /></td>
-        <td><input data-field="phone" value="${esc(p.phone)}" disabled /></td>
-        <td><input data-field="email" value="${esc(p.email)}" disabled /></td>
-        <td><input data-field="payment_terms" value="${esc(p.payment_terms)}" disabled /></td>
-        <td><input data-field="notes" value="${esc(p.notes)}" disabled /></td>
-        <td class="sp-actions">
+        <td class="list-td-text sp-name-cell">${esc(supplier)}</td>
+        <td class="list-td-text"><input class="le" data-field="address" value="${esc(p.address)}" disabled /></td>
+        <td class="list-td-text"><input class="le" data-field="contact" value="${esc(p.contact)}" disabled /></td>
+        <td class="list-td-text"><input class="le" data-field="phone" value="${esc(p.phone)}" disabled /></td>
+        <td class="list-td-text"><input class="le" data-field="email" value="${esc(p.email)}" disabled /></td>
+        <td class="list-td-text"><input class="le" data-field="payment_terms" value="${esc(p.payment_terms)}" disabled /></td>
+        <td class="list-td-text"><input class="le" data-field="notes" value="${esc(p.notes)}" disabled /></td>
+        <td class="action-cell sp-actions">
           <button type="button" class="btn btn-outline btn-sm sp-edit-btn">编辑</button>
+          <button type="button" class="btn btn-danger btn-sm sp-delete-btn">删除</button>
           <button type="button" class="btn btn-primary btn-sm sp-save-btn is-hidden">保存</button>
           <button type="button" class="btn btn-outline btn-sm sp-cancel-btn is-hidden">取消</button>
         </td>
@@ -148,6 +161,31 @@
         } catch (err) {
           showMsg(msg, err.message || "保存失败", false);
           if (window.showSaveError) window.showSaveError(err.message || "保存失败");
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      });
+      tr.querySelector(".sp-delete-btn")?.addEventListener("click", async () => {
+        const supplier = tr.dataset.supplier || "";
+        if (!supplier) return;
+        if (
+          !window.confirm(
+            `确定删除供应商「${supplier}」？\n\n此操作不可恢复。`
+          )
+        ) {
+          return;
+        }
+        const msg = document.getElementById("spMapMsg");
+        const btn = tr.querySelector(".sp-delete-btn");
+        if (btn) btn.disabled = true;
+        try {
+          await deleteSupplierRow(supplier);
+          showMsg(msg, "✓ 已删除", true);
+          if (window.showSaveSuccess) window.showSaveSuccess("✓ 已删除");
+          await loadSupplierAdmin();
+        } catch (err) {
+          showMsg(msg, err.message || "删除失败", false);
+          if (window.showSaveError) window.showSaveError(err.message || "删除失败");
         } finally {
           if (btn) btn.disabled = false;
         }

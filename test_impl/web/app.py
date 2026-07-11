@@ -855,6 +855,19 @@ def create_customer_profile():
         return jsonify({"error": str(exc)}), 400
 
 
+@app.route("/api/customer-profiles/delete", methods=["POST"])
+def delete_customer_profile():
+    data = request.get_json(force=True) or {}
+    customer = (data.get("customer") or "").strip()
+    if not customer:
+        return jsonify({"error": "客户名称不能为空"}), 400
+    try:
+        customer_profile_service.delete(customer)
+        return jsonify({"ok": True, "customer": customer})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 @app.route("/api/supplier-profiles", methods=["GET"])
 def list_supplier_profiles():
     rows = supplier_profile_service.list_rows()
@@ -897,6 +910,19 @@ def create_supplier_profile():
     try:
         profile = supplier_profile_service.create(supplier, data.get("profile") or {})
         return jsonify({"ok": True, "supplier": supplier, "profile": profile})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/supplier-profiles/delete", methods=["POST"])
+def delete_supplier_profile():
+    data = request.get_json(force=True) or {}
+    supplier = (data.get("supplier") or "").strip()
+    if not supplier:
+        return jsonify({"error": "供应商名称不能为空"}), 400
+    try:
+        supplier_profile_service.delete(supplier)
+        return jsonify({"ok": True, "supplier": supplier})
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 

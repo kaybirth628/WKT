@@ -5,68 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · 成本查询</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260623-noto-font" />
-  <link rel="stylesheet" href="/static/cost.css?v=20260530-process-supplier" />
+  <link rel="stylesheet" href="/static/style.css?v=20260711-title-gray-bg" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260711-title-gray-bg" />
 </head>
 <body>
   <div class="app-layout">
     {% include '_order_sidebar.html' %}
 
     <div class="app-main">
-      <main class="content-stack cost-stack cost-query-stack">
-        <section class="card cost-query-card">
-          <div class="card-head">
-            <div class="card-icon list-icon">⌕</div>
-            <div class="card-head-text">
-              <h3>成本查询</h3>
-              <p class="card-desc">按客户、料号或关键字检索已录入的成本记录，支持修改与删除</p>
-            </div>
-          </div>
-
-          <form id="costQueryForm" class="form cost-query-filters">
-            <label class="field">
+      <main class="content-stack cost-stack">
+        <h3 class="section-h3 submodule-page-title">成本查询</h3>
+        <section class="card list-card" id="costQuerySection">
+          <form id="costQueryForm" class="filter-bar filter-bar-compact cost-query-filters">
+            <label class="cost-filter-field">
               <span>关键字</span>
-              <input name="q" placeholder="客户 / 产品 / 料号 / 模具 / 材质" />
+              <input name="q" type="text" placeholder="客户 / 产品 / 料号 / 模具 / 材质" />
             </label>
-            <label class="field">
+            <label class="cost-filter-field">
               <span>客户名称</span>
-              <input name="customer" placeholder="精确匹配" />
+              <input name="customer" type="text" placeholder="精确匹配" />
             </label>
-            <label class="field">
+            <label class="cost-filter-field">
               <span>产品料号</span>
-              <input name="product_part_no" placeholder="模糊匹配" />
+              <input name="product_part_no" type="text" placeholder="模糊匹配" />
             </label>
-            <div class="cost-query-filter-actions">
-              <button type="submit" class="btn btn-primary">查询</button>
-              <button type="button" id="costQueryReset" class="btn btn-secondary">重置</button>
-            </div>
+            <button type="submit" class="btn btn-primary btn-sm">查询</button>
+            <button type="button" id="costQueryReset" class="btn btn-outline btn-sm">重置</button>
           </form>
 
-          <div class="cost-query-meta">
-            <span id="costQueryCount">共 0 条</span>
-            <span class="card-desc">点击行查看详情，或使用右侧操作按钮</span>
+          <div class="list-meta-row">
+            <p id="costQueryCount" class="list-summary">共 0 条</p>
           </div>
 
-          <div class="table-wrap">
-            <table class="data-table cost-query-table">
-              <thead>
-                <tr>
-                  <th>客户</th>
-                  <th>产品名称</th>
-                  <th>产品料号</th>
-                  <th>材质</th>
-                  <th>单重(g)</th>
-                  <th>机台</th>
-                  <th>工序数</th>
-                  <th>单件成本</th>
-                  <th>录入时间</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="costQueryBody"></tbody>
-            </table>
-            <p id="costQueryEmpty" class="empty-hint" hidden>暂无记录，请先在「成本录入」中保存</p>
+          <div class="list-scroll-host">
+            <div class="table-wrap list-table-wrap">
+              <table class="data-table list-table">
+                <thead>
+                  <tr class="list-header-row">
+                    <th class="list-th-text">客户</th>
+                    <th class="list-th-text">产品名称</th>
+                    <th class="list-th-text">产品料号</th>
+                    <th class="list-th-text">材质</th>
+                    <th class="list-th-text">单重(g)</th>
+                    <th class="list-th-text">机台</th>
+                    <th class="list-th-text">工序数</th>
+                    <th class="list-th-text">单件成本</th>
+                    <th class="list-th-text">录入时间</th>
+                    <th class="list-th-action action-cell">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="costQueryBody"></tbody>
+              </table>
+            </div>
           </div>
+          <p id="costQueryEmpty" class="empty-hint list-empty-hint" hidden>暂无记录，请先在「成本录入」中保存</p>
         </section>
       </main>
 
@@ -156,7 +148,7 @@
     </div>
   </div>
 
-  <script src="/static/cost_common.js?v=20260530-process-supplier"></script>
-  <script src="/static/cost_query.js?v=20260530-process-supplier"></script>
+  <script src="/static/cost_common.js?v=20260711-title-gray-bg"></script>
+  <script src="/static/cost_query.js?v=20260711-title-gray-bg"></script>
 </body>
 </html>

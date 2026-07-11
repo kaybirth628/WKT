@@ -175,6 +175,18 @@ def save_customer_delivery_info(customer: str, info: dict) -> None:
     _save_json(_CUSTOMER_FILE, all_cfg)
 
 
+def remove_customer_delivery_info(customer: str) -> None:
+    customer = (customer or "").strip()
+    if not customer:
+        return
+    all_cfg = load_customer_delivery_config()
+    key = next((k for k in all_cfg if str(k).strip().casefold() == customer.casefold()), None)
+    if not key:
+        return
+    del all_cfg[key]
+    _save_json(_CUSTOMER_FILE, all_cfg)
+
+
 def _fmt_date_cn(dt: datetime) -> str:
     local = dt.astimezone() if dt.tzinfo else dt.replace(tzinfo=timezone.utc).astimezone()
     return f"{local.year}年{local.month}月{local.day}日"

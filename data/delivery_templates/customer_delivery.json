@@ -285,12 +285,5 @@
     "receiver_contact": "胡长戈",
     "doc_no_prefix": "",
     "receiver_phone": "13862608372"
-  },
-  "新客户A": {
-    "receiver_company": "新客户A",
-    "receiver_address": "苏州",
-    "receiver_contact": "李四",
-    "receiver_phone": "",
-    "doc_no_prefix": ""
   }
 }

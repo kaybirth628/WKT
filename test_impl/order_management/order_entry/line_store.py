@@ -206,6 +206,23 @@ class LineStore:
         self._conn.commit()
         return CustomerMaster(name=name)
 
+    def count_lines_for_customer(self, customer: str) -> int:
+        customer = (customer or "").strip()
+        if not customer:
+            return 0
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS c FROM order_lines WHERE customer = ?",
+            (customer,),
+        ).fetchone()
+        return int(row["c"] or 0)
+
+    def delete_customer_master(self, name: str) -> None:
+        name = (name or "").strip()
+        if not name:
+            return
+        self._conn.execute("DELETE FROM customers WHERE name = ?", (name,))
+        self._conn.commit()
+
     def list_parts(self) -> List[PartMapping]:
         rows = self._conn.execute(
             "SELECT product_spec, customer_part_no FROM parts ORDER BY product_spec COLLATE NOCASE"

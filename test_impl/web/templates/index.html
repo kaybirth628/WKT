@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · 订单管理</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260623-noto-font" />
+  <link rel="stylesheet" href="/static/style.css?v=20260711-title-gray-bg" />
   <link rel="stylesheet" href="/static/dashboard.css?v=20260623-order-dashboard" />
 </head>
 <body>
@@ -17,6 +17,7 @@
       <main class="content-stack">
         <!-- 子模块：首页（FEATURE_HOME_DASHBOARD=false 时隐藏，见 app.js） -->
         <div id="submoduleHome" class="submodule-panel is-hidden" hidden aria-hidden="true">
+          <h3 class="section-h3 submodule-page-title">首页</h3>
           <section class="card dash-card">
             <div class="dash-toolbar">
               <button type="button" class="btn btn-outline btn-sm" id="dashRefreshBtn">刷新数据</button>
@@ -55,6 +56,7 @@
 
         <!-- 子模块：订单录入 -->
         <div id="submoduleEntry" class="submodule-panel">
+        <h3 class="section-h3 submodule-page-title">订单录入</h3>
         <section class="card mode-card">
           <div class="mode-switch" role="tablist">
             <button type="button" class="mode-btn" id="modeOcrBtn" data-mode="ocr" role="tab" aria-selected="false">订单 OCR 识别</button>
@@ -169,11 +171,15 @@
           <section id="excelPendingCard" class="card list-card is-hidden">
             <h3 class="section-h3">待确认（Excel 导入）</h3>
             <p id="excelPendingCardHint" class="list-summary"></p>
-            <div class="table-wrap">
-              <table class="data-table">
+            <div class="table-wrap list-table-wrap">
+              <table class="data-table list-table">
                 <thead>
-                  <tr>
-                    <th>Excel行</th><th>客户</th><th>订单号</th><th>品名规格</th><th>待确认原因</th>
+                  <tr class="list-header-row">
+                    <th class="list-th-text">Excel行</th>
+                    <th class="list-th-text">客户</th>
+                    <th class="list-th-text">订单号</th>
+                    <th class="list-th-text">品名规格</th>
+                    <th class="list-th-text">待确认原因</th>
                   </tr>
                 </thead>
                 <tbody id="excelPendingCardBody"></tbody>
@@ -229,8 +235,8 @@
 
         <!-- 子模块：订单明细 / 出货 / 未结 / 结案（共用列表） -->
         <div id="submoduleList" class="submodule-panel is-hidden">
+        <h3 class="section-h3 submodule-page-title" id="submodulePageTitle">订单明细</h3>
         <section class="card list-card" id="lineListSection">
-          <h3 class="section-h3" id="listSectionTitle">订单明细</h3>
           <div class="filter-bar filter-bar-compact">
             <div id="reconcileToolbar" class="reconcile-toolbar is-hidden">
               <button type="button" class="btn btn-outline btn-sm is-hidden" id="reconcileBackBtn">← 返回汇总</button>
@@ -279,9 +285,8 @@
 
         <!-- 子模块：客户信息维护 -->
         <div id="submoduleDelivery" class="submodule-panel is-hidden">
+          <h3 class="section-h3 submodule-page-title">客户信息维护</h3>
           <section class="card list-card dn-maint-card">
-            <h3 class="section-h3">新增客户</h3>
-            <p class="dn-maint-hint">录入新客户档案；保存后可在下方一览中继续编辑。送货单为可选项。</p>
             <form id="dnNewCustomerForm" class="dn-form dn-new-form">
               <label>客户名称 <input type="text" id="dnNewName" required placeholder="公司全称" /></label>
               <label>地址 <input type="text" id="dnNewAddress" placeholder="收货/公司地址" /></label>
@@ -314,35 +319,44 @@
           </section>
 
           <section class="card list-card dn-maint-card">
-            <div class="dn-list-head">
-              <h3 class="section-h3">客户一览</h3>
+            <div class="list-meta-row list-meta-row-end">
               <button type="button" class="btn btn-outline btn-sm" id="dnRefreshBtn">刷新</button>
             </div>
-            <p class="dn-maint-hint" id="dnMaintHint">维护客户地址、联系人、电话、邮箱、账期；对账周期二选一（已有客户默认未设置，请业务员逐一维护）。送货单可选「不使用 / 威可特统一模板 / 专用模板」。点「编辑」修改后保存。</p>
-            <div class="table-wrap dn-table-scroll">
-              <table class="data-table dn-customer-table dn-customer-table-wide">
-                <thead>
-                  <tr>
-                    <th>客户</th>
-                    <th>送货单</th>
-                    <th>地址</th>
-                    <th>联系人</th>
-                    <th>电话</th>
-                    <th>邮箱</th>
-                    <th>账期</th>
-                    <th>对账周期</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody id="dnCustomerBody"></tbody>
-              </table>
+            <p id="dnMapMsg" class="msg list-msg dn-msg"></p>
+            <div class="list-scroll-host">
+              <div class="table-wrap list-table-wrap dn-table-scroll">
+                <table class="data-table list-table dn-maint-table" id="dnMaintTable">
+                  <colgroup>
+                    <col style="width:14%" />
+                    <col style="width:10%" />
+                    <col style="width:16%" />
+                    <col style="width:8%" />
+                    <col style="width:10%" />
+                    <col style="width:10%" />
+                    <col style="width:12%" />
+                    <col style="width:12%" />
+                    <col style="width:8%" />
+                  </colgroup>
+                  <thead>
+                    <tr class="list-header-row">
+                      <th class="list-th-text">客户</th>
+                      <th class="list-th-text">送货单</th>
+                      <th class="list-th-text">地址</th>
+                      <th class="list-th-text">联系人</th>
+                      <th class="list-th-text">电话</th>
+                      <th class="list-th-text">邮箱</th>
+                      <th class="list-th-text">账期</th>
+                      <th class="list-th-text">对账周期</th>
+                      <th class="list-th-action action-cell">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dnCustomerBody"></tbody>
+                </table>
+              </div>
             </div>
-            <p id="dnMapMsg" class="msg dn-msg"></p>
           </section>
 
           <section class="card dn-maint-card" id="dnPreviewSection">
-            <h3 class="section-h3">送货单预览</h3>
-            <p class="dn-maint-hint" id="dnPreviewHint">威可特统一模板可网页预览；专用模板请在 Excel 单元格写 <code>{{占位符}}</code>，预览/出货时自动填入。</p>
             <p id="dnPreviewStatus" class="dn-preview-status"></p>
             <p id="dnPreviewEmpty" class="dn-preview-empty">请在一览表点「预览」查看送货单示例</p>
             <div id="dnPreviewActions" class="dn-preview-actions is-hidden">
@@ -356,9 +370,8 @@
 
         <!-- 子模块：供应商信息维护 -->
         <div id="submoduleSupplier" class="submodule-panel is-hidden">
+          <h3 class="section-h3 submodule-page-title">供应商信息维护</h3>
           <section class="card list-card dn-maint-card">
-            <h3 class="section-h3">新增供应商</h3>
-            <p class="dn-maint-hint">录入新供应商档案；保存后可在下方一览中继续编辑。</p>
             <form id="spNewSupplierForm" class="dn-form dn-new-form">
               <label>供应商名称 <input type="text" id="spNewName" required placeholder="公司全称" /></label>
               <label>地址 <input type="text" id="spNewAddress" placeholder="公司地址" /></label>
@@ -375,34 +388,45 @@
           </section>
 
           <section class="card list-card dn-maint-card">
-            <div class="dn-list-head">
-              <h3 class="section-h3">供应商一览</h3>
+            <div class="list-meta-row list-meta-row-end">
               <button type="button" class="btn btn-outline btn-sm" id="spRefreshBtn">刷新</button>
             </div>
-            <p class="dn-maint-hint">维护供应商地址、联系人、电话、邮箱、账期与备注；点「编辑」修改后保存。</p>
-            <div class="table-wrap dn-table-scroll">
-              <table class="data-table dn-customer-table dn-customer-table-wide">
-                <thead>
-                  <tr>
-                    <th>供应商</th>
-                    <th>地址</th>
-                    <th>联系人</th>
-                    <th>电话</th>
-                    <th>邮箱</th>
-                    <th>账期</th>
-                    <th>备注</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody id="spSupplierBody"></tbody>
-              </table>
+            <p id="spMapMsg" class="msg list-msg dn-msg"></p>
+            <div class="list-scroll-host">
+              <div class="table-wrap list-table-wrap dn-table-scroll">
+                <table class="data-table list-table dn-maint-table" id="spMaintTable">
+                  <colgroup>
+                    <col style="width:14%" />
+                    <col style="width:18%" />
+                    <col style="width:9%" />
+                    <col style="width:10%" />
+                    <col style="width:12%" />
+                    <col style="width:12%" />
+                    <col style="width:14%" />
+                    <col style="width:11%" />
+                  </colgroup>
+                  <thead>
+                    <tr class="list-header-row">
+                      <th class="list-th-text">供应商</th>
+                      <th class="list-th-text">地址</th>
+                      <th class="list-th-text">联系人</th>
+                      <th class="list-th-text">电话</th>
+                      <th class="list-th-text">邮箱</th>
+                      <th class="list-th-text">账期</th>
+                      <th class="list-th-text">备注</th>
+                      <th class="list-th-action action-cell">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="spSupplierBody"></tbody>
+                </table>
+              </div>
             </div>
-            <p id="spMapMsg" class="msg dn-msg"></p>
           </section>
         </div>
 
         <!-- 子模块：AI 数据助手（FEATURE_AI_ASSISTANT=false 时隐藏，见 app.js） -->
         <div id="submoduleAi" class="submodule-panel is-hidden">
+          <h3 class="section-h3 submodule-page-title">AI 数据助手</h3>
           {% include '_ai_assistant_panel.html' %}
         </div>
       </main>
@@ -460,9 +484,9 @@
   </div>
 
   <script src="/static/save-feedback.js?v=20260530"></script>
-  <script src="/static/delivery-note-admin.js?v=20260711-reconcile-empty"></script>
-  <script src="/static/supplier-admin.js?v=20260711-partner"></script>
+  <script src="/static/delivery-note-admin.js?v=20260711-ui-unify"></script>
+  <script src="/static/supplier-admin.js?v=20260711-ui-unify"></script>
   <script src="/static/ai-assistant.js?v=20260530-ai-sidebar"></script>
-  <script src="/static/app.js?v=20260711-partner"></script>
+  <script src="/static/app.js?v=20260711-ui-unify"></script>
 </body>
 </html>

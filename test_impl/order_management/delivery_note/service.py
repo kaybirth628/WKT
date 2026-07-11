@@ -1019,10 +1019,8 @@ class DeliveryNoteService:
                 template_display = "不使用送货单"
             elif meta["is_wkt_standard"]:
                 template_display = "威可特统一模板"
-            elif meta["template_missing"]:
-                template_display = f"专用 · {meta['template_file']}（待放入）"
             else:
-                template_display = f"专用 · {meta['template_file']}"
+                template_display = "专用"
             rows.append(
                 {
                     "customer": name,

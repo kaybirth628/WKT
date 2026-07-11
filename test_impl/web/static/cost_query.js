@@ -19,17 +19,17 @@ function renderTable(items) {
     .map(
       (r) => `
     <tr data-id="${r.id}" tabindex="0">
-      <td>${r.customer_name}</td>
-      <td>${r.product_name}</td>
-      <td>${r.product_part_no}</td>
+      <td class="list-td-text">${r.customer_name}</td>
+      <td class="list-td-text">${r.product_name}</td>
+      <td class="list-td-text">${r.product_part_no}</td>
       <td>${r.material}</td>
       <td>${r.unit_weight_g}</td>
       <td>${r.machine_tonnage}</td>
       <td>${(r.process_selections || r.selected_processes || []).length}</td>
       <td>${CostCommon.money(r.unit_cost)}</td>
       <td>${CostCommon.formatDate(r.created_at)}</td>
-      <td class="cost-query-actions">
-        <button type="button" class="btn btn-ghost btn-sm" data-action="edit" data-id="${r.id}">修改</button>
+      <td class="action-cell">
+        <button type="button" class="btn btn-outline btn-sm" data-action="edit" data-id="${r.id}">修改</button>
         <button type="button" class="btn btn-danger btn-sm" data-action="delete" data-id="${r.id}">删除</button>
       </td>
     </tr>`

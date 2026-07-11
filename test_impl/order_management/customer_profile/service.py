@@ -4,7 +4,15 @@ from typing import Any, Dict, List, Optional
 
 from test_impl.order_management.order_entry.line_service import OrderLineService
 
-from .store import EMPTY_PROFILE, get_profile, is_delivery_enabled, list_profile_customers, save_profile
+from .store import (
+    EMPTY_PROFILE,
+    delete_profile,
+    get_profile,
+    is_delivery_enabled,
+    list_profile_customers,
+    load_all_profiles,
+    save_profile,
+)
 from .store import profile_with_labels as _profile_with_labels
 
 
@@ -57,6 +65,54 @@ class CustomerProfileService:
             raise ValueError(f"客户「{dup}」已存在")
         self._lines.add_customer(customer)
         return self.save(customer, info)
+
+    def _all_known_customer_names(self) -> set[str]:
+        names: set[str] = set()
+        try:
+            for name in self._lines.list_master().get("customers") or []:
+                if str(name).strip():
+                    names.add(str(name).strip())
+        except Exception:
+            pass
+        names.update(list_profile_customers())
+        from test_impl.order_management.delivery_note.template_store import DeliveryTemplateStore
+        from test_impl.order_management.delivery_note.wkt_document import load_customer_delivery_config
+
+        names.update(load_customer_delivery_config().keys())
+        names.update(DeliveryTemplateStore().load_mapping().keys())
+        return names
+
+    def _resolve_customer_name(self, customer: str) -> str | None:
+        target = (customer or "").strip().casefold()
+        if not target:
+            return None
+        for name in self._all_known_customer_names():
+            if str(name).strip().casefold() == target:
+                return str(name).strip()
+        return None
+
+    def delete(self, customer: str) -> None:
+        customer = (customer or "").strip()
+        if not customer:
+            raise ValueError("客户名称不能为空")
+        actual = self._resolve_customer_name(customer)
+        if not actual:
+            raise ValueError(f"客户「{customer}」不存在")
+
+        if self._lines.count_lines_for_customer(actual) > 0:
+            raise ValueError(f"客户「{actual}」已有订单，无法删除")
+
+        profiles = load_all_profiles()
+        profile_key = next((k for k in profiles if k.casefold() == actual.casefold()), None)
+        if profile_key:
+            delete_profile(profile_key)
+
+        from test_impl.order_management.delivery_note.template_store import DeliveryTemplateStore
+        from test_impl.order_management.delivery_note.wkt_document import remove_customer_delivery_info
+
+        DeliveryTemplateStore().remove_customer_mapping(actual)
+        remove_customer_delivery_info(actual)
+        self._lines.delete_customer_master(actual)
 
     def empty_profile(self) -> Dict[str, str]:
         return dict(EMPTY_PROFILE)

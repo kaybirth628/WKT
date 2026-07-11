@@ -215,6 +215,12 @@ const SUBMODULES = {
   },
 };
 
+function setSubmodulePageTitle(text) {
+  document.querySelectorAll(".submodule-page-title").forEach((el) => {
+    el.textContent = text;
+  });
+}
+
 let currentSubmodule = "entry";
 
 const PAYMENT_TERM_PRESETS = ["月结30天", "月结60天", "月结90天"];
@@ -1103,8 +1109,7 @@ async function openReconcileDetail(customer, month) {
   reconcileDetailCustomer = customer;
   reconcileDetailMonth = month;
   listColFilters.reconcile = {};
-  const listTitle = document.getElementById("listSectionTitle");
-  if (listTitle) listTitle.textContent = `对账明细 · ${customer} · ${month}`;
+  setSubmodulePageTitle(`对账明细 · ${customer} · ${month}`);
   updateReconcileToolbarState();
   renderHead("listHead", ["序号"]);
   await loadLines();
@@ -1115,8 +1120,7 @@ function closeReconcileDetail() {
   reconcileDetailCustomer = "";
   reconcileDetailMonth = "";
   listColFilters.reconcile = {};
-  const listTitle = document.getElementById("listSectionTitle");
-  if (listTitle) listTitle.textContent = SUBMODULES.reconcile.listTitle;
+  setSubmodulePageTitle(SUBMODULES.reconcile.listTitle);
   updateReconcileToolbarState();
   renderHead("listHead", ["序号"]);
   loadLines();
@@ -1329,8 +1333,7 @@ async function switchSubmodule(key) {
   if (titleEl) titleEl.textContent = meta.title;
   if (descEl) descEl.textContent = meta.desc;
 
-  const listTitle = document.getElementById("listSectionTitle");
-  if (listTitle && meta.listTitle) listTitle.textContent = meta.listTitle;
+  setSubmodulePageTitle(isList || isReconcile ? meta.listTitle || meta.title : meta.title);
 
   document.querySelectorAll("[data-submodule]").forEach((el) => {
     const on = el.dataset.submodule === key;
