@@ -101,16 +101,37 @@ if (-not $PushOnly) {
     }
 }
 
+function Invoke-GitPushWithRetry {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$Args,
+        [string]$Label = "git push"
+    )
+    $max = 3
+    for ($i = 1; $i -le $max; $i++) {
+        & git @Args
+        if ($LASTEXITCODE -eq 0) { return }
+        if ($i -lt $max) {
+            Write-Host "$Label failed (attempt $i/$max); retry in 5s ..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 5
+        }
+    }
+    Write-Host ""
+    Write-Host "GitHub push failed: network cannot reach github.com (443)." -ForegroundColor Red
+    Write-Host "Your commit is saved locally. Try:" -ForegroundColor Yellow
+    Write-Host "  1) VPN / proxy, then run this script again with -PushOnly" -ForegroundColor DarkGray
+    Write-Host "  2) Or: git push origin master" -ForegroundColor DarkGray
+    Write-Host "  3) Cloud sync (一键同步云端) uses SSH to Aliyun — separate from GitHub" -ForegroundColor DarkGray
+    Write-Host ""
+    throw "$Label failed."
+}
+
 if (-not $Version.Trim()) {
     $Version = Read-Host "Milestone tag? empty=skip, e.g. v0.6.0"
 }
 $Version = Normalize-VersionTag $Version
 
 Write-Host "Pushing origin/master ..." -ForegroundColor Cyan
-git push origin master
-if ($LASTEXITCODE -ne 0) {
-    throw "git push failed."
-}
+Invoke-GitPushWithRetry -Args @("push", "origin", "master") -Label "git push origin master"
 
 if ($Version) {
     $exists = git tag -l $Version
@@ -121,10 +142,7 @@ if ($Version) {
         git tag -a $Version -m "Release $Version"
         Write-Host "Created tag $Version" -ForegroundColor Green
     }
-    git push origin $Version
-    if ($LASTEXITCODE -ne 0) {
-        throw "git push tag failed."
-    }
+    Invoke-GitPushWithRetry -Args @("push", "origin", $Version) -Label "git push tag $Version"
     Write-Host "Pushed tag $Version" -ForegroundColor Green
     Write-Host "Update docs/VERSION.md and CHANGELOG if needed." -ForegroundColor DarkYellow
 }
