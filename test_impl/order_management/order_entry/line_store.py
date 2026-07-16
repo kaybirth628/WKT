@@ -11,6 +11,10 @@ from typing import Dict, List, Optional
 
 from test_impl.common.money import round_qty
 
+from test_impl.order_management.customer_name import (
+    customer_names_match,
+    dedupe_customer_names,
+)
 from .line_models import CustomerMaster, OrderLine, PartMapping
 from .shipment_models import SHIP_SOURCE_OPEN, ShipmentEvent
 
@@ -775,7 +779,9 @@ class LineStore:
             sql += " AND id <> ?"
             params.append(int(exclude_line_id))
         customer_rows = self._conn.execute(sql, params).fetchall()
-        customers = [str(r["customer"] or "").strip() for r in customer_rows if str(r["customer"] or "").strip()]
+        customers = dedupe_customer_names(
+            str(r["customer"] or "").strip() for r in customer_rows if str(r["customer"] or "").strip()
+        )
         if not customers:
             return None
         if len(customers) > 1:
@@ -845,7 +851,7 @@ class LineStore:
             joined = "、".join(binding.get("customers") or [])
             raise ValueError(f"料号「{part_no}」在订单中存在多个客户（{joined}），请先修正数据")
         owner = str(binding.get("customer_name") or "").strip()
-        if owner and owner.casefold() != cust.casefold():
+        if owner and cust and not customer_names_match(owner, cust):
             raise DuplicatePartNoError(part_no, owner)
 
     def find_order_by_part_no(self, product_part_no: str) -> Optional[dict]:

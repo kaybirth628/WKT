@@ -1,0 +1,126 @@
+{
+  "order_customers": [
+    {
+      "customer": "东莞凯泰智联",
+      "count": 7
+    },
+    {
+      "customer": "先锋（上海）",
+      "count": 7
+    },
+    {
+      "customer": "大沃",
+      "count": 10
+    },
+    {
+      "customer": "安徽欧菲光",
+      "count": 26
+    },
+    {
+      "customer": "康比利",
+      "count": 4
+    },
+    {
+      "customer": "思瑞奕",
+      "count": 2
+    },
+    {
+      "customer": "怡利",
+      "count": 18
+    },
+    {
+      "customer": "日月照明",
+      "count": 2
+    },
+    {
+      "customer": "朗信",
+      "count": 35
+    },
+    {
+      "customer": "泰仕通",
+      "count": 1
+    },
+    {
+      "customer": "立讯",
+      "count": 2
+    },
+    {
+      "customer": "精达（安徽）",
+      "count": 8
+    },
+    {
+      "customer": "红黑",
+      "count": 18
+    },
+    {
+      "customer": "苏州允锐（油力）",
+      "count": 3
+    },
+    {
+      "customer": "迅铂",
+      "count": 1
+    },
+    {
+      "customer": "金棒",
+      "count": 10
+    },
+    {
+      "customer": "金脉",
+      "count": 5
+    },
+    {
+      "customer": "鑫福泰-东硕",
+      "count": 5
+    },
+    {
+      "customer": "鑫福泰-中磊",
+      "count": 1
+    },
+    {
+      "customer": "鑫福泰-剑桥",
+      "count": 2
+    },
+    {
+      "customer": "鑫福泰-力硕",
+      "count": 4
+    },
+    {
+      "customer": "鑫福泰-名硕（巴淡）",
+      "count": 1
+    },
+    {
+      "customer": "鑫福泰-巨圣",
+      "count": 2
+    },
+    {
+      "customer": "锐霸",
+      "count": 147
+    }
+  ],
+  "master_customers": [
+    "东莞凯泰智联",
+    "先锋（上海）",
+    "大沃",
+    "安徽欧菲光",
+    "康比利",
+    "思瑞奕",
+    "怡利",
+    "日月照明",
+    "朗信",
+    "泰仕通",
+    "立讯",
+    "精达（安徽）",
+    "红黑",
+    "苏州允锐（油力）",
+    "迅铂",
+    "金棒",
+    "金脉",
+    "鑫福泰-东硕",
+    "鑫福泰-中磊",
+    "鑫福泰-剑桥",
+    "鑫福泰-力硕",
+    "鑫福泰-名硕（巴淡）",
+    "鑫福泰-巨圣",
+    "锐霸"
+  ]
+}

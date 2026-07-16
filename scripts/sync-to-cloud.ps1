@@ -54,19 +54,8 @@ function Build-Staging {
         if ($LASTEXITCODE -ge 8) { throw "robocopy scripts failed" }
     }
 
-    # Master data only — never sync DB or customer profiles here.
-    $dataWhitelist = @(
-        "data\supplier_profiles.json"
-    )
-    foreach ($rel in $dataWhitelist) {
-        $src = Join-Path $root $rel
-        if (!(Test-Path $src)) { continue }
-        $dest = Join-Path $StagingDir $rel
-        $destDir = Split-Path $dest -Parent
-        if (!(Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir | Out-Null }
-        Copy-Item $src $dest -Force
-        Write-Host "Pack $rel ..." -ForegroundColor Cyan
-    }
+    . (Join-Path $PSScriptRoot "data-sync-rules.ps1")
+    Copy-WktDataForSync -SourceRoot $root -DestDir $StagingDir
 }
 
 function New-Archive {
@@ -141,7 +130,7 @@ rm -rf "`$STAGING"
 curl -s '${Cfg.health_url}' || true
 "@
 
-        Write-Host "Merge on server (DB/customer/config/venv untouched) ..." -ForegroundColor Cyan
+        Write-Host "Merge on server (order DB + delivery_notes untouched) ..." -ForegroundColor Cyan
         $result = Invoke-SSHCommand -SessionId $session.SessionId -Command $remoteScript -TimeOut 120
         Write-Host $result.Output
         if ($result.ExitStatus -ne 0) {
@@ -155,8 +144,10 @@ curl -s '${Cfg.health_url}' || true
 
 Write-Host ""
 Write-Host "=== WKT sync to cloud ===" -ForegroundColor Cyan
-Write-Host "Sync: test_impl + scripts + supplier_profiles.json" -ForegroundColor DarkGray
-Write-Host "NOT touched: DB, customer_profiles, config, venv" -ForegroundColor DarkGray
+. (Join-Path $PSScriptRoot "data-sync-rules.ps1")
+Show-WktDataSyncPolicy
+Write-Host "Also sync: test_impl + scripts" -ForegroundColor DarkGray
+Write-Host "NOT touched: config/, venv/, orders/, imports/" -ForegroundColor DarkGray
 Write-Host ""
 
 $cfg = Load-Config

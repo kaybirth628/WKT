@@ -309,6 +309,23 @@ def build_batch_draft_document(items: List[tuple]) -> WktDeliveryDocument:
     )
 
 
+def enforce_document_quantities(
+    doc: WktDeliveryDocument,
+    quantities: List,
+) -> None:
+    """送货单数量以实际出货为准，避免确认页未同步时写入整单数量。"""
+    from decimal import Decimal
+
+    total = Decimal("0")
+    for i, raw_qty in enumerate(quantities):
+        q = raw_qty if isinstance(raw_qty, Decimal) else Decimal(str(raw_qty or "0"))
+        if i < len(doc.lines):
+            doc.lines[i].qty = serialize_qty(q)
+        total += q
+    if total > 0:
+        doc.total_qty = serialize_qty(total)
+
+
 def apply_document_overrides(doc: WktDeliveryDocument, payload: Optional[dict]) -> WktDeliveryDocument:
     """将用户确认页提交的字段合并到文档。"""
     if not payload or not isinstance(payload, dict):

@@ -2409,6 +2409,10 @@ function renderShipDnBatchTable(lines) {
       </tr>`;
     })
     .join("");
+  tbody.querySelectorAll(".ship-dn-batch-qty").forEach((inp) => {
+    inp.addEventListener("input", syncBatchQtyToShipDnFrame);
+    inp.addEventListener("change", syncBatchQtyToShipDnFrame);
+  });
 }
 
 function collectBatchShipItems() {
@@ -2431,11 +2435,38 @@ function getShipDnFrameWin() {
   return frame?.contentWindow || null;
 }
 
+function syncBatchQtyToShipDnFrame() {
+  const items = collectBatchShipItems();
+  const win = getShipDnFrameWin();
+  if (win?.syncLineQtyFromParent && items.length) {
+    win.syncLineQtyFromParent(items.map((i) => i.qty));
+  }
+}
+
 function collectShipDnPayload() {
+  if (_shipDnMode === "batch") {
+    syncBatchQtyToShipDnFrame();
+  }
   const qty = document.getElementById("shipDnQty")?.value.trim().replace(/,/g, "") || "";
   const win = getShipDnFrameWin();
   if (win && typeof win.collectDeliveryNoteDoc === "function") {
     const doc = win.collectDeliveryNoteDoc();
+    if (_shipDnMode === "batch") {
+      const items = collectBatchShipItems();
+      if (doc.lines && items.length) {
+        items.forEach((it, i) => {
+          if (doc.lines[i]) doc.lines[i].qty = it.qty;
+        });
+        let sum = 0;
+        items.forEach((it) => {
+          const n = parseFloat(String(it.qty || "").replace(/,/g, ""));
+          if (!isNaN(n)) sum += n;
+        });
+        if (sum > 0) doc.total_qty = String(sum);
+      }
+      doc.ship_qty = items.map((i) => i.qty).join(",");
+      return doc;
+    }
     doc.ship_qty = qty;
     if (doc.lines && doc.lines[0]) doc.lines[0].qty = doc.lines[0].qty || qty;
     doc.total_qty = doc.total_qty || qty;

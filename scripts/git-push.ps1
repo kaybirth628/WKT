@@ -59,6 +59,26 @@ function Show-Status {
     Write-Host ""
 }
 
+function Assert-NoDatabaseStaged {
+    $staged = @(git diff --cached --name-only 2>$null)
+    if ($LASTEXITCODE -ne 0) { return }
+    $dbFiles = $staged | Where-Object {
+        $_ -match '(^|/)data/.*\.db(\.|$|-journal$|-wal$|-shm$)' -or $_ -match '\.db\.bak'
+    }
+    if ($dbFiles) {
+        throw "Refusing to commit order database files: $($dbFiles -join ', ')"
+    }
+}
+
+function Show-DataCommitPolicy {
+    Write-Host ""
+    Write-Host "=== Data commit policy ===" -ForegroundColor Cyan
+    Write-Host "  Will commit: customer_profiles, delivery_templates, supplier_profiles, feishu_config, ..." -ForegroundColor DarkGray
+    Write-Host "  Will NOT commit: *.db, delivery_notes/attachments, secrets, deploy.local.json" -ForegroundColor DarkGray
+    Write-Host ""
+}
+
+Show-DataCommitPolicy
 Show-VersionHelp
 Show-Status
 
@@ -72,6 +92,7 @@ if (-not $PushOnly) {
             throw "Commit message required."
         }
         git add -A
+        Assert-NoDatabaseStaged
         git commit -m $Message
         Write-Host "Committed: $Message" -ForegroundColor Green
     }

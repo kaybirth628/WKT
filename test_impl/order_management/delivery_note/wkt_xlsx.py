@@ -1,4 +1,4 @@
-"""按威可特统一版式生成 Excel 送货单。"""
+"""按威可特统一版式生成 Excel 送货单（对齐 HTML 预览/打印版式）。"""
 from __future__ import annotations
 
 import io
@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, Side
+    from openpyxl.utils import get_column_letter
 except ImportError:
     Workbook = None  # type: ignore
 
@@ -17,6 +18,32 @@ _THIN = Side(style="thin", color="000000")
 _BORDER = Border(left=_THIN, right=_THIN, top=_THIN, bottom=_THIN)
 _CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
 _LEFT = Alignment(horizontal="left", vertical="center", wrap_text=True)
+_LABEL = Alignment(horizontal="left", vertical="center", wrap_text=False)
+
+_COL_WIDTHS = [14, 14, 16, 14, 6, 8, 12, 8, 12]
+
+
+def _set_col_widths(ws) -> None:
+    for i, w in enumerate(_COL_WIDTHS, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+
+def _merge_write(ws, cell_range: str, value, *, align=None, bold=False, border=False):
+    ws.merge_cells(cell_range)
+    top_left = cell_range.split(":")[0]
+    cell = ws[top_left]
+    cell.value = value
+    cell.alignment = align or _LEFT
+    cell.font = Font(bold=bold)
+    if border:
+        cell.border = _BORDER
+
+
+def _write_meta_row(ws, row: int, left_lbl: str, left_val: str, right_lbl: str, right_val: str) -> None:
+    ws.cell(row=row, column=1, value=left_lbl).alignment = _LABEL
+    _merge_write(ws, f"B{row}:E{row}", left_val or "", align=_LEFT)
+    ws.cell(row=row, column=6, value=right_lbl).alignment = _LABEL
+    _merge_write(ws, f"G{row}:I{row}", right_val or "", align=_LEFT)
 
 
 def build_xlsx_bytes(doc: "WktDeliveryDocument") -> bytes:
@@ -25,30 +52,18 @@ def build_xlsx_bytes(doc: "WktDeliveryDocument") -> bytes:
     wb = Workbook()
     ws = wb.active
     ws.title = "送货单"
+    _set_col_widths(ws)
 
-    ws.merge_cells("A1:I1")
-    c = ws["A1"]
-    c.value = doc.title_company
-    c.font = Font(size=16, bold=True)
-    c.alignment = _CENTER
+    _merge_write(ws, "A1:I1", doc.title_company, align=_CENTER, bold=True)
+    ws["A1"].font = Font(size=16, bold=True)
+    _merge_write(ws, "A2:I2", "送货单", align=_CENTER, bold=True)
+    ws["A2"].font = Font(size=14, bold=True)
 
-    ws.merge_cells("A2:I2")
-    c2 = ws["A2"]
-    c2.value = "送货单"
-    c2.font = Font(size=14, bold=True)
-    c2.alignment = _CENTER
-
-    meta = [
-        ("A4", "送货单号：", doc.doc_no, "F4", "日期：", doc.ship_date_cn),
-        ("A5", "收货公司：", doc.receiver_company, "F5", "供应商：", doc.supplier_name),
-        ("A6", "收货地点：", doc.receiver_address, "F6", "供应商地址：", doc.supplier_address),
-        ("A7", "联系人及电话：", doc.receiver_contact, "F7", "供应商电话：", doc.supplier_phone),
-    ]
-    for left_cell, left_lbl, left_val, right_cell, right_lbl, right_val in meta:
-        ws[left_cell] = left_lbl + (left_val or "")
-        ws[right_cell] = right_lbl + (right_val or "")
-        ws[left_cell].alignment = _LEFT
-        ws[right_cell].alignment = _LEFT
+    _write_meta_row(ws, 4, "送货单号：", doc.doc_no, "日期：", doc.ship_date_cn)
+    _write_meta_row(ws, 5, "收货公司：", doc.receiver_company, "供应商：", doc.supplier_name)
+    _write_meta_row(ws, 6, "收货地点：", doc.receiver_address, "供应商地址：", doc.supplier_address)
+    _write_meta_row(ws, 7, "联系人及电话：", doc.receiver_contact, "供应商电话：", doc.supplier_phone)
+    ws.row_dimensions[6].height = 36
 
     headers = [
         "订单号",
@@ -87,26 +102,30 @@ def build_xlsx_bytes(doc: "WktDeliveryDocument") -> bytes:
             cell.alignment = _CENTER if col in (5, 6, 7, 8) else _LEFT
         row += 1
 
-    ws.cell(row=row, column=1, value="以下空白").border = _BORDER
-    for col in range(2, 10):
+    _merge_write(ws, f"A{row}:I{row}", "以下空白", align=_LEFT, border=True)
+    for col in range(1, 10):
         ws.cell(row=row, column=col).border = _BORDER
     row += 1
 
-    ws.cell(row=row, column=1, value="合计").font = Font(bold=True)
-    ws.cell(row=row, column=6, value=doc.total_qty).font = Font(bold=True)
+    _merge_write(
+        ws,
+        f"A{row}:E{row}",
+        "合计",
+        align=Alignment(horizontal="left", vertical="center"),
+        bold=True,
+    )
+    qty_cell = ws.cell(row=row, column=6, value=doc.total_qty)
+    qty_cell.font = Font(bold=True)
+    qty_cell.alignment = _CENTER
     for col in range(1, 10):
         ws.cell(row=row, column=col).border = _BORDER
 
     sign_row = row + 2
-    ws.cell(row=sign_row, column=1, value="送货人：" + (doc.deliverer or ""))
-    ws.cell(row=sign_row, column=4, value="仓管：" + (doc.warehouse_manager or ""))
-    ws.cell(row=sign_row, column=7, value="收货：" + (doc.receiver_sign or ""))
+    _merge_write(ws, f"A{sign_row}:C{sign_row}", "送货人：" + (doc.deliverer or ""), align=_LEFT)
+    _merge_write(ws, f"D{sign_row}:F{sign_row}", "仓管：" + (doc.warehouse_manager or ""), align=_LEFT)
+    _merge_write(ws, f"G{sign_row}:I{sign_row}", "收货：" + (doc.receiver_sign or ""), align=_LEFT)
 
-    ws.cell(row=sign_row + 2, column=1, value=doc.footer_note)
-
-    widths = [14, 14, 16, 14, 6, 8, 12, 8, 12]
-    for i, w in enumerate(widths, 1):
-        ws.column_dimensions[chr(64 + i)].width = w
+    _merge_write(ws, f"A{sign_row + 2}:I{sign_row + 2}", doc.footer_note or "", align=_LEFT)
 
     buf = io.BytesIO()
     wb.save(buf)

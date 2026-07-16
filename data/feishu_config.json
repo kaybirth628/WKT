@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/16ce332b-68e6-4d36-ade1-1199fa427291",
+  "sign_secret": "",
+  "app_name": "WKT销售系统",
+  "events": {
+    "line_created": true,
+    "line_updated": true,
+    "line_deleted": true,
+    "line_shipped": true,
+    "import_completed": true
+  }
+}

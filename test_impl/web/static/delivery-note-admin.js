@@ -6,6 +6,9 @@
   const RECONCILIATION_PERIOD_OPTIONS = [
     { value: "calendar_month", label: "自然月（1日～月末）" },
     { value: "month_21_20", label: "21日～次月20日" },
+    { value: "month_26_25", label: "26日～次月25日" },
+    { value: "month_22_21", label: "22日～次月21日" },
+    { value: "month_16_15", label: "16日～次月15日" },
   ];
 
   function reconciliationPeriodLabel(value) {

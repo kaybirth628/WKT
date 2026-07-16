@@ -8,6 +8,13 @@ from decimal import Decimal
 
 from test_impl.common.money import round_qty, serialize_qty, to_decimal
 
+from test_impl.order_management.customer_name import (
+    customer_names_match,
+    dedupe_customer_names,
+    normalize_customer_name,
+    pick_canonical_customer_name,
+)
+
 from .line_models import CustomerMaster, OrderLine, PartMapping, normalize_line_fields
 from .line_store import CLOSURE_FORCED, DuplicatePartNoError, LineStore, default_db_path
 from .shipment_models import SHIP_SOURCE_OPEN, ShipmentEvent
@@ -37,7 +44,7 @@ class OrderLineService:
         for name in self._store.distinct_customers_from_lines():
             if name:
                 names.add(name)
-        return sorted(names, key=lambda x: (x.casefold(), x))
+        return dedupe_customer_names(names)
 
     def list_master(self) -> dict:
         return {
@@ -66,25 +73,25 @@ class OrderLineService:
         self._store.delete_customer_master(name)
 
     def resolve_customer(self, ocr_name: str) -> Optional[CustomerMaster]:
-        """OCR 客户名匹配主数据（精确 → 忽略大小写 → 包含关系）。"""
+        """OCR 客户名匹配主数据（精确 → 规范化 → 包含关系）。"""
         name = (ocr_name or "").strip()
         if not name:
             return None
         customers = self._store.list_customers()
         for c in customers:
-            if c.name == name:
-                return c
+            if customer_names_match(c.name, name):
+                canonical = pick_canonical_customer_name([c.name, name])
+                return CustomerMaster(name=canonical)
         lower = name.lower()
-        for c in customers:
-            if c.name.lower() == lower:
-                return c
-        best: Optional[CustomerMaster] = None
+        matches: List[CustomerMaster] = []
         for c in customers:
             cl = c.name.lower()
             if cl in lower or lower in cl:
-                if best is None or len(c.name) > len(best.name):
-                    best = c
-        return best
+                matches.append(c)
+        if matches:
+            canonical = pick_canonical_customer_name([m.name for m in matches] + [name])
+            return CustomerMaster(name=canonical)
+        return None
 
     def enrich_line_dict(self, row: dict) -> dict:
         out = dict(row)
@@ -125,6 +132,12 @@ class OrderLineService:
 
     def create_line(self, data: dict) -> OrderLine:
         fields = normalize_line_fields(self.enrich_line_dict(data))
+        cpn = fields.get("customer_part_no", "")
+        binding = self._store.get_part_no_binding(cpn)
+        if binding and not binding.get("conflict"):
+            owner = str(binding.get("customer_name") or "").strip()
+            if owner and customer_names_match(owner, fields.get("customer", "")):
+                fields["customer"] = owner
         self._ensure_customer(fields["customer"])
         dup = self._store.find_duplicate_line(
             fields["customer"], fields["order_no"], fields["product_spec"]
@@ -226,6 +239,7 @@ class OrderLineService:
             apply_document_overrides,
             build_batch_draft_document,
             document_to_dict,
+            enforce_document_quantities,
             finalize_doc_no,
         )
 
@@ -284,6 +298,7 @@ class OrderLineService:
         if delivery_note is not None and events:
             doc = build_batch_draft_document(ship_pairs)
             apply_document_overrides(doc, delivery_note)
+            enforce_document_quantities(doc, [delta for _, delta in ship_pairs])
             if monthly_seq is not None:
                 finalize_doc_no(doc, events[0].id, events[0].shipped_at, monthly_seq)
             snap = json.dumps(document_to_dict(doc), ensure_ascii=False)
