@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · 订单管理</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260711-title-gray-bg" />
+  <link rel="stylesheet" href="/static/style.css?v=20260725-partner-seq" />
   <link rel="stylesheet" href="/static/dashboard.css?v=20260623-order-dashboard" />
 </head>
 <body>
@@ -251,8 +251,30 @@
                   <option value="">全部</option>
                 </select>
               </label>
-              <button type="button" class="btn btn-outline btn-sm" id="reconcileRefreshBtn">刷新对账</button>
+              <button type="button" class="btn btn-outline btn-sm" id="reconcileRefreshBtn">刷新应收</button>
               <span id="reconcileAmountSummary" class="reconcile-amount-summary"></span>
+            </div>
+            <div id="payableToolbar" class="reconcile-toolbar is-hidden">
+              <button type="button" class="btn btn-outline btn-sm is-hidden" id="payableBackBtn">← 返回汇总</button>
+              <span id="payableDetailBadge" class="reconcile-detail-badge is-hidden"></span>
+              <label class="reconcile-filter-label payable-summary-only">结算月份
+                <select id="payableSettlementMonthFilter" class="reconcile-filter-select">
+                  <option value="">全部</option>
+                </select>
+              </label>
+              <label class="reconcile-filter-label payable-summary-only">付款月份
+                <select id="payablePaymentMonthFilter" class="reconcile-filter-select">
+                  <option value="">全部</option>
+                </select>
+              </label>
+              <label class="reconcile-filter-label payable-detail-only is-hidden">收货起
+                <input type="date" id="payableReceiveFrom" class="reconcile-filter-select" />
+              </label>
+              <label class="reconcile-filter-label payable-detail-only is-hidden">收货止
+                <input type="date" id="payableReceiveTo" class="reconcile-filter-select" />
+              </label>
+              <button type="button" class="btn btn-outline btn-sm" id="payableRefreshBtn">刷新应付</button>
+              <span id="payableAmountSummary" class="reconcile-amount-summary"></span>
             </div>
             <button type="button" class="btn btn-outline btn-sm" id="clearListFiltersBtn">清空筛选</button>
             <button type="button" class="btn btn-primary btn-sm is-hidden" id="openBatchShipBtn" title="同一客户多条料号合并为一张送货单">合并出货</button>
@@ -287,75 +309,96 @@
         <div id="submoduleDelivery" class="submodule-panel is-hidden">
           <h3 class="section-h3 submodule-page-title">客户信息维护</h3>
           <section class="card list-card dn-maint-card">
-            <form id="dnNewCustomerForm" class="dn-form dn-new-form">
-              <label>客户名称 <input type="text" id="dnNewName" required placeholder="公司全称" /></label>
-              <label>地址 <input type="text" id="dnNewAddress" placeholder="收货/公司地址" /></label>
-              <label>联系人 <input type="text" id="dnNewContact" placeholder="联系人" /></label>
-              <label>电话 <input type="text" id="dnNewPhone" placeholder="电话" /></label>
-              <label>邮箱 <input type="email" id="dnNewEmail" placeholder="邮箱" /></label>
-              <label>账期 <input type="text" id="dnNewPaymentTerms" placeholder="如：月结60天" /></label>
-              <label>对账周期
-                <select id="dnNewReconcilePeriod" required>
-                  <option value="">请选择</option>
-                  <option value="calendar_month">自然月（1日～月末）</option>
-                  <option value="month_21_20">21日～次月20日</option>
-                  <option value="month_26_25">26日～次月25日</option>
-                  <option value="month_22_21">22日～次月21日</option>
-                  <option value="month_16_15">16日～次月15日</option>
-                </select>
-              </label>
-              <label>送货单
-                <select id="dnNewDeliveryMode">
-                  <option value="off">不使用</option>
-                  <option value="wkt" selected>威可特统一模板</option>
-                  <option value="custom">专用模板</option>
-                </select>
-              </label>
-              <label id="dnNewCustomUploadWrap" class="dn-custom-tpl-wrap is-hidden">上传 Excel 模板
-                <input type="file" id="dnNewCustomUpload" accept=".xlsx,.xlsm" />
-              </label>
-              <div class="dn-form-actions">
-                <button type="submit" class="btn btn-primary btn-sm">添加客户</button>
+            <form id="dnNewCustomerForm" class="dn-form dn-new-form dn-new-form-2row">
+              <div class="dn-form-row">
+                <label>客户名称 <input type="text" id="dnNewName" required placeholder="公司全称" /></label>
+                <label>地址 <input type="text" id="dnNewAddress" placeholder="收货/公司地址" /></label>
+                <label>联系人 <input type="text" id="dnNewContact" placeholder="联系人" /></label>
+                <label>电话 <input type="text" id="dnNewPhone" placeholder="电话" /></label>
+                <label>邮箱 <input type="email" id="dnNewEmail" placeholder="邮箱" /></label>
+              </div>
+              <div class="dn-form-row">
+                <label>账期 <input type="text" id="dnNewPaymentTerms" placeholder="如：月结60天" /></label>
+                <label>对账周期
+                  <select id="dnNewReconcilePeriod" required>
+                    <option value="">请选择</option>
+                    <option value="calendar_month">自然月（1日～月末）</option>
+                    <option value="month_21_20">21日～次月20日</option>
+                    <option value="month_26_25">26日～次月25日</option>
+                    <option value="month_22_21">22日～次月21日</option>
+                    <option value="month_16_15">16日～次月15日</option>
+                  </select>
+                </label>
+                <label>送货单
+                  <select id="dnNewDeliveryMode">
+                    <option value="off">不使用</option>
+                    <option value="wkt" selected>威可特统一模板</option>
+                    <option value="custom">专用模板</option>
+                  </select>
+                </label>
+                <label id="dnNewCustomUploadWrap" class="dn-custom-tpl-wrap is-hidden">上传 Excel 模板
+                  <input type="file" id="dnNewCustomUpload" accept=".xlsx,.xlsm" />
+                </label>
+                <div class="dn-form-actions">
+                  <button type="submit" class="btn btn-primary btn-sm">添加客户</button>
+                </div>
               </div>
             </form>
             <p id="dnNewMsg" class="msg dn-msg"></p>
           </section>
 
           <section class="card list-card dn-maint-card">
-            <div class="list-meta-row list-meta-row-end">
-              <button type="button" class="btn btn-outline btn-sm" id="dnRefreshBtn">刷新</button>
-            </div>
             <p id="dnMapMsg" class="msg list-msg dn-msg"></p>
+            <div id="dnColFilterPanel" class="list-col-filter-panel is-hidden" role="dialog" aria-modal="true" aria-labelledby="dnColFilterPanelTitle">
+              <div class="list-col-filter-panel-head">
+                <span id="dnColFilterPanelTitle">筛选</span>
+                <button type="button" class="list-col-filter-close" id="dnColFilterPanelClose" aria-label="关闭">×</button>
+              </div>
+              <input type="text" class="list-col-filter-search" id="dnColFilterSearch" placeholder="搜索选项…" />
+              <label class="list-col-filter-all"><input type="checkbox" id="dnColFilterSelectAll" checked /> <span id="dnColFilterSelectAllLabel">全选</span></label>
+              <div id="dnColFilterOptions" class="list-col-filter-options"></div>
+              <div class="list-col-filter-actions">
+                <button type="button" class="btn btn-primary btn-sm" id="dnColFilterApply">确定</button>
+                <button type="button" class="btn btn-outline btn-sm" id="dnColFilterReset">重置</button>
+              </div>
+            </div>
             <div class="list-scroll-host">
               <div class="table-wrap list-table-wrap dn-table-scroll">
                 <table class="data-table list-table dn-maint-table" id="dnMaintTable">
                   <colgroup>
-                    <col style="width:14%" />
+                    <col style="width:3%" />
+                    <col style="width:13%" />
                     <col style="width:10%" />
-                    <col style="width:16%" />
+                    <col style="width:15%" />
                     <col style="width:8%" />
+                    <col style="width:9%" />
+                    <col style="width:9%" />
+                    <col style="width:11%" />
+                    <col style="width:11%" />
                     <col style="width:10%" />
-                    <col style="width:10%" />
-                    <col style="width:12%" />
-                    <col style="width:12%" />
-                    <col style="width:8%" />
                   </colgroup>
-                  <thead>
+                  <thead id="dnMaintHead">
                     <tr class="list-header-row">
-                      <th class="list-th-text">客户</th>
-                      <th class="list-th-text">送货单</th>
-                      <th class="list-th-text">地址</th>
-                      <th class="list-th-text">联系人</th>
-                      <th class="list-th-text">电话</th>
-                      <th class="list-th-text">邮箱</th>
-                      <th class="list-th-text">账期</th>
-                      <th class="list-th-text">对账周期</th>
-                      <th class="list-th-action action-cell">操作</th>
+                      <th scope="col" class="list-th-seq">序号</th>
+                      <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">客户</span><button type="button" class="list-filter-btn" data-col="customer" aria-label="筛选客户" title="筛选客户"><span aria-hidden="true">▾</span></button></span></th>
+                      <th scope="col" class="list-th-text">送货单</th>
+                      <th scope="col" class="list-th-text">地址</th>
+                      <th scope="col" class="list-th-text">联系人</th>
+                      <th scope="col" class="list-th-text">电话</th>
+                      <th scope="col" class="list-th-text">邮箱</th>
+                      <th scope="col" class="list-th-text">账期</th>
+                      <th scope="col" class="list-th-text">对账周期</th>
+                      <th scope="col" class="list-th-action action-cell">操作</th>
                     </tr>
                   </thead>
                   <tbody id="dnCustomerBody"></tbody>
                 </table>
               </div>
+            </div>
+            <div class="filter-bar filter-bar-compact list-footer-toolbar">
+              <button type="button" class="btn btn-outline btn-sm" id="dnClearFiltersBtn">清空筛选</button>
+              <p id="dnListCount" class="list-summary">共 0 条</p>
+              <button type="button" class="btn btn-outline btn-sm" id="dnRefreshBtn">刷新</button>
             </div>
           </section>
 
@@ -375,54 +418,75 @@
         <div id="submoduleSupplier" class="submodule-panel is-hidden">
           <h3 class="section-h3 submodule-page-title">供应商信息维护</h3>
           <section class="card list-card dn-maint-card">
-            <form id="spNewSupplierForm" class="dn-form dn-new-form">
-              <label>供应商名称 <input type="text" id="spNewName" required placeholder="公司全称" /></label>
-              <label>地址 <input type="text" id="spNewAddress" placeholder="公司地址" /></label>
-              <label>联系人 <input type="text" id="spNewContact" placeholder="联系人" /></label>
-              <label>电话 <input type="text" id="spNewPhone" placeholder="电话" /></label>
-              <label>邮箱 <input type="email" id="spNewEmail" placeholder="邮箱" /></label>
-              <label>账期 <input type="text" id="spNewPaymentTerms" placeholder="如：月结60天" /></label>
-              <label>备注 <input type="text" id="spNewNotes" placeholder="备注（可选）" /></label>
-              <div class="dn-form-actions">
-                <button type="submit" class="btn btn-primary btn-sm">添加供应商</button>
+            <form id="spNewSupplierForm" class="dn-form dn-new-form dn-new-form-2row">
+              <div class="dn-form-row">
+                <label>供应商名称 <input type="text" id="spNewName" required placeholder="公司全称" /></label>
+                <label>地址 <input type="text" id="spNewAddress" placeholder="公司地址" /></label>
+                <label>联系人 <input type="text" id="spNewContact" placeholder="联系人" /></label>
+                <label>电话 <input type="text" id="spNewPhone" placeholder="电话" /></label>
+              </div>
+              <div class="dn-form-row">
+                <label>邮箱 <input type="email" id="spNewEmail" placeholder="邮箱" /></label>
+                <label>账期 <input type="text" id="spNewPaymentTerms" placeholder="如：月结60天" /></label>
+                <label>备注 <input type="text" id="spNewNotes" placeholder="备注（可选）" /></label>
+                <div class="dn-form-actions">
+                  <button type="submit" class="btn btn-primary btn-sm">添加供应商</button>
+                </div>
               </div>
             </form>
             <p id="spNewMsg" class="msg dn-msg"></p>
           </section>
 
           <section class="card list-card dn-maint-card">
-            <div class="list-meta-row list-meta-row-end">
-              <button type="button" class="btn btn-outline btn-sm" id="spRefreshBtn">刷新</button>
-            </div>
             <p id="spMapMsg" class="msg list-msg dn-msg"></p>
+            <div id="spColFilterPanel" class="list-col-filter-panel is-hidden" role="dialog" aria-modal="true" aria-labelledby="spColFilterPanelTitle">
+              <div class="list-col-filter-panel-head">
+                <span id="spColFilterPanelTitle">筛选</span>
+                <button type="button" class="list-col-filter-close" id="spColFilterPanelClose" aria-label="关闭">×</button>
+              </div>
+              <input type="text" class="list-col-filter-search" id="spColFilterSearch" placeholder="搜索选项…" />
+              <label class="list-col-filter-all"><input type="checkbox" id="spColFilterSelectAll" checked /> <span id="spColFilterSelectAllLabel">全选</span></label>
+              <div id="spColFilterOptions" class="list-col-filter-options"></div>
+              <div class="list-col-filter-actions">
+                <button type="button" class="btn btn-primary btn-sm" id="spColFilterApply">确定</button>
+                <button type="button" class="btn btn-outline btn-sm" id="spColFilterReset">重置</button>
+              </div>
+            </div>
             <div class="list-scroll-host">
               <div class="table-wrap list-table-wrap dn-table-scroll">
                 <table class="data-table list-table dn-maint-table" id="spMaintTable">
                   <colgroup>
-                    <col style="width:14%" />
-                    <col style="width:18%" />
+                    <col style="width:3%" />
+                    <col style="width:13%" />
+                    <col style="width:17%" />
+                    <col style="width:8%" />
                     <col style="width:9%" />
-                    <col style="width:10%" />
-                    <col style="width:12%" />
-                    <col style="width:12%" />
-                    <col style="width:14%" />
                     <col style="width:11%" />
+                    <col style="width:11%" />
+                    <col style="width:13%" />
+                    <col style="width:15%" />
                   </colgroup>
-                  <thead>
+                  <thead id="spMaintHead">
                     <tr class="list-header-row">
-                      <th class="list-th-text">供应商</th>
-                      <th class="list-th-text">地址</th>
-                      <th class="list-th-text">联系人</th>
-                      <th class="list-th-text">电话</th>
-                      <th class="list-th-text">邮箱</th>
-                      <th class="list-th-text">账期</th>
-                      <th class="list-th-text">备注</th>
-                      <th class="list-th-action action-cell">操作</th>
+                      <th scope="col" class="list-th-seq">序号</th>
+                      <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">供应商</span><button type="button" class="list-filter-btn" data-col="supplier" aria-label="筛选供应商" title="筛选供应商"><span aria-hidden="true">▾</span></button></span></th>
+                      <th scope="col" class="list-th-text">地址</th>
+                      <th scope="col" class="list-th-text">联系人</th>
+                      <th scope="col" class="list-th-text">电话</th>
+                      <th scope="col" class="list-th-text">邮箱</th>
+                      <th scope="col" class="list-th-text">账期</th>
+                      <th scope="col" class="list-th-text">备注</th>
+                      <th scope="col" class="list-th-action action-cell">操作</th>
                     </tr>
                   </thead>
                   <tbody id="spSupplierBody"></tbody>
                 </table>
               </div>
+            </div>
+            <div class="filter-bar filter-bar-compact list-footer-toolbar">
+              <button type="button" class="btn btn-outline btn-sm" id="spClearFiltersBtn">清空筛选</button>
+              <p id="spListCount" class="list-summary">共 0 条</p>
+              <button type="button" class="btn btn-outline btn-sm" id="spRefreshBtn">刷新</button>
             </div>
           </section>
         </div>
@@ -487,9 +551,10 @@
   </div>
 
   <script src="/static/save-feedback.js?v=20260530"></script>
-  <script src="/static/delivery-note-admin.js?v=20260716-reconcile-period"></script>
-  <script src="/static/supplier-admin.js?v=20260711-ui-unify"></script>
+  <script src="/static/list-col-filter.js?v=20260725-partner-seq"></script>
+  <script src="/static/delivery-note-admin.js?v=20260725-partner-sort-desc"></script>
+  <script src="/static/supplier-admin.js?v=20260725-partner-sort-desc"></script>
   <script src="/static/ai-assistant.js?v=20260530-ai-sidebar"></script>
-  <script src="/static/app.js?v=20260715-batch-ship-qty"></script>
+  <script src="/static/app.js?v=20260723-auth-audit"></script>
 </body>
 </html>

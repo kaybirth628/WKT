@@ -1,14 +1,22 @@
 # WKT 主数据同步规则（一键云端 / GitHub 参考）
-# 订单库 *.db 与出货附件 delivery_notes 不同步；其余 data/ 覆盖上传。
+# 默认（CodeOnly）：不同步任何 data/，云端数据以服务器为准。
+# -WithMasterData：同步 JSON 主数据（客户/供应商/送货单模板等），仍排除 *.db、delivery_notes。
+# -FullData：整包 data/（含 wkt_orders.db、delivery_notes）覆盖云端（危险，需 YES 确认）。
 
 function Get-WktDataSyncExcludeDirs {
+    param([switch]$FullData)
+    if ($FullData) { return @() }
     return @(
         "delivery_notes"
     )
 }
 
 function Test-WktDataSyncExcludedFile {
-    param([string]$FileName)
+    param(
+        [string]$FileName,
+        [switch]$FullData
+    )
+    if ($FullData) { return $false }
     $name = [IO.Path]::GetFileName($FileName)
     if ($name -match '\.db$') { return $true }
     if ($name -match '\.db-(journal|wal|shm)$') { return $true }
@@ -19,8 +27,15 @@ function Test-WktDataSyncExcludedFile {
 function Copy-WktDataForSync {
     param(
         [Parameter(Mandatory = $true)][string]$SourceRoot,
-        [Parameter(Mandatory = $true)][string]$DestDir
+        [Parameter(Mandatory = $true)][string]$DestDir,
+        [switch]$FullData,
+        [switch]$WithMasterData
     )
+
+    if (-not $FullData -and -not $WithMasterData) {
+        Write-Host "Skip data/ (code-only sync; cloud data preserved)." -ForegroundColor Green
+        return
+    }
 
     $srcData = Join-Path $SourceRoot "data"
     if (!(Test-Path $srcData)) {
@@ -30,15 +45,19 @@ function Copy-WktDataForSync {
 
     $destData = Join-Path $DestDir "data"
     New-Item -ItemType Directory -Path $destData -Force | Out-Null
-    $excludeDirs = Get-WktDataSyncExcludeDirs
+    $excludeDirs = Get-WktDataSyncExcludeDirs -FullData:$FullData
 
-    Write-Host "Pack data/ (exclude order DB + delivery_notes attachments) ..." -ForegroundColor Cyan
+    if ($FullData) {
+        Write-Host "Pack data/ FULL (order DB + delivery_notes included) ..." -ForegroundColor Yellow
+    } else {
+        Write-Host "Pack data/ master JSON only (exclude order DB + delivery_notes) ..." -ForegroundColor Cyan
+    }
     $count = 0
     Get-ChildItem -Path $srcData -Recurse -File | ForEach-Object {
         $rel = $_.FullName.Substring($srcData.Length).TrimStart('\', '/')
         $top = ($rel -split '[\\/]', 2)[0]
         if ($excludeDirs -contains $top) { return }
-        if (Test-WktDataSyncExcludedFile $_.Name) { return }
+        if (Test-WktDataSyncExcludedFile $_.Name -FullData:$FullData) { return }
 
         $target = Join-Path $destData $rel
         $targetDir = Split-Path $target -Parent
@@ -51,7 +70,39 @@ function Copy-WktDataForSync {
     Write-Host "  Packed $count data files." -ForegroundColor DarkGray
 }
 
+function Copy-WktFeishuConfigForSync {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourceRoot,
+        [Parameter(Mandatory = $true)][string]$DestDir
+    )
+    $srcFeishu = Join-Path $SourceRoot "data\feishu_config.json"
+    if (!(Test-Path $srcFeishu)) {
+        Write-Host "No data/feishu_config.json; skip Feishu notify sync." -ForegroundColor DarkGray
+        return
+    }
+    $destData = Join-Path $DestDir "data"
+    New-Item -ItemType Directory -Path $destData -Force | Out-Null
+    Copy-Item $srcFeishu (Join-Path $destData "feishu_config.json") -Force
+    Write-Host "Pack data/feishu_config.json (always push Feishu webhooks to cloud)." -ForegroundColor Cyan
+}
+
 function Show-WktDataSyncPolicy {
-    Write-Host "Sync data/: customer_profiles, delivery_templates, supplier_profiles, feishu_config, ..." -ForegroundColor DarkGray
-    Write-Host "NOT sync: *.db (order DB), delivery_notes/ (shipment attachments)" -ForegroundColor DarkGray
+    param(
+        [switch]$FullData,
+        [switch]$WithMasterData
+    )
+    if ($FullData) {
+        Write-Host "FULL data sync: entire data/ including wkt_orders.db + delivery_notes/" -ForegroundColor Yellow
+        Write-Host "Cloud order DB will be REPLACED by local copy." -ForegroundColor Yellow
+        return
+    }
+    if ($WithMasterData) {
+        Write-Host "Master data sync: customer_profiles, supplier_profiles, delivery_templates, feishu_config, ..." -ForegroundColor Yellow
+        Write-Host "NOT sync: *.db (order DB), delivery_notes/" -ForegroundColor DarkGray
+        Write-Host "WARNING: cloud JSON master data will be OVERWREN by local files." -ForegroundColor Yellow
+        return
+    }
+    Write-Host "Code-only sync: test_impl + scripts ONLY" -ForegroundColor Green
+    Write-Host "Cloud data/ is NOT touched (orders, suppliers, customers stay on server)." -ForegroundColor Green
+    Write-Host "Exception: data/feishu_config.json is ALWAYS synced (Feishu notify webhooks)." -ForegroundColor Cyan
 }

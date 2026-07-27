@@ -83,3 +83,48 @@ def format_terms_label(cfg: Dict[str, Any] | None = None) -> str:
     label = str(cfg.get("terms_label") or "月结90天").strip()
     day = int(cfg.get("payment_day") or 25)
     return f"{label}·每月{day}日付款"
+
+
+def parse_supplier_payment_terms(text: str | None) -> Dict[str, Any]:
+    """解析供应商账期文本 → term_days / is_cash。"""
+    raw = str(text or "").strip()
+    if not raw:
+        cfg = load_reconciliation_config()
+        return {"term_days": int(cfg.get("term_days") or 90), "is_cash": False}
+    compact = raw.replace(" ", "")
+    if compact in ("现结", "现金", "即付", "货到付款"):
+        return {"term_days": 0, "is_cash": True}
+    import re
+
+    m = re.search(r"(\d+)\s*天", compact)
+    if m:
+        return {"term_days": max(0, int(m.group(1))), "is_cash": False}
+    m = re.search(r"(\d+)", compact)
+    if m and "月" not in compact:
+        return {"term_days": max(0, int(m.group(1))), "is_cash": False}
+    cfg = load_reconciliation_config()
+    return {"term_days": int(cfg.get("term_days") or 90), "is_cash": False}
+
+
+def compute_payable_date(
+    receive_date: date,
+    payment_terms: str | None = None,
+    *,
+    payment_day: int = 25,
+) -> date:
+    """应付日：现结=回货日；否则回货日+N 天后对齐 payment_day。"""
+    parsed = parse_supplier_payment_terms(payment_terms)
+    if parsed["is_cash"]:
+        return receive_date
+    payment_day = max(1, min(int(payment_day), 28))
+    term_days = max(0, int(parsed["term_days"]))
+    anchor = receive_date + timedelta(days=term_days)
+    y, m = anchor.year, anchor.month
+    if anchor.day > payment_day:
+        m += 1
+        if m > 12:
+            y += 1
+            m = 1
+    last_pay = calendar.monthrange(y, m)[1]
+    day = min(payment_day, last_pay)
+    return date(y, m, day)

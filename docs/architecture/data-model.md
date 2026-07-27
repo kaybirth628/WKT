@@ -2,7 +2,7 @@
 
 > 描述业务数据如何存储、关联与流转。  
 > 代码对照：`test_impl/order_management/order_entry/line_store.py`（SQLite 建表）、`line_models.py`、`shipment_models.py`。  
-> 最后更新：2026-05-30 · CL-0059
+> 最后更新：2026-07-20 · CL-0114
 
 ---
 
@@ -15,7 +15,9 @@
 | **订单原件** | `orders/{客户名}/{接单日期}_{订单号}.ext` | OCR 识别后归档的 PDF/图片 |
 | **上传临时** | `test_impl/web/uploads/` | 上传中间文件，可清理 |
 | **OCR 任务** | 内存（`app.py`） | `_recognize_jobs`、`_recognize_previews`，重启清空 |
-| **成本分析** | 不入库 | 浏览器内 `CostQuote` 计算 |
+| **会话密钥** | `data/auth_secret.txt` | Flask Session 签名（自动生成，勿提交 Git） |
+| **成本/BOM 主数据** | `data/wkt_orders.db` → `cost_records` | SQLite，料号、工序、成本；**订单料号权威来源** |
+| **即时报价试算** | 不入库 | 浏览器内 `CostQuote`（`/cost` 页，非 BOM 主数据） |
 
 ```mermaid
 flowchart TB
@@ -31,8 +33,10 @@ flowchart TB
   end
 
   subgraph nopersist["仅页面计算"]
-    COST["成本分析 CostQuote"]
+    COST["即时报价 CostQuote /cost"]
   end
+
+  BOM["cost_records BOM主数据"] --> DB
 
   UI["网页 / API"] --> DB
   UI --> JSON
@@ -49,8 +53,45 @@ flowchart TB
 ```mermaid
 erDiagram
   customers ||--o{ order_lines : "名称引用(非FK)"
+  cost_records ||--o{ order_lines : "customer_part_no 逻辑引用"
   parts ||--o{ order_lines : "品名引用(非FK)"
   order_lines ||--o{ shipment_events : "line_id FK"
+  users ||--o{ audit_log : "user_id FK"
+
+  users {
+    int id PK
+    text username UK "登录名"
+    text display_name "显示姓名"
+    text password_hash "密码哈希"
+    text role "admin|user"
+    int is_active
+    int must_change_password
+    text created_at
+    text last_login_at
+  }
+
+  audit_log {
+    int id PK
+    int user_id FK
+    text username
+    text display_name
+    text action "如 line.create"
+    text module "orders|inventory|..."
+    text summary "可读摘要"
+    text detail_json
+    text ip_address
+    text created_at
+  }
+
+  cost_records {
+    int id PK
+    text customer_name "绑定客户"
+    text product_part_no "客户料号 UK逻辑"
+    text product_name "品名"
+    text unit_weight_g "单重"
+    text material "材质"
+    text process_prices_json "工序单价"
+  }
 
   customers {
     int id PK
@@ -79,6 +120,8 @@ erDiagram
     text tax_rate
     text rmb_tax_incl_price
     text payment_terms
+    text closure_type
+    int is_demo
     text created_at
     text updated_at
   }
@@ -133,6 +176,7 @@ erDiagram
 | `rmb_tax_incl_price` | TEXT → Decimal | 人民币含税单价 |
 | `payment_terms` | TEXT | 账期 |
 | `closure_type` | TEXT | 结案方式：空=未强制结案；`forced`=强制结案（不记出货、不纳入对账） |
+| `is_demo` | INTEGER | 1=测试数据（UI **测** 徽标）；`scripts/seed_sop_test_data.py` 写入 |
 | `created_at` | TEXT ISO | 系统录入时间 |
 | `updated_at` | TEXT ISO | 最后更新时间 |
 
@@ -283,6 +327,36 @@ WktDeliveryDocument
 
 ## 7. 主数据表
 
+### `cost_records`（BOM · 料号主数据）
+
+| 字段 | 说明 |
+|------|------|
+| `id` | PK |
+| `customer_name` | 绑定客户（同一 `product_part_no` 仅允许一个客户） |
+| `product_part_no` | **客户料号**（BOM 权威键） |
+| `product_name` | 品名 |
+| `mold_no` / `cavity` / `unit_weight_g` / `material` / `machine_tonnage` | 模具与物性 |
+| `material_unit_price` / `process_prices_json` | 原材与工序单价；JSON 内可含 **`__order__`** 数组保存自定义工艺顺序（CL-0137） |
+| `material_cost` / `process_total` / `unit_cost` / `quote_price` | 计算结果 |
+| `is_demo` | 1=测试数据（列表显示 **测**）；0=正式（CL-0133） |
+| `created_at` / `updated_at` | 时间戳 |
+
+**数据流（订单 ← BOM）**
+
+```mermaid
+flowchart LR
+  BOM["BOM录入 cost_records"]
+  ORD["订单录入 order_lines"]
+  API["GET /api/bom/lookup"]
+  BOM --> API
+  API -->|"回填品名/单重/材质"| ORD
+  ORD -->|"保存时 require_for_order"| BOM
+```
+
+- 订单保存/导入时若带 `customer_part_no`，`BomService.require_for_order()` 校验 BOM 存在且客户一致。
+- 未建档 → `BomNotFoundError`，提示先到 **BOM录入**。
+- 客户名匹配支持 profile 简称（如「怡利」↔ `customer_profiles.json` 全称）。
+
 ### `customers`
 
 | 字段 | 说明 |
@@ -300,7 +374,76 @@ WktDeliveryDocument
 | `product_spec` | 品名规格，UNIQUE |
 | `customer_part_no` | 对应客户料号 |
 
-选品名时可自动带出客户料号（`GET /api/master/lookup`）。
+**说明**：`parts` 表仍保留品名下拉；**客户料号以 BOM（`cost_records`）为准**。选品名时 `GET /api/master/lookup` 优先查 BOM，再回退 `parts`。
+
+### `users` / 用户管理 API（CL-0171）
+
+| 字段 | 说明 |
+|------|------|
+| `id` | PK |
+| `username` | 登录名，UNIQUE |
+| `display_name` | 显示姓名 |
+| `role` | `admin` / `user` |
+| `is_active` | 1=启用，0=禁用 |
+| `must_change_password` | 首次登录须改密 |
+| `last_login_at` | 上次登录时间 |
+
+| 接口 | 说明 |
+|------|------|
+| `GET /api/users` | 用户列表（仅管理员） |
+| `POST /api/users` | 创建用户 |
+| `PUT /api/users/{id}` | 编辑姓名、角色 |
+| `DELETE /api/users/{id}` | 删除用户（不可删 `admin`、当前登录账号；至少保留一名管理员） |
+| `POST /api/users/{id}/reset-password` | 重置密码 |
+| `POST /api/users/{id}/active` | 启用/禁用 |
+
+页面：`/admin/users`。
+
+| `POST /api/cost/bom-import/parse` | 上传 BOM 表单 Excel，解析预览（每 sheet 一料号） |
+| `POST /api/cost/bom-import/commit` | 批量写入 BOM（工序单价默认 0） |
+
+页面：`/bom/entry`（BOM 录入页顶部「BOM 表单批量导入」）。
+
+### `inventory_balances` / `inventory_movements`（库存 · CL-0114）
+
+| 表 | 说明 |
+|----|------|
+| `inventory_balances` | 余额：料号 × 工序 × 状态（`inhouse` / `outsource` / `finished`）× 供应商 |
+| `inventory_movements` | 流水：`inbound` 入库 / `outbound` 出库（历史 `complete`/`outsource_*`/`ship_finished` 展示映射为入库/出库） |
+| `production_replenish_orders` | 生产补产单（CL-0118，UI 已收起） |
+| `inventory_part_tags` | 料号数据标注（CL-0124）：`product_part_no` PK、`is_demo`（1=测 / 0=实）、`updated_at` |
+
+统一模型（CL-0163）：**入库** = 首道+场内 / 非首道在途→场内 / 末道→成品；**出库** = 上道场内→下道在途 / 成品出库。末道入库写入 `process_code=FIN` 成品仓。页面：`/inventory`、`/inventory/entry`。展示文案「在途」对应库内状态 `outsource`。
+
+| `POST /api/inventory/inbound` | 入库；`process_code`、可选 `supplier_name`（外发回货） |
+| `POST /api/inventory/outbound` | 出库；`from_process_code`、`to_process_code`（成品出库时 from=`FIN`、to 空） |
+
+| `GET /api/inventory/board` | 库存总览看板；可选 `product_part_no`、`customer_name`（客户模糊匹配）；每项含 `product_part_no`、`product_name`、`customer_name`、`finished_qty`、`stages[]`、`data_tag` |
+| `GET /api/cost/customers` | BOM 客户名称联想；`q` 模糊匹配，返回 `{ items: string[] }` |
+
+进出单号（CL-0163）：未填时自动 `RK` 入库 / `CK` 出库 / `TZ` 校正 -YYYYMMDD-序号；`inventory_movements.doc_no`。API  enriched 字段含 `route_display`（如 `01 压铸 → 02 去毛边`）。
+
+订单出货（`OrderLineService.ship_line`，已注入库存服务）自动调用 `ship_finished` 扣成品仓；不足则拒绝。
+
+### 排产对照 / 补产单 API（CL-0115 / CL-0118）
+
+| 接口 | 说明 |
+|------|------|
+| `GET /api/inventory/planning?customer=&q=` | 未结订单行 × 成品/半成品缺口；**一行一条** |
+| `POST /api/inventory/planning/seed-demo` | 演示：PLAN-A/B/C 需求各 1000，可用库存约 500/600/700 |
+| `GET /api/inventory/replenish` | 补产单列表 |
+| `POST /api/inventory/replenish` | 生成补产单（可绑 `sales_order_no` / `line_id`） |
+| `POST /api/inventory/seed-demo` | 单料号流水演示 |
+| `POST /api/inventory/seed-board-demo` | 约 10 料号 BOM+各工序在途/成品（总览看板演示） |
+| `GET /api/inventory/movements` | 流水；可选 `product_part_no`、`customer_name`（模糊）、`on_date`；每项含 `customer_name`、`product_name`（BOM）、`action_label`、`editable` 等 |
+| `PUT /api/inventory/movements/{id}` | 修改手工出入库流水数量/备注（同步回滚库存；订单出货流水不可改，CL-0152） |
+
+| `GET /api/reconciliation/due-outlook` | 应收到期：自本月起重 **6** 个收款月按客户汇总（CL-0129） |
+| `GET /api/payable/due-outlook` | 应付到期：自本月起重 **6** 个付款月按供应商汇总（CL-0129） |
+| `GET /api/payable/supplier-months` | 应付汇总：供应商×结算月 |
+| `GET /api/payable/lines` | 应付明细（`payment_month` / `receive_from` / `receive_to`） |
+
+应付只读聚合：`inventory_movements`（`outsource_receive` 或 `inbound` 且外发在途回货）+ BOM 工序价 + `supplier_profiles`（账期/对账周期）。无新增 SQLite 表（CL-0127）。
 
 ---
 
@@ -311,7 +454,7 @@ WktDeliveryDocument
 | `data/delivery_templates/wkt_company.json` | 威可特供应商信息、`doc_no_prefix`（如 WKT） |
 | `data/delivery_templates/customer_delivery.json` | 按客户：收货地址、联系人、单号前缀 |
 | `data/delivery_templates/mapping.json` | 客户名 → 旧 Excel 模板文件名（遗留） |
-| `data/feishu_config.json` | 飞书 Webhook（**勿提交 Git**） |
+| `data/feishu_config.json` | 飞书 Webhook（**勿提交 Git**）；支持 `webhook_urls` 多群推送 |
 
 `customer_delivery.json` 示例：
 

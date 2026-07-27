@@ -100,11 +100,33 @@ function applyProcessPrices(processPrices, processSelections) {
       inp.value = entry.price !== "0" ? entry.price : "";
       inp.classList.toggle("filled", parseFloat(entry.price) > 0);
     }
-    const sel = document.querySelector(`select.process-supplier[data-process-code="${code}"]`);
-    if (sel && entry.supplier) sel.value = entry.supplier;
+    const combo = document.querySelector(
+      `.process-supplier-combo:has(.process-supplier[data-process-code="${code}"])`
+    );
+    if (combo && entry.supplier) {
+      const hidden = combo.querySelector(".process-supplier");
+      const search = combo.querySelector(".process-supplier-search");
+      if (hidden) hidden.value = entry.supplier;
+      if (search) {
+        search.value = entry.supplier;
+        search.disabled = false;
+      }
+      if (hidden) hidden.disabled = false;
+    } else {
+      const sel = document.querySelector(
+        `input.process-supplier[data-process-code="${code}"], select.process-supplier[data-process-code="${code}"]`
+      );
+      if (sel && entry.supplier) sel.value = entry.supplier;
+    }
   });
   selectedCount = document.querySelectorAll("#processGrid .process-pick:checked").length;
   updateProcessSelectionSummary();
+  const order =
+    Array.isArray(processSelections) && processSelections.length
+      ? processSelections.map((s) => s.code)
+      : null;
+  if (order) CostCommon.setProcessOrder("processGrid", order);
+  else CostCommon.refreshProcessOrder("processGrid");
 }
 
 function applySuggestedFill(suggested) {
@@ -153,15 +175,15 @@ async function lookupPartNo() {
 
   if (!data.found) {
     markAutoFilledWeight(false);
-    setPartLookupHint("订单中未找到该料号，请手动填写", "warn");
+    setPartLookupHint("BOM 中未找到该料号，请填写完整信息后保存", "warn");
     return;
   }
 
   applySuggestedFill(data.suggested || {});
 
   const hints = [];
-  if (data.from_order_line) hints.push("已关联订单并绑定客户");
-  if (data.from_cost_record) hints.push("已载入历史成本");
+  if (data.from_bom) hints.push("已载入 BOM 主数据");
+  if (data.from_cost_record) hints.push("已载入历史记录");
   if ((data.auto_filled || []).includes("unit_weight_g")) {
     hints.push(`产品单重 ${data.suggested.unit_weight_g}g`);
   } else {
@@ -230,13 +252,17 @@ function renderProcessPicker(processOptions) {
   grid.innerHTML = CostCommon.renderProcessGridHtml(processOptions);
   selectedCount = 0;
   updateProcessSelectionSummary();
-  CostCommon.bindProcessPickerGrid(grid);
-  grid.querySelectorAll(".process-pick").forEach((cb) => {
-    cb.addEventListener("change", () => {
-      selectedCount = grid.querySelectorAll(".process-pick:checked").length;
-      updateProcessSelectionSummary();
-    });
+  CostCommon.bindProcessPickerGrid(grid, () => {
+    selectedCount = grid.querySelectorAll(".process-pick:checked").length;
+    updateProcessSelectionSummary();
+    CostCommon.refreshProcessOrder("processGrid");
   });
+  CostCommon.bindProcessOrder(
+    "processGrid",
+    "processOrderList",
+    "processOrderBlock",
+    processOptions
+  );
 }
 
 function fillMaterialDatalist(materials) {
@@ -333,9 +359,11 @@ async function submitRecord() {
     return;
   }
   if (!validateSuppliers(msg)) return;
+  const { order } = collectSelectedProcesses();
   const payload = {
     ...collectBasicForm(form),
     process_prices: byCode,
+    process_order: order,
   };
   const res = await fetch("/api/cost/records", {
     method: "POST",
@@ -348,7 +376,7 @@ async function submitRecord() {
     msg.className = "msg error";
     return;
   }
-  msg.textContent = "已保存，可在「成本查询」中查看";
+  msg.textContent = "已保存，可在「BOM查询」中查看";
   msg.className = "msg ok";
   form.reset();
   lastLookupPart = "";
@@ -360,6 +388,7 @@ async function submitRecord() {
   });
   selectedCount = 0;
   updateProcessSelectionSummary();
+  CostCommon.clearProcessOrder("processGrid");
   closePreviewModal();
 }
 
@@ -403,3 +432,25 @@ CostCommon.loadOptions()
       .then((data) => fillCustomerOptions((data.customers || []).map((name) => ({ customer_name: name }))))
       .catch(() => {});
   });
+
+function switchBomMode(mode) {
+  const isBatch = mode === "batch";
+  const batchPanel = document.getElementById("bomBatchPanel");
+  const manualPanel = document.getElementById("bomManualPanel");
+  const batchBtn = document.getElementById("bomModeBatchBtn");
+  const manualBtn = document.getElementById("bomModeManualBtn");
+  if (batchPanel) batchPanel.classList.toggle("is-hidden", !isBatch);
+  if (manualPanel) manualPanel.classList.toggle("is-hidden", isBatch);
+  if (batchBtn) {
+    batchBtn.classList.toggle("active", isBatch);
+    batchBtn.setAttribute("aria-selected", isBatch ? "true" : "false");
+  }
+  if (manualBtn) {
+    manualBtn.classList.toggle("active", !isBatch);
+    manualBtn.setAttribute("aria-selected", !isBatch ? "true" : "false");
+  }
+}
+
+document.getElementById("bomModeBatchBtn")?.addEventListener("click", () => switchBomMode("batch"));
+document.getElementById("bomModeManualBtn")?.addEventListener("click", () => switchBomMode("manual"));
+switchBomMode("batch");

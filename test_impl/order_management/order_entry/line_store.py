@@ -122,6 +122,7 @@ def _row_to_line(row: sqlite3.Row) -> OrderLine:
         created_at=_parse_dt(row["created_at"] if "created_at" in row.keys() else row["updated_at"]),
         updated_at=_parse_dt(row["updated_at"]),
         closure_type=str(row["closure_type"] or "") if "closure_type" in row.keys() else "",
+        is_demo=bool(row["is_demo"]) if "is_demo" in row.keys() else False,
     )
 
 
@@ -132,6 +133,8 @@ class LineStore:
         if path != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(path, check_same_thread=False)
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout=60000")
         self._conn.row_factory = sqlite3.Row
         self._init_schema()
 
@@ -188,6 +191,11 @@ class LineStore:
         if "closure_type" not in line_cols:
             self._conn.execute(
                 "ALTER TABLE order_lines ADD COLUMN closure_type TEXT NOT NULL DEFAULT ''"
+            )
+        line_cols = {r[1] for r in self._conn.execute("PRAGMA table_info(order_lines)")}
+        if "is_demo" not in line_cols:
+            self._conn.execute(
+                "ALTER TABLE order_lines ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0"
             )
 
     def close(self) -> None:
@@ -266,8 +274,9 @@ class LineStore:
             INSERT INTO order_lines (
                 customer, order_date, delivery_date, order_no, product_spec,
                 customer_part_no, unit_weight_g, material, po_qty, shipped_qty,
-                unit, tax_rate, rmb_tax_incl_price, payment_terms, created_at, updated_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                unit, tax_rate, rmb_tax_incl_price, payment_terms, is_demo,
+                created_at, updated_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 fields["customer"],
@@ -284,6 +293,7 @@ class LineStore:
                 str(fields.get("tax_rate", "0")),
                 str(fields.get("rmb_tax_incl_price", "0")),
                 fields.get("payment_terms", ""),
+                1 if fields.get("is_demo") else 0,
                 now,
                 now,
             ),

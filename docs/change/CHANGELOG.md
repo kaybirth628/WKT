@@ -27,6 +27,647 @@
 
 ## 变更记录
 
+### CL-0180 · 2026-07-27 · 优化（C）
+
+- 涉及模块：`cost_entry.html`、`cost_entry.js`、`cost_bom_import.js`、`cost.css`
+- 变更内容：BOM 录入页改为与订单录入一致的 **模式切换**（Excel 批量导入 / 手动录入）；批量区复用 upload-card + preview-card 版式。
+- 验证：浏览器 `/bom/entry` 切换两种模式并解析 Excel。
+- SOP 同步：否。
+
+### CL-0179 · 2026-07-27 · 优化（C）
+
+- 涉及模块：`cost_entry.html`、`cost_bom_import.js`、`cost.css`
+- 变更内容：BOM 批量导入 UI 优化——展示文件名、客户匹配、通过/待核/阻断统计、同 Sheet 拆分标记；说明已内置纵表头料号、多料号拆分、工序别名等解析能力（后端 `bom_form_import.py` 已生效）。
+- 验证：浏览器打开 `/bom/entry` → 上传 Excel → 解析预览。
+- SOP 同步：否。
+
+### CL-0178 · 2026-07-27 · 修复（C）
+
+- 涉及模块：`bom_form_import.py`、`scripts/split_metal_shaft_bom.py`
+- 变更内容：同一 Sheet **多产品料号**（换行/`/` 分隔，如怡利「金属转轴」）自动拆成多条 BOM；已拆分误合并记录为 `1A104D0A001-00` / `1A104D0A003-00` 两条。
+- 验证：`tests/test_bom_form_import.py`；`python scripts/split_metal_shaft_bom.py`。
+- SOP 同步：否。
+
+### CL-0177 · 2026-07-27 · 修复（B）
+
+- 涉及模块：`bom_form_import.py`、`scripts/reimport_bom_audit_batch.py`
+- 变更内容：修正威可特 BOM 表 **纵表头** 解析（标签第 3/5 行、数值第 4/6 行）；产品料号读取 **E 列产品料号栏** 而非 Sheet 名/组装区「料号」；已删除并 **重新导入 68 条 BOM**。
+- 验证：`tests/test_bom_form_import.py`；`python scripts/reimport_bom_audit_batch.py`。
+- SOP 同步：否。
+
+### CL-0176 · 2026-07-27 · 新增（B）
+
+- 涉及模块：`models.py`、`bom_form_import.py`、`customer_name.py`、`cost_store.py`、库存/演示 BOM 编号、`scripts/import_bom_audit_batch.py`
+- 变更内容：新增工艺 **铝挤（32，位于制程损耗前）** 并顺延旧 32–36→33–37（含 SQLite 一次性迁移）；按员工确认更新 BOM 工序别名（清洗拉白/拉白/钝化拉白、振动研磨去毛边→去毛边+震研、铆合弹片跳过等）；文件名 **BOM格式** 后缀剥离 + 日月照明/欧菲光/红黑客户映射；批量导入 `data/bom_import_audit/` 六份 BOM。
+- 验证：`tests/test_bom_form_import.py`、`tests/test_cost_analysis_service.py`；`python scripts/import_bom_audit_batch.py`。
+- SOP 同步：否。
+
+### CL-0175 · 2026-07-26 · 优化（C）
+
+- 涉及模块：`bom_form_import.py`
+- 变更内容：BOM 导入支持 **东硕式纵向制程表**（制程:1 + 工序 + 可加工厂商）；料号误读「文件编号/版次」时改用 **sheet 名**（如 HUV9142V1）；新增工序别名（冲切下料、振动研磨、皮膜钝化、全检出货等）。
+- 验证：`tests/test_bom_form_import.py`。
+- SOP 同步：否。
+
+### CL-0174 · 2026-07-26 · 优化（C）
+
+- 涉及模块：`customer_name.py`、`bom_form_import.py`、`cost_bom_import.js`、`app.py`
+- 变更内容：BOM 导入 **从文件名识别客户简称**（如 `东硕BOM.xls`→东硕），匹配客商档案全称（如 `苏州鑫福泰电子科技有限公司-东硕`）；无匹配时提示先建客户。
+- 验证：`tests/test_bom_form_import.py`。
+- SOP 同步：否。
+
+### CL-0173 · 2026-07-26 · 修复（C）
+
+- 涉及模块：`bom_form_import.py`、`requirements.txt`、`cost_entry.html`、`app.py`
+- 变更内容：BOM 导入 **支持旧版 `.xls`**（需 `xlrd 1.2`）；修复仅接受 xlsx 导致无法上传 `.xls` 的问题。
+- 验证：`tests/test_bom_form_import.py`。
+- SOP 同步：否。
+
+### CL-0172 · 2026-07-26 · 新增（B）
+
+- 涉及模块：`cost_analysis/bom_form_import.py`、`record_service.py`、`cost_entry.html`、`cost_bom_import.js`、`app.py`
+- 变更内容：**BOM 表单批量导入**：上传威可特「新产品 BOM 表」Excel（每 sheet 一料号），解析表头 + 产品制程（单价默认 0）；预览分通过/待核/阻断后批量写入。
+- 验证：`tests/test_bom_form_import.py`。
+- SOP 同步：是。
+
+### CL-0171 · 2026-07-25 · 新增（B）
+
+- 涉及模块：`auth/service.py`、`auth/store.py`、`flask_integration.py`、`users_admin.html/js`、`auth.css`
+- 变更内容：用户管理增加 **编辑**（姓名、角色）与 **删除** 员工；`PUT/DELETE /api/users/{id}`；不可删 admin / 当前登录账号。
+- 验证：`tests/test_auth.py`。
+- SOP 同步：是。
+
+### CL-0170 · 2026-07-25 · 修复（C）
+
+- 涉及模块：`cost_store.py`、`bom_service.py`、`line_service.py`
+- 变更内容：撤销 CL-0169 料号前缀匹配；**订单客户料号与 BOM 产品料号须完全一致**（仍保留连字符/空格规范化与 CL-0168 空客户误报修复）。
+- 验证：`tests/test_order_line_service.py` 全通过。
+- SOP 同步：否。
+
+### CL-0169 · 2026-07-25 · 修复（B）
+
+- 涉及模块：`cost_store.py`、`bom_service.py`、`line_service.py`
+- 变更内容：订单 **客户料号** 可匹配 BOM **产品料号** 前缀（如订单 `PL9-12580-10-0A` ↔ BOM `PL9-12580-10-0A-前挡板`）；结合品名/客户消歧。
+- 验证：`test_create_line_bom_part_no_with_product_suffix`。
+- SOP 同步：否。
+
+### CL-0168 · 2026-07-25 · 修复（B）
+
+- 涉及模块：`cost_store.py`、`bom_service.py`、`tests/test_order_line_service.py`
+- 变更内容：订单录入查 BOM 时修复误报「未建档」（BOM 存在但客户名为空时 `get_part_binding` 返回空）；料号匹配增加连字符/空格规范化；错误提示注明须在同一服务器保存 BOM。
+- 验证：`tests/test_order_line_service.py` 新增用例。
+- SOP 同步：否。
+
+### CL-0167 · 2026-07-25 · 修复（C）
+
+- 涉及模块：`inventory_entry.js`
+- 变更内容：点选上方工序站时，下方 **入库工序 / 从工序** 下拉框同步跳到该工序（不再被上一次手动选择覆盖）；**到工序** 自动带出下道。
+- 验证：载入料号后点「01 压铸」，出库「从工序」应显示 01 而非上次选的包装。
+- SOP 同步：否。
+
+### CL-0166 · 2026-07-25 · 优化（C）
+
+- 涉及模块：`inventory_entry.html`、`inventory_entry.js`
+- 变更内容：工序出入库 **登记动作** 下方扣增说明文字移除（界面更简洁）。
+- 验证：打开 `/inventory/entry` 载入料号后无灰色提示行。
+- SOP 同步：否。
+
+### CL-0165 · 2026-07-25 · 优化（C）
+
+- 涉及模块：`inventory_movements.html`、`inventory_movements.js`
+- 变更内容：**出入库流水**总览表与工序出入库 **当日流水** 列格式统一：时间 → 客户 → 料号 → 品名 → 动作 → 工序（路线）→ 数量 → 单号 → 备注 → 操作；移除来源/去向列。
+- 验证：打开 `/inventory/movements` 与 `/inventory/entry` 对比列一致。
+- SOP 同步：是。
+
+### CL-0164 · 2026-07-25 · 修复（C）
+
+- 涉及模块：`inventory/service.py`、`inventory/store.py`
+- 变更内容：历史流水单号 **WG/FC/CP** 在列表/API 展示时统一映射为 **RK/CK**；新单号序号与旧前缀共用当日序号（避免 RK-001 与 WG-003 并存）。
+- 验证：`test_legacy_doc_no_display_normalized`。
+- SOP 同步：否。
+
+### CL-0163 · 2026-07-25 · 重构（B）
+
+- 涉及模块：`inventory/service.py`、`app.py`、`inventory_entry.html/js`、`inventory_movements.js`、`flask_integration.py`、`payable_service.py`、`tests/test_inventory.py`
+- 变更内容：工序出入库统一为 **入库 / 出库** 两种动作（保留 **校正库存**）；**入库** 选择目标工艺（首道加场内、非首道在途→场内、末道→成品）；**出库** 选择从哪道工艺发往下道相邻工艺（成品出库：从→成品）；单号前缀改为 **`RK` 入库 / `CK` 出库**（原 WG/FC/CP 仅历史流水展示仍映射为入库/出库）；旧 API（complete/outsource-*）兼容转发；应付对账同时识别 `inbound` 外发回货。
+- 验证：`python -m unittest tests.test_inventory -v`；`/inventory/entry` 载入料号后选入库/出库登记。
+- SOP 同步：是。
+
+### CL-0162 · 2026-07-25 · 优化（C）
+
+- 涉及模块：出入库流水、`inventory/service.py`、`inventory_entry.js`、`inventory_movements.js`
+- 变更内容：流水表 **工序** 列显示 **编号 + 名称**（如 `01 压铸`）；API 返回 `process_name`。
+- 验证：`test_list_movements_filter_on_date`。
+- SOP 同步：否。
+
+### CL-0161 · 2026-07-25 · 优化（C）
+
+- 涉及模块：工序出入库 `inventory_entry.html/js`
+- 变更内容：移除「当日出入库流水」下方筛选栏；当日流水表去掉 **从/到** 列（动作列已表达业务）；「出入库流水」页改为 **来源/去向** 中文可读格式。
+- 验证：工序出入库页当日流水无筛选、无从到列；流水页来源去向可读。
+- SOP 同步：是。
+
+### CL-0160 · 2026-07-25 · 优化（B）
+
+- 涉及模块：工序出入库、出入库流水、`inventory/service.py`
+- 变更内容：当日/历史流水表列顺序改为 **时间 → 客户名称 → 客户料号 → 产品名称 → 动作…**；工序出入库增加 **客户名称** 载入条件与 **筛选流水**（客户/料号）；流水 API 支持 `customer_name` 模糊筛选。
+- 验证：`tests/test_inventory.py`；`/inventory/entry` 筛选流水与列显示。
+- SOP 同步：是。
+
+### CL-0159 · 2026-07-25 · 优化（B）
+
+- 涉及模块：工序出入库、出入库流水、`inventory/service.py`
+- 变更内容：工序出入库移除绿色 BOM 提示行与「返回总览」；出入库流水表增加 **品名**、**客户** 列（BOM 关联）；移除流水页冗余「出入库登记」按钮。
+- 验证：`tests/test_inventory.py`；打开 `/inventory/entry`、`/inventory/movements`。
+- SOP 同步：是。
+
+### CL-0158 · 2026-07-25 · 优化（C）
+
+- 涉及模块：库存总览 `inventory.html`、`inventory.js`
+- 变更内容：移除筛选栏「写入10料号演示」「出入库登记」「出入库流水」按钮，避免与顶栏库存菜单重复。
+- 验证：打开 `/inventory` 筛选栏仅保留查询条件与「查询」。
+- SOP 同步：是。
+
+### CL-0157 · 2026-07-25 · 优化（B）
+
+- 涉及模块：库存总览/流水/登记/排产、`inventory_bom_lookup.js`、`cost_store.py`、`app.py`
+- 变更内容：总览卡片 **客户名称** 显示在卡片标题右侧（测/实 标签旁）；库存各页搜索栏增加 **自动填充**：料号/品名/客户下拉联想（`GET /api/cost/customers`）；选 BOM 项时互填料号/品名/客户；排产页客户与关键字亦支持下拉。
+- 验证：`tests/test_cost_lookup.py`；总览/流水/登记/排产页输入联想。
+- SOP 同步：是。
+
+### CL-0156 · 2026-07-25 · 新增（B）
+
+- 涉及模块：库存总览、`inventory/service.py`、`inventory.js/html`、`app.py`
+- 变更内容：看板卡片显示 **客户名称**（来自 BOM）；筛选栏增加 **客户名称** 模糊查询（`GET /api/inventory/board?customer_name=`）。
+- 验证：`tests/test_inventory.py` 客户筛选；总览页按客户查询。
+- SOP 同步：是。
+
+### CL-0155 · 2026-07-25 · 优化（C）
+
+- 涉及模块：工序出入库 `inventory_entry.js`
+- 变更内容：移除工序出入库页载入前的静态说明（「点选工序站登记…」「未载入料号…」）；载入成功后继续隐藏 BOM 提示与状态行。
+- 验证：载入料号后仅显示工序站卡片与登记区。
+- SOP 同步：否。
+
+### CL-0154 · 2026-07-25 · 新增（B）
+
+- 涉及模块：工序出入库、`inventory/service.py`、`inventory_entry.js/html`、`app.py`、审计
+- 变更内容：新增 **库存校正**：当余额本身有误（如期初成品 150 实际应为 120）时，点选工序站/成品卡 → **校正库存**，填写 **正确数量**；系统按差额记 `TZ` 流水（`POST /api/inventory/adjust`）。与 **修改流水** 区分：修改仅改单笔登记数量，校正改目标余额。
+- 验证：`python -m unittest tests.test_inventory.TestInventoryService.test_adjust_finished_balance` 等；工序出入库页成品 150→120。
+- SOP 同步：是（§工序出入库 改错说明）。
+
+### CL-0153 · 2026-07-25 · 优化（B）
+
+- 涉及模块：工序出入库 `inventory_entry.js`、`inventory.css`
+- 变更内容：提交登记成功后展示 **「已录入」** 动画（约 1.5 秒），并高亮当日流水新增行；避免成功反馈一闪而过。
+- 验证：手动提交登记确认动画与流水高亮。
+- SOP 同步：否（交互增强）。
+
+### CL-0152 · 2026-07-25 · 新增（B）
+
+- 涉及模块：工序出入库、`inventory/store.py`、`inventory/service.py`、`inventory_entry.js`、`app.py`
+- 变更内容：当日出入库流水增加 **修改**（更正数量/备注，自动回滚并重算库存）；`PUT /api/inventory/movements/{id}`；订单出货与演示流水不可改。
+- 验证：`test_inventory.py` 修改数量与拒绝订单出货用例。
+- SOP 同步：是。
+
+### CL-0151 · 2026-07-25 · 优化（B）
+
+- 涉及模块：`data-sync-rules.ps1`、`sync-to-cloud.ps1`、`server-merge-update.sh`、`一键同步云端.bat`
+- 变更内容：**默认一键同步云端** 时始终推送本地 `data/feishu_config.json` 到服务器（双 Webhook 等通知配置），**不**覆盖订单库与客商 JSON。
+- 验证：同步后云端 `/api/feishu/config` 显示 `webhook_count: 2`；飞书测试与操作通知两群均收到。
+- SOP 同步：否（RESTORE 云端节补充说明）。
+
+### CL-0150 · 2026-07-25 · 优化（B）
+
+- 涉及模块：`integrations/feishu.py`、`data/feishu_config.json`、`feishu_README.md`
+- 变更内容：飞书支持 **多个 Webhook 同时推送**（`webhook_urls` 数组）；本地已配置 2 个机器人；兼容旧 `webhook_url` 单地址。
+- 验证：`test_feishu_notify.py` 多 Webhook 用例；`/api/feishu/config` 返回 `webhook_count`。
+- SOP 同步：否（配置说明在 feishu_README）。
+
+### CL-0149 · 2026-07-25 · 优化（A）
+
+- 涉及模块：飞书、`flask_integration.py`（审计钩子）、`sync-to-cloud.ps1`、`server-merge-update.sh`、`notify-feishu-deploy.py`
+- 变更内容：
+  - **云端任意操作**：登录/退出及所有已登记写操作（订单、库存、BOM、客商、送货单、用户管理等）经 **审计钩子统一推送飞书**（含操作人、模块、摘要、IP）；
+  - **系统迭代通知**：一键同步云端完成后自动推送 **版本号 + build + CHANGELOG 摘要**（`deploy-info/` 随包下发）；
+  - 移除各 API 端点重复飞书调用，避免双份通知。
+- 验证：`test_feishu_notify.py`；同步云端后飞书收到「系统更新」；云端登录/出货/BOM 等收到「操作通知」。
+- SOP 同步：是。
+
+### CL-0148 · 2026-07-25 · 优化（B）
+
+- 涉及模块：飞书集成（`wkt_events.py`、`feishu.py`、`app.py`）、SOP §五、`data/feishu_README.md`
+- 变更内容：飞书通知扩展至 **全模块写操作**：库存出入库、BOM 录入/修改/删除、客户/供应商档案、订单强制结案、撤销出货等；原订单录入/修改/删除/出货/导入保持不变。
+- 验证：`test_feishu_notify.py`；手动测试 `/api/feishu/test` 与各模块操作。
+- SOP 同步：是。
+
+### CL-0147 · 2026-07-25 · 优化（B）
+
+- 涉及模块：库存导航、`inventory_movements.html`、`inventory_movements.js`、`inventory.html`、`inventory.js`、`app.py`
+- 变更内容：将 **出入库流水** 从库存总览拆为独立子模块 **库存 ▾ → 出入库流水**（`/inventory/movements`）；支持料号/品名/日期筛选；总览页仅保留看板。
+- 验证：手动打开 `/inventory` 与 `/inventory/movements`；导航高亮正确。
+- SOP 同步：是。
+
+### CL-0146 · 2026-07-25 · 优化（B）
+
+- 涉及模块：BOM 查询、`cost_query.html`、`cost_query.js`
+- 变更内容：BOM 查询列表增加 **序号** 列；按 **录入时间降序**（最新录入在最前，与后端 `created_at DESC` 一致）。
+- 验证：手动 BOM 查询页；`test_cost_records.py` 列表顺序不变。
+- SOP 同步：否。
+
+### CL-0145 · 2026-07-25 · 优化（B）
+
+- 涉及模块：客户/供应商档案 store、客商维护列表
+- 变更内容：客户与供应商列表按 **录入时间** 降序排列（**最新录入在最前**）；新建档案自动写入 `created_at`；旧档案无时间戳时按 JSON 原顺序靠后。
+- 验证：`test_customer_profile.py`、`test_supplier_profile.py` 排序用例。
+- SOP 同步：否。
+
+### CL-0144 · 2026-07-25 · 修复（B）
+
+- 涉及模块：`scripts/pull-data-from-cloud.ps1`、`一键从云端拉取数据.bat`
+- 变更内容：修复拉取云端数据时 `$remoteArchive` 未定义、SSH 空密码；改用 **Python UTF-8 解压**（避免 Windows tar 中文文件名失败）；打包时排除 `delivery_templates/files/`。
+- 验证：运行「一键从云端拉取数据」完成下载与解压。
+- SOP 同步：否。
+
+### CL-0143 · 2026-07-25 · 优化（B）
+
+- 涉及模块：客户信息维护、供应商信息维护、`index.html`
+- 变更内容：客商列表首列增加 **序号**（筛选后按当前显示顺序 1、2、3…）。
+- 验证：手动打开客商维护页确认序号列。
+- SOP 同步：否（列展示增强）。
+
+### CL-0142 · 2026-07-25 · 修复（A）
+
+- 涉及模块：`scripts/sync-to-cloud.ps1`、`scripts/data-sync-rules.ps1`、`scripts/server-merge-update.sh`、云端运维 bat
+- 变更内容：
+  - **默认「一键同步云端」改为仅同步代码**（`test_impl` + `scripts`），**不再上传/覆盖** 云端 `data/`（订单库、供应商、客户、BOM 等以云端为准）；
+  - 新增 **一键查询云端数据**、**一键从云端拉取数据**、**一键恢复云端供应商**（从 `data.bak-*` 恢复 `supplier_profiles.json`）；
+  - 旧行为「本地 JSON 覆盖云端」改为显式参数 `-WithMasterData`（需手动调用，不再默认）。
+- 验证：打包 staging 无 `data/` 目录；`server-merge-update.sh` 在无 staging/data 时跳过 data 合并。
+- SOP 同步：已更新 RESTORE 云端数据节。
+
+### CL-0141 · 2026-07-24 · 优化（B）
+
+- 涉及模块：库存总览、`inventory/service.py`、`inventory.js`
+- 变更内容：库存总览看板卡片标题除料号外增加 **BOM 品名**；API `GET /api/inventory/board` 返回 `product_name`。
+- 验证：`test_inventory.py` 通过。
+- SOP 同步：否（展示增强）。
+
+### CL-0140 · 2026-07-24 · 修复（B）
+
+- 涉及模块：客商信息维护、`style.css`
+- 变更内容：修复客户/供应商维护页 **添加表单卡片被 flex 拉伸** 导致表头筛选上方大面积留白；表单卡与列表卡改为随内容高度紧凑排列。
+- 验证：打开客商信息维护，确认表单与列表表头之间无大块空白。
+- SOP 同步：否（纯布局）。
+
+### CL-0139 · 2026-07-24 · 优化（B）
+
+- 涉及模块：BOM 查询、`cost_query.js`、`list-col-filter.js`
+- 变更内容：
+  - BOM 查询列表表头增加 **▾ 列筛选**（客户、产品、料号、材质、单重、机台、工序数、成本、录入时间）；
+  - 支持与顶部关键字查询组合；**清空列筛选** 一键恢复。
+- 验证：手动 BOM 查询页列筛选；全量单元测试通过。
+- SOP 同步：已更新。
+
+---
+
+### CL-0138 · 2026-07-24 · 优化（B）
+
+- 涉及模块：客户信息维护、供应商信息维护、`delivery-note-admin.js`、`supplier-admin.js`
+- 变更内容：
+  - 客商列表布局收紧：表格紧贴上方，底部 **清空筛选 / 条数 / 刷新**；
+  - **客户、供应商** 均仅 **名称列 ▾** 表头筛选；
+  - 新增客户/供应商表单改为 **两排** 横排布局。
+- 验证：手动进入客商维护页筛选；全量单元测试通过。
+- SOP 同步：已更新。
+
+---
+
+### CL-0137 · 2026-07-24 · 优化（B）
+
+- 涉及模块：BOM 录入/查询、`record_service.py`、`cost_common.js`、`inventory/service.py`
+- 变更内容：
+  - BOM 录入与编辑时，已选工序下方显示 **工艺顺序** 列表，可用 **↑↓** 调整先后；
+  - 顺序写入 `process_prices_json` 的 **`__order__`** 字段；库存工艺路线按此顺序展示；
+  - 旧记录无自定义顺序时，仍按工序代码排序（兼容）。
+- 验证：`tests/test_cost_records.py::test_custom_process_order_persisted`；全量单元测试。
+- SOP 同步：已更新 BOM 录入说明。
+
+---
+
+### CL-0136 · 2026-07-24 · 优化（B）
+
+- 涉及模块：库存总览、工序出入库、`inventory_bom_lookup.js`
+- 变更内容：
+  - 库存搜索支持 **料号 + 品名** 双字段；
+  - 输入时 **BOM 自动联想**（同 BOM 录入数据源）；
+  - 选料号自动带出品名，选品名自动带出料号。
+- 验证：库存页手动验证联想与查询；全量单元测试通过。
+- SOP 同步：已更新库存搜索说明。
+
+---
+
+### CL-0135 · 2026-07-23 · 新增（A）
+
+- 涉及模块：`test_impl/auth/`、登录页、操作记录、用户管理、`app.py`
+- 变更内容：
+  - **正式登录**：未登录跳转 `/login`；Flask Session + 密码哈希（werkzeug）；
+  - 首次无用户时 bootstrap **`admin` / `WKT@2026`**（须改密）；
+  - **`audit_log` 表**：自动记录 POST/PUT/DELETE 业务操作（模块、动作、操作人、IP、摘要）；
+  - **操作记录页** `/admin/audit`；**用户管理** `/admin/users`（仅 admin）；
+  - CLI：`python scripts/create_employee_user.py --username ... --name ... --password ...`
+- 验证：`tests/test_auth.py` 3 项；全量 `192` tests OK。
+- SOP 同步：已更新登录与审计说明。
+
+---
+
+### CL-0134 · 2026-07-23 · 新增（B）
+
+- 涉及模块：`scripts/sync-to-cloud.ps1`、`scripts/data-sync-rules.ps1`、`scripts/server-merge-update.sh`、`一键全量同步云端.bat`
+- 变更内容：
+  - 新增 **全量云端同步**：`-FullData` / `一键全量同步云端.bat`；
+  - 整包覆盖 `data/`（含 **`wkt_orders.db`**、`delivery_notes/`）；服务器先停进程、备份旧 `data/` 再覆盖；
+  - 原 `一键同步云端.bat` 仍保留「只同步代码+主数据、不动订单库」行为。
+- 验证：全量同步后 `/api/health` 的 `line_count`、`build` 与本地一致。
+- SOP 同步：否（运维脚本）。
+
+---
+
+### CL-0133 · 2026-07-23 · 新增（A）
+
+- 涉及模块：`test_impl/demo/sop_seed.py`、`一键写入SOP测试数据.bat`、`is_demo` 字段
+- 变更内容：
+  - **一键写入 SOP 测试数据**：清空 SQLite 业务表（订单/BOM/库存/出货），**保留** `customer_profiles.json` / `supplier_profiles.json`；
+  - 默认每模块 **15 条**（10~20 可调）；料号 `TST-PL-*`、订单 `TST-PO-*`、账期后缀 **【测试数据】**；
+  - 订单/BOM 增加 **`is_demo` + 列表「测」徽标**；库存沿用 `inventory_part_tags`；
+  - 分布：5 未结 / 5 部分出货 / 3 已结案 / 2 强制结案；含出货明细、应收、外发回货应付。
+- 验证：`tests/test_sop_seed.py`；`python scripts/seed_sop_test_data.py`。
+- SOP 同步：已更新。
+
+---
+
+### CL-0132 · 2026-07-23 · 文档（B）
+
+- 涉及模块：`docs/SOP/员工培训手册-图文版.pdf`、`scripts/export_sop_pdf.py`
+- 变更内容：培训手册导出 **PDF**（A4、嵌入全部配图、页眉页脚页码）；脚本 `export_sop_pdf.py` 可重复生成。
+- 验证：`docs/SOP/员工培训手册-图文版.pdf` 约 5MB，可正常打开。
+- SOP 同步：Markdown 手册已加 PDF 链接。
+
+---
+
+### CL-0131 · 2026-07-23 · 文档（B）
+
+- 涉及模块：`docs/SOP/images/`、截屏脚本、`data/sop_samples/sample_po.pdf`
+- 变更内容：SOP 配图升级为 **Windows 实拍**（资源管理器 bat、服务 PowerShell 窗口）+ **真实 OCR 预览**（自动生成样例 PO 并跑识别截屏）；新增 `capture_desktop_sop_shots.py`、`create_sop_sample_po.py`、`capture_ocr_preview_only.py`。
+- 验证：`03-ocr-preview.png` 含识别表 2 行；`00-start-bat.png` / `00-cmd-window.png` 为桌面窗口截屏。
+- SOP 同步：`images/README.md` 已更新。
+
+---
+
+### CL-0130 · 2026-07-23 · 文档（A）
+
+- 涉及模块：`docs/SOP/`
+- 变更内容：新增 **《员工培训手册-图文版》**（全模块手把手步骤、注意事项、mermaid 流程、正式测试检查表）；`docs/SOP/images/README.md` 配图清单；简明 SOP 增加详版入口。
+- 验证：手册覆盖订单/BOM/库存/对账/客商/飞书；与当前顶栏菜单一致。
+- SOP 同步：已更新。
+
+---
+
+### CL-0129 · 2026-07-23 · 优化（A）
+
+- 涉及模块：应收/应付到期视图、`due-outlook` API
+- 变更内容：去掉「随后到期」；改为自 **本月起重连续 6 个月** 收款/付款到期滚动展示（应付逻辑对称）。
+- 验证：`due_outlook` 返回 `months` 长度 6；10 月出货数据出现在对应月份段。
+- SOP 同步：已更新。
+
+---
+
+### CL-0128 · 2026-07-23 · 优化（A）
+
+- 涉及模块：应收/应付页、`due-outlook` API
+- 变更内容：打开 **应收/应付** 默认展示 **本月 + 下月** 到期客户/供应商及各自合计；仍可点「查看明细」钻取。本月/下月无数据时提示原因并展示 **随后到期** 月份（如有）。
+- 验证：`/api/reconciliation/due-outlook`、`/api/payable/due-outlook`；`test_payable_due_bucket_by_month`。
+- SOP 同步：已更新。
+
+---
+
+### CL-0127 · 2026-07-23 · 新增（A）
+
+- 涉及模块：对账导航、`PayableService`、`/api/payable/*`、首页子模块
+- 变更内容：
+  - 顶栏 **对账 ▾** → **应收**（原出货对账）/ **应付**（外发回货×供应商）；
+  - 应付金额 = 回货数量 × BOM 工序单价；结算月按供应商对账周期；应付日按供应商账期；
+  - 应付支持供应商×结算月汇总、明细钻取、收货日期起止筛选。
+- 验证：`tests/test_payable.py`；导航切换应收/应付；有回货流水时应付表有数据。
+- SOP 同步：已更新。
+
+---
+
+### CL-0126 · 2026-07-22 · 优化（A）
+
+- 涉及模块：工序出入库页布局
+- 变更内容：收紧上方留白（缩短说明、空状态改左对齐一行、压缩区块间距），流水区更靠上。
+- 验证：打开 `/inventory/entry` 未载入料号时，当日流水紧接在载入区下方，无大块空白。
+- SOP 同步：无需（纯布局）。
+
+---
+
+### CL-0125 · 2026-07-22 · 优化（A）
+
+- 涉及模块：工序出入库页、`GET /api/inventory/movements`
+- 变更内容：
+  - 流水区改为 **当日出入库流水**：打开即显示今天全部料号（含料号列）；
+  - 载入料号仅用于工序站登记，不再要求先载入才看流水；
+  - API 支持 `on_date=YYYY-MM-DD`（按本机时区日历日）。
+- 验证：`/inventory/entry` 无料号也可看到当日流水；`test_list_movements_filter_on_date` 通过。
+- SOP 同步：已更新。
+
+---
+
+### CL-0124 · 2026-07-22 · 优化（A）
+
+- 涉及模块：导航、库存总览/工序出入库、`inventory_part_tags`
+- 变更内容：
+  - 导航 **排产对照** 菜单（`/inventory/planning` 重定向至总览）；
+  - 料号增加数据标注：**测**（演示/测试）/ **实**（正式）；写入演示库存自动标测；已有演示流水启动时回填。
+- 验证：导航无排产对照；总览卡片显示测/实；`test_seed_board_demo_ten_parts` 断言 `data_tag=测`。
+- SOP 同步：已更新。
+
+---
+
+### CL-0123 · 2026-07-22 · 优化（A）
+
+- 涉及模块：工序出入库登记表单
+- 变更内容：登记区去掉「单号」输入（避免切换工序时残留旧单号误解）；单号仍后台自动生成，提交成功提示与流水中可见。
+- 验证：打开 `/inventory/entry` 登记区无单号栏；提交后提示含 `FC-…` 等单号。
+- SOP 同步：无需。
+
+---
+
+### CL-0122 · 2026-07-22 · 新增（A）
+
+- 涉及模块：库存进出单号、`InventoryStore.next_movement_doc_no`、工序出入库登记
+- 变更内容：
+  - 未填单号时自动生成：`WG`完工转入 / `FC`发出 / `RK`回货入库 / `CP`成品出货 + `YYYYMMDD` + 当日序号；
+  - 手工传入 `doc_no` 仍保留；登记页单号只读，提交后显示生成结果。
+- 验证：`test_auto_doc_no_by_action`；工序出入库提交后看提示与流水单号。
+- SOP 同步：已补充单号规则。
+
+---
+
+### CL-0121 · 2026-07-22 · 优化（B）
+
+- 涉及模块：`outsource_receive`、工序出入库文案、演示流水、测试
+- 变更内容：
+  - **回货入库**改为本道在途 → **本道场内**（不再进下一道）；
+  - 发下一道：对本道场内点下道「发出」（本道场内↓、下道在途↑）；
+  - 动作文案：发出 / 回货入库；演示流与 SOP/data-model 同步。
+- 验证：`test_receive_goes_to_same_process_inhouse`、`test_send_next_from_same_process_inhouse`、全量 unittest。
+- SOP 同步：已更新 §工序出入库。
+
+---
+
+### CL-0120 · 2026-07-22 · 优化（A）
+
+- 涉及模块：工序出入库登记区、`inventory_entry.js/html/css`
+- 变更内容：
+  - 登记区改为 **横向**：数量/供应商/单号/备注与提交同一行；
+  - 在途发出/回货时：BOM 已填供应商则只读默认；未填则下拉选客商档案供应商；
+  - 修复 `hidden` 被 CSS `display:flex` 顶掉导致「完工转入」误显供应商。
+- 验证：点场内工序应无供应商；点外发工序有 BOM 供应商则只读，无则下拉可选。
+- SOP 同步：无需（交互优化）。
+
+---
+
+### CL-0119 · 2026-07-21 · 优化（A）
+
+- 涉及模块：工序出入库页、排产对照 UI、导航
+- 变更内容：
+  - **出入库登记**改为按工序站卡片操作：载入料号后显示场内/在途/成品余额，点选工序再选「完工转入 / 在途发出 / 在途回货 / 成品出货」，并展示扣增说明与本料号流水；
+  - 暂缓订单绑定：排产页隐藏「生成补产单」与补产单列表（API 保留）；
+  - 导航文案改为「工序出入库」。
+- 验证：打开 `/inventory/entry` 载入演示料号，点外发工序发出并看流水刷新；全量 unittest。
+- SOP 同步：已更新 §库存。
+
+---
+
+### CL-0118 · 2026-07-21 · 新增（B）
+
+- 涉及模块：库存总览成品框、补产单、`production_replenish_orders`、订单出货扣成品仓
+- 变更内容：
+  - 总览工序格旁增加 **成品库存** 方框，去掉右上角「成品可出货」；
+  - **补产单**：排产对照可生成（单号 `BC-YYYYMMDD-序号`），可绑定销售订单号/订单行；列表展示；一期不自动增减库存；
+  - **订单出货**自动扣成品仓；不足则拒绝出货并回滚已出货数量。
+- 验证：`tests/test_replenish_ship.py`；`/inventory` 看成品框；`/inventory/planning` 生成补产单；有成品库存后再出货。
+- SOP 同步：已更新 §库存。
+
+---
+
+### CL-0117 · 2026-07-21 · 优化（A）
+
+- 涉及模块：库存总览/出入库/排产对照文案、`ACTION_LABELS`、`inventory.js`
+- 变更内容：
+  - 库存状态展示 **外发 → 在途**；动作 **在途出库 / 在途回货**（库内状态码仍为 `outsource`）；
+  - 总览工序卡在途>0 时高亮并显示「待回货」，便于跟催回场。
+- 验证：打开 `/inventory` 看「在途」「待回货」；`/inventory/entry` 动作下拉文案；全量 unittest。
+- SOP 同步：已更新 §库存。
+
+---
+
+### CL-0116 · 2026-07-21 · 优化（A）
+
+- 涉及模块：库存总览演示、`InventoryService.seed_board_demo`、`/api/inventory/seed-board-demo`
+- 变更内容：
+  - 总览「写入10料号演示」：从订单挑约 10 个料号建 BOM（若缺，工艺轮换乱填）并写入各工序场内/外发/成品库存；
+  - 默认查询改为留空查全部，便于一次看到多料号看板。
+- 验证：`test_seed_board_demo_ten_parts`；打开 `/inventory` 点「写入10料号演示」。
+- SOP 同步：已更新 §库存总览。
+
+---
+
+### CL-0115 · 2026-07-21 · 新增（B）
+
+- 涉及模块：排产对照、`inventory/planning.py`、`/inventory/planning`、`/api/inventory/planning*`、导航
+- 变更内容：
+  - **排产对照**只读页：未结订单**一行一条**对照成品/半成品库存；
+  - 缺口出货（仅成品）、缺口覆盖（成品+半成品）、建议补量；工序明细可展开；
+  - 「写入排产演示」：PLAN-A/B/C 各需求 1000、可用库存约 500/600/700。
+- 验证：`tests/test_planning.py`；打开 `/inventory/planning` 点「写入排产演示」。
+- SOP 同步：已增加 §排产对照。
+
+---
+
+### CL-0114 · 2026-07-20 · 新增（B）
+
+- 涉及模块：库存、`inventory/*`、`/inventory`、`/inventory/entry`、`/api/inventory/*`、导航
+- 变更内容：
+  - 独立 **库存** 模块：按 BOM 工序监控半成品（场内/外发）与成品；
+  - 四种动作：**完工入库**、**外发出库**、**外发回货（进下一道）**、**成品出货（手工）**；
+  - 库存总览看板 + 流水；「写入演示数据」一键生成示例流水；
+  - SQLite：`inventory_balances`、`inventory_movements`。
+- 验证：`tests/test_inventory.py`；打开 `/inventory` 点「写入演示数据」。
+- SOP 同步：已增加 §库存。
+
+---
+
+### CL-0113 · 2026-07-20 · 撤销（C）
+
+- 涉及模块：工序在制品 WIP（试跑）
+- 变更内容：**撤销** CL-0113 方案 A MVP（在制品查询 / 出入库录入 / `wip_*` 表与 API）；库存方案待重新设计后再做。代码与导航已移除；若本地库曾建表，可手动 `DROP TABLE wip_balances; DROP TABLE wip_movements;`。
+- 验证：相关路由/文件已删除；原测试套件不再包含 `test_wip`。
+- SOP 同步：已去掉 §4.4 在制品试跑说明。
+
+---
+
+### CL-0112 · 2026-07-20 · 优化（A）
+
+- 涉及模块：BOM 查询表格、`cost_query.html`、`cost_query.js`、`style.css`
+- 变更内容：BOM 查询列表对齐全局 `list-table` 样式（列宽、字体、间距、斑马纹、操作列）；料号列等宽字体；文本溢出悬停提示。
+- 验证：打开 `/bom/query` 与订单明细表对比字体/表头/行高一致。
+- SOP 同步：无需。
+
+---
+
+### CL-0111 · 2026-07-20 · 优化（A）
+
+- 涉及模块：BOM 录入/查询工序供应商、`cost_common.js`、`cost.css`、`record_service`、`models`
+- 变更内容：
+  - 工序供应商改为 **可搜索下拉**（输入关键字过滤）；
+  - 选项列表固定增加 **「场内自制」**（无需在供应商档案中建档）；后端校验同步放行该值；
+  - 修复 `cost_common.js` 笔误（`.search.addEventListener`）导致脚本无法加载、工序网格空白。
+- 验证：`node --check cost_common.js`；`test_accept_inhouse_supplier_label`；BOM 录入页应显示完整工序卡片。
+- SOP 同步：无需（交互增强，流程不变）。
+
+---
+
+### CL-0110 · 2026-07-17 · 重构（B）
+
+- 涉及模块：BOM 主数据、`bom_service`、`line_service`、`cost_store`、`record_service`、`lookup_service`、导航、`/bom/*`、`/api/bom/lookup`、`app.js`、`cost_entry`/`cost_query`、测试
+- 变更内容：
+  - 顶部 **「成本分析」** 更名为 **「BOM分析」**，子菜单 **BOM录入** / **BOM查询**（原 `/cost/*` 重定向至 `/bom/*`）；
+  - **料号主数据**以 `cost_records`（BOM）为权威来源，不再从订单行反查料号绑定；
+  - 订单录入填写 **客户料号** 时调用 `GET /api/bom/lookup` 校验并回填品名/单重/材质；未建档则提示先到 **BOM录入** 维护；
+  - 订单保存/导入时若带客户料号，须 BOM 中存在且客户一致（支持客户简称与 profile 全称匹配，如「怡利」↔ 档案全称）；
+  - 手工「新增料号」入口改为引导至 BOM录入；`/api/health` build=`20260717-bom-master`。
+- 验证：`python -m unittest discover -s tests -p "test_*.py"`（168 项通过）。
+- SOP 同步：已更新 §二导航、§三（料号/BOM 约束）、§四 BOM 分析；并补全 CL-0108 遗留的录入/查询说明。
+
+---
+
+### CL-0109 · 2026-07-16 · 新增/优化（B）
+
+- 涉及模块：云端同步、客户/供应商档案、对账周期、成本录入 UI、`customer_name`、送货单、Git 脚本
+- 变更内容：
+  - **云端同步**：`scripts/sync-to-cloud.ps1`、`scripts/server-merge-update.sh`、根目录「同步云端.bat」；同步 `data/`（除 `*.db`、`delivery_notes/`）及配置；
+  - **供应商信息维护**：`data/supplier_profiles.json` 与维护页；工序外协供应商下拉联动；
+  - **客户档案补全**：批量导入/更新 `customer_profiles.json`；**对账周期** 扩展多种口径（自然月、21～20、26～25、22～21、16～15 等）；
+  - **客户名称规范化**：全角/半角括号等同视为同一客户（修复「怡利」等重复建档问题）；
+  - **成本录入/查询** UI 与 `record_service` 增强（工序卡片、编辑体验）；送货单 `wkt_document` 小修。
+- 验证：单元测试 + 云端同步脚本 dry-run；客户档案对账周期字段可在维护页保存。
+- SOP 同步：部分（对账周期见 §3.5.2）；完整录入流程待 CL-0110 一并补全。
+
+---
+
 ### CL-0108 · 2026-07-11 · 新增（B）
 
 - 涉及模块：成本分析、客商信息维护、客户档案、对账周期、订单料号、`cost_entry`/`cost_query`、导航
@@ -36,7 +677,7 @@
   - 客户 **对账周期** 改为二选一（自然月 / 21日～次月20日），已有客户默认未设置；
   - 供应商默认 21日～次月20日；工艺选择卡片对齐优化；AI 助手入口暂隐藏。
 - 验证：`scripts/verify.ps1` 单元测试通过。
-- SOP 同步：待后续补全（本次以代码发布为主）。
+- SOP 同步：待后续补全（**CL-0109 / CL-0110 已补写 SOP §二、§三、§四**）。
 
 ---
 

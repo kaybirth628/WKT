@@ -14,6 +14,20 @@ const OPEN_ORDER_STALE_MONTHS = 6;
 /** 未结订单：距客户交期 ≤ 该天数时黄色预警 */
 const OPEN_DELIVERY_WARN_DAYS = 10;
 
+(function patchFetchAuth() {
+  const rawFetch = window.fetch.bind(window);
+  window.fetch = async function (input, init) {
+    const res = await rawFetch(input, init);
+    if (res.status === 401) {
+      const url = typeof input === "string" ? input : (input && input.url) || "";
+      if (!url.includes("/api/auth/login")) {
+        location.href = "/login?next=" + encodeURIComponent(location.pathname + location.search + location.hash);
+      }
+    }
+    return res;
+  };
+})();
+
 /* ========== 附件2 字段定义 ========== */
 const COLS = [
   { f: "customer", label: "客户", type: "text" },
@@ -99,9 +113,57 @@ const RECONCILE_SUMMARY_COLS = [
 
 const LIST_RECONCILE_SUMMARY_COL_WEIGHTS = [1.25, 0.95, 0.95, 0.8, 1.05];
 
-let reconcileDetailMode = false;
+/** 应付明细列 */
+const PAYABLE_LIST_COLS = [
+  { f: "supplier", label: "供应商", type: "text" },
+  { f: "received_at", label: "收货时间", type: "datetime" },
+  { f: "product_part_no", label: "料号", type: "text" },
+  { f: "process_name", label: "工序", type: "text" },
+  { f: "qty", label: "回货数量", type: "decimal", dp: 1 },
+  { f: "unit_price", label: "工序单价", type: "decimal", dp: 4 },
+  { f: "amount", label: "应付金额", type: "decimal", dp: 2 },
+  { f: "doc_no", label: "回货单号", type: "text" },
+  { f: "payable_date", label: "应付日期", type: "date" },
+  { f: "settlement_month", label: "结算月份", type: "text" },
+];
+
+const LIST_PAYABLE_COL_WEIGHTS = [1.2, 1.1, 1.15, 0.9, 0.85, 0.85, 0.9, 1.0, 0.9, 0.85];
+
+/** 应付汇总：供应商 × 结算月份 */
+const PAYABLE_SUMMARY_COLS = [
+  { f: "supplier", label: "供应商", type: "text" },
+  { f: "settlement_month", label: "结算月份", type: "text" },
+  { f: "payable_date", label: "应付日期", type: "date" },
+  { f: "line_count", label: "明细行数", type: "text" },
+  { f: "total_qty", label: "回货总量", type: "decimal", dp: 1 },
+  { f: "total_amount", label: "应付金额", type: "decimal", dp: 2 },
+];
+
+const LIST_PAYABLE_SUMMARY_COL_WEIGHTS = [1.25, 0.95, 0.95, 0.75, 0.85, 1.05];
+
+/** 到期总览列（本月/下月） */
+const RECEIVABLE_OUTLOOK_COLS = [
+  { f: "customer", label: "客户", type: "text" },
+  { f: "line_count", label: "明细行数", type: "text" },
+  { f: "total_amount", label: "到期金额", type: "decimal", dp: 2 },
+];
+
+const PAYABLE_OUTLOOK_COLS = [
+  { f: "supplier", label: "供应商", type: "text" },
+  { f: "line_count", label: "明细行数", type: "text" },
+  { f: "total_amount", label: "到期金额", type: "decimal", dp: 2 },
+];
+
+const LIST_RECEIVABLE_OUTLOOK_COL_WEIGHTS = [1.5, 0.85, 1.0];
+const LIST_PAYABLE_OUTLOOK_COL_WEIGHTS = [1.5, 0.85, 1.0];
+
+let dueOutlookCache = null;
 let reconcileDetailCustomer = "";
 let reconcileDetailMonth = "";
+
+let payableDetailMode = false;
+let payableDetailSupplier = "";
+let payableDetailMonth = "";
 
 const LIST_SEQ_PCT = 3;
 const LIST_ACTION_PCT = 6;
@@ -133,6 +195,10 @@ const LIST_CLOSED_COL_WIDTHS = buildListColPercents([
 const LIST_SHIPMENT_COL_WIDTHS = buildListColPercents(LIST_SHIPMENT_COL_WEIGHTS);
 const LIST_RECONCILE_COL_WIDTHS = buildListColPercents(LIST_RECONCILE_COL_WEIGHTS);
 const LIST_RECONCILE_SUMMARY_COL_WIDTHS = buildListColPercents(LIST_RECONCILE_SUMMARY_COL_WEIGHTS);
+const LIST_PAYABLE_COL_WIDTHS = buildListColPercents(LIST_PAYABLE_COL_WEIGHTS);
+const LIST_PAYABLE_SUMMARY_COL_WIDTHS = buildListColPercents(LIST_PAYABLE_SUMMARY_COL_WEIGHTS);
+const LIST_RECEIVABLE_OUTLOOK_COL_WIDTHS = buildListColPercents(LIST_RECEIVABLE_OUTLOOK_COL_WEIGHTS);
+const LIST_PAYABLE_OUTLOOK_COL_WIDTHS = buildListColPercents(LIST_PAYABLE_OUTLOOK_COL_WEIGHTS);
 
 /** 订单管理子模块 */
 const SUBMODULES = {
@@ -165,11 +231,18 @@ const SUBMODULES = {
     summary: "出货记录",
   },
   reconcile: {
-    title: "对账",
-    desc: "默认按客户与收款月份汇总应收；点「查看明细」查看该月出货对账行",
-    listTitle: "对账汇总",
+    title: "应收",
+    desc: "自本月起重连续 6 个收款月滚动展示；点「查看明细」看出货对账行",
+    listTitle: "收款到期",
     view: "reconcile",
-    summary: "汇总行",
+    summary: "到期客户",
+  },
+  payable: {
+    title: "应付",
+    desc: "自本月起重连续 6 个付款月滚动展示；点「查看明细」看回货对账行",
+    listTitle: "付款到期",
+    view: "payable",
+    summary: "到期供应商",
   },
   open: {
     title: "未结订单",
@@ -612,10 +685,21 @@ function reconcileShowsSummaryActionColumn() {
   return currentSubmodule === "reconcile" && !reconcileDetailMode;
 }
 
+function payableShowsSummaryActionColumn() {
+  return currentSubmodule === "payable" && !payableDetailMode;
+}
+
+function ledgerShowsSummaryActionColumn() {
+  return reconcileShowsSummaryActionColumn() || payableShowsSummaryActionColumn();
+}
+
 function listTableCols(viewKey) {
   if (viewKey === "shipped") return SHIPMENT_LIST_COLS;
   if (viewKey === "reconcile") {
-    return reconcileDetailMode ? RECONCILE_LIST_COLS : RECONCILE_SUMMARY_COLS;
+    return reconcileDetailMode ? RECONCILE_LIST_COLS : RECEIVABLE_OUTLOOK_COLS;
+  }
+  if (viewKey === "payable") {
+    return payableDetailMode ? PAYABLE_LIST_COLS : PAYABLE_OUTLOOK_COLS;
   }
   if (viewKey === "closed") return [...LIST_DETAIL_COLS, ...LIST_CLOSED_EXTRA_COLS];
   if (viewKey === "closedForced") return LIST_DETAIL_COLS;
@@ -629,7 +713,7 @@ function listShowsActionColumn(viewKey) {
 
 function listTableColSpan(viewKey, colCount) {
   let span = colCount + 1;
-  if (viewKey === "shipped" || reconcileShowsSummaryActionColumn() || listShowsActionColumn(viewKey)) {
+  if (viewKey === "shipped" || ledgerShowsSummaryActionColumn() || listShowsActionColumn(viewKey)) {
     span += 1;
   }
   return span;
@@ -638,7 +722,10 @@ function listTableColSpan(viewKey, colCount) {
 function listTableColWidths(viewKey) {
   if (viewKey === "shipped") return LIST_SHIPMENT_COL_WIDTHS;
   if (viewKey === "reconcile") {
-    return reconcileDetailMode ? LIST_RECONCILE_COL_WIDTHS : LIST_RECONCILE_SUMMARY_COL_WIDTHS;
+    return reconcileDetailMode ? LIST_RECONCILE_COL_WIDTHS : LIST_RECEIVABLE_OUTLOOK_COL_WIDTHS;
+  }
+  if (viewKey === "payable") {
+    return payableDetailMode ? LIST_PAYABLE_COL_WIDTHS : LIST_PAYABLE_OUTLOOK_COL_WIDTHS;
   }
   if (viewKey === "closed") return LIST_CLOSED_COL_WIDTHS;
   return LIST_COL_WIDTHS;
@@ -662,7 +749,8 @@ function renderHead(elId, extraCols) {
   const table = head.closest("table");
   const isShippedList = elId === "listHead" && currentSubmodule === "shipped";
   const isReconcileList = elId === "listHead" && currentSubmodule === "reconcile";
-  const isOrderList = elId === "listHead" && !isShippedList && !isReconcileList;
+  const isPayableList = elId === "listHead" && currentSubmodule === "payable";
+  const isOrderList = elId === "listHead" && !isShippedList && !isReconcileList && !isPayableList;
   const showListActions = isOrderList && listShowsActionColumn(currentSubmodule);
   if (elId === "listHead" && table) {
     let cg = table.querySelector("colgroup.list-colgroup");
@@ -677,12 +765,12 @@ function renderHead(elId, extraCols) {
     cg.innerHTML =
       seqCol +
       widths.map((w) => listColHtml(w)).join("") +
-      (showListActions || isShippedList || reconcileShowsSummaryActionColumn() ? actionCol : "");
+      (showListActions || isShippedList || ledgerShowsSummaryActionColumn() ? actionCol : "");
   }
   const cols = elId === "listHead" ? listTableCols(currentSubmodule) : COLS;
   const showActions = showListActions;
   const showShippedDn = isShippedList;
-  const showReconcileSummaryAction = reconcileShowsSummaryActionColumn();
+  const showLedgerSummaryAction = ledgerShowsSummaryActionColumn();
   const isListHead = elId === "listHead";
   const titleRow =
     "<tr class=\"list-header-row\">" +
@@ -704,7 +792,7 @@ function renderHead(elId, extraCols) {
         ? '<th scope="col" class="list-th-action action-cell">操作</th>'
         : showShippedDn
           ? '<th scope="col" class="list-th-action action-cell">操作</th>'
-          : showReconcileSummaryAction
+          : showLedgerSummaryAction
             ? '<th scope="col" class="list-th-action action-cell">明细</th>'
             : "") +
     "</tr>";
@@ -1092,7 +1180,7 @@ function buildReconcileGrandTotalRowHtml(cols, summary) {
 function updateReconcileToolbarState() {
   const isReconcile = currentSubmodule === "reconcile";
   document.querySelectorAll(".reconcile-summary-only").forEach((el) => {
-    el.classList.toggle("is-hidden", !isReconcile || reconcileDetailMode);
+    el.classList.add("is-hidden");
   });
   const backBtn = document.getElementById("reconcileBackBtn");
   const badge = document.getElementById("reconcileDetailBadge");
@@ -1102,6 +1190,70 @@ function updateReconcileToolbarState() {
   if (badge && reconcileDetailMode) {
     badge.textContent = `${reconcileDetailCustomer} · ${reconcileDetailMonth}`;
   }
+}
+
+function outlookRowCell(row, col) {
+  if (col.f === "line_count") return String(row.line_count ?? "—");
+  if (col.type === "decimal") return fmtSmart(row[col.f], col.dp || 2);
+  return esc(row[col.f]) || "—";
+}
+
+function renderDueOutlook(viewKey, outlook) {
+  const cols = listTableCols(viewKey);
+  const tbody = document.getElementById("lineListBody");
+  const summaryEl = document.getElementById("listSummary");
+  if (!tbody || !outlook) return;
+  const isReceivable = viewKey === "reconcile";
+  const nameField = isReceivable ? "customer" : "supplier";
+  const monthField = isReceivable ? "collection_month" : "payment_month";
+  const btnClass = isReceivable ? "reconcile-detail-btn" : "payable-detail-btn";
+  const dataNameAttr = isReceivable ? "data-customer" : "data-supplier";
+  const unitLabel = isReceivable ? "个客户" : "家供应商";
+  const colSpan = listTableColSpan(viewKey, cols.length);
+
+  function sectionHtml(section) {
+    const rows = section?.rows || [];
+    let html = `<tr class="ledger-due-section-head"><td colspan="${colSpan}" class="list-td-text"><strong>${esc(
+      section?.label || section?.month || ""
+    )}</strong> · 合计 <strong>¥${fmtSmart(
+      section?.total_amount || "0",
+      2
+    )}</strong>（${rows.length} ${unitLabel}）</td></tr>`;
+    if (!rows.length) {
+      html += `<tr><td colspan="${colSpan}" class="empty-cell">该月暂无到期</td></tr>`;
+      return html;
+    }
+    let seq = 0;
+    rows.forEach((row) => {
+      seq += 1;
+      html += `<tr class="ledger-due-row"><td class="list-td-seq">${seq}</td>${cols
+        .map((c) => `<td class="${listTdClass(c)}">${outlookRowCell(row, c)}</td>`)
+        .join("")}<td class="action-cell"><button type="button" class="btn btn-sm btn-outline ${btnClass}" ${dataNameAttr}="${esc(
+        row[nameField]
+      )}" data-month="${esc(row[monthField])}">查看明细</button></td></tr>`;
+    });
+    return html;
+  }
+
+  const monthSections = outlook.months || [];
+  tbody.innerHTML = monthSections.map((section) => sectionHtml(section)).join("");
+  tbody.querySelectorAll("tr.ledger-due-row td:not(:first-child)").forEach(bindHoverTip);
+  if (summaryEl) {
+    const total = outlook.total_amount || "0";
+    const n = monthSections.length || 6;
+    summaryEl.textContent = `${SUBMODULES[viewKey].listTitle}：近 ${n} 月合计 ¥${fmtSmart(total, 2)}`;
+  }
+}
+
+function updateDueOutlookSummary(viewKey, outlook) {
+  const el =
+    viewKey === "reconcile"
+      ? document.getElementById("reconcileAmountSummary")
+      : document.getElementById("payableAmountSummary");
+  if (!el || !outlook) return;
+  const total = outlook.total_amount || "0";
+  const n = outlook.month_count || (outlook.months || []).length || 6;
+  el.textContent = `近 ${n} 月合计 ¥${fmtSmart(total, 2)}`;
 }
 
 async function openReconcileDetail(customer, month) {
@@ -1119,9 +1271,122 @@ function closeReconcileDetail() {
   reconcileDetailMode = false;
   reconcileDetailCustomer = "";
   reconcileDetailMonth = "";
+  dueOutlookCache = null;
   listColFilters.reconcile = {};
   setSubmodulePageTitle(SUBMODULES.reconcile.listTitle);
   updateReconcileToolbarState();
+  renderHead("listHead", ["序号"]);
+  loadLines();
+}
+
+function payableCellValue(row, col) {
+  if (col.type === "datetime") return fmtCreatedAt(row.received_at);
+  if (col.type === "date") return fmtDateOnly(row[col.f]);
+  if (col.type === "decimal") {
+    if (col.f === "amount" && row.price_missing) return "待补BOM";
+    return fmtSmart(row[col.f], col.dp || 2);
+  }
+  return esc(row[col.f]) || "-";
+}
+
+function buildPayableSummaryGroupedRows(rows) {
+  const groups = new Map();
+  rows.forEach((row) => {
+    const key = row.supplier || "(未填供应商)";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  });
+  const supplierKeys = [...groups.keys()].sort((a, b) => {
+    const sum = (rs) => rs.reduce((s, r) => s + (parseFloat(r.total_amount) || 0), 0);
+    const diff = sum(groups.get(b)) - sum(groups.get(a));
+    return diff !== 0 ? diff : a.localeCompare(b, "zh-CN");
+  });
+  const display = [];
+  supplierKeys.forEach((supplier) => {
+    const monthRows = groups.get(supplier);
+    let totalAmt = 0;
+    monthRows.forEach((row) => {
+      totalAmt += parseFloat(row.total_amount) || 0;
+      display.push({ kind: "month", row });
+    });
+    display.push({
+      kind: "supplier_summary",
+      supplier,
+      month_count: monthRows.length,
+      total_amount: totalAmt,
+    });
+  });
+  return display;
+}
+
+function payableSummaryMonthCell(row, col) {
+  if (col.f === "total_amount") return fmtSmart(row[col.f], col.dp || 2);
+  if (col.f === "line_count") return String(row.line_count ?? "-");
+  if (col.f === "total_qty") return fmtSmart(row.total_qty, col.dp || 1);
+  if (col.type === "date") return fmtDateOnly(row[col.f]);
+  return esc(row[col.f]) || "-";
+}
+
+function payableSupplierMonthSubtotalCell(col, summary) {
+  if (col.f === "supplier") {
+    return `<strong>【小计】${esc(summary.supplier)}</strong>（${summary.month_count} 个月）`;
+  }
+  if (col.f === "total_amount") return `<strong>${fmtSmart(String(summary.total_amount), 2)}</strong>`;
+  return "—";
+}
+
+function buildPayableGrandTotalRowHtml(cols, summary) {
+  return `<tr class="reconcile-grand-total-row"><td class="list-td-seq">—</td>${cols
+    .map((c) => {
+      if (c.f === "supplier") {
+        return `<td class="${listTdClass(c)}"><strong>【合计】</strong>（${summary.supplier_count} 个供应商）</td>`;
+      }
+      if (c.f === "line_count") return `<td class="${listTdClass(c)}"><strong>${summary.line_count}</strong></td>`;
+      if (c.f === "total_amount") {
+        return `<td class="${listTdClass(c)}"><strong>${fmtSmart(String(summary.total_amount), 2)}</strong></td>`;
+      }
+      return `<td class="${listTdClass(c)}">—</td>`;
+    })
+    .join("")}<td class="action-cell"></td></tr>`;
+}
+
+function updatePayableToolbarState() {
+  const isPayable = currentSubmodule === "payable";
+  document.querySelectorAll(".payable-summary-only").forEach((el) => {
+    el.classList.add("is-hidden");
+  });
+  document.querySelectorAll(".payable-detail-only").forEach((el) => {
+    el.classList.toggle("is-hidden", !isPayable || !payableDetailMode);
+  });
+  const backBtn = document.getElementById("payableBackBtn");
+  const badge = document.getElementById("payableDetailBadge");
+  if (!isPayable) return;
+  backBtn?.classList.toggle("is-hidden", !payableDetailMode);
+  badge?.classList.toggle("is-hidden", !payableDetailMode);
+  if (badge && payableDetailMode) {
+    badge.textContent = `${payableDetailSupplier} · ${payableDetailMonth}`;
+  }
+}
+
+async function openPayableDetail(supplier, month) {
+  payableDetailMode = true;
+  payableDetailSupplier = supplier;
+  payableDetailMonth = month;
+  listColFilters.payable = {};
+  setSubmodulePageTitle(`应付明细 · ${supplier} · ${month}`);
+  updatePayableToolbarState();
+  renderHead("listHead", ["序号"]);
+  await loadLines();
+}
+
+function closePayableDetail() {
+  payableDetailMode = false;
+  payableDetailSupplier = "";
+  payableDetailMonth = "";
+  dueOutlookCache = null;
+  listColFilters.payable = {};
+  setSubmodulePageTitle(SUBMODULES.payable.listTitle);
+  updatePayableToolbarState();
   renderHead("listHead", ["序号"]);
   loadLines();
 }
@@ -1208,7 +1473,20 @@ function scheduleTodayHighlightRefresh() {
   }, ms);
 }
 
+function demoTagHtml(isDemo) {
+  if (!isDemo) return "";
+  return '<span class="inv-data-tag is-demo" style="margin-right:0.35rem">测</span>';
+}
+
 function cellValue(ln, col) {
+  if (col.f === "customer_part_no") {
+    const tag = demoTagHtml(ln.is_demo);
+    const val = esc(ln.customer_part_no) || "-";
+    return tag + val;
+  }
+  if (col.f === "product_spec" && ln.is_demo) {
+    return demoTagHtml(true) + (esc(ln.product_spec) || "-");
+  }
   if (col.f === "last_shipped_at") return ln.last_shipped_at ? fmtCreatedAt(ln.last_shipped_at) : "-";
   if (col.f === "last_delivery_doc_no") return esc(ln.last_delivery_doc_no) || "-";
   if (col.type === "datetime") return fmtDateOnly(ln.created_at);
@@ -1318,22 +1596,24 @@ async function switchSubmodule(key) {
   const isSupplier = key === "supplier";
   const isAi = key === "ai";
   const isReconcile = key === "reconcile";
-  const isList = !isHome && !isEntry && !isDelivery && !isSupplier && !isAi && !isReconcile;
+  const isPayable = key === "payable";
+  const isList = !isHome && !isEntry && !isDelivery && !isSupplier && !isAi && !isReconcile && !isPayable;
 
   document.getElementById("submoduleHome")?.classList.toggle("is-hidden", !isHome);
   document.getElementById("submoduleEntry")?.classList.toggle("is-hidden", !isEntry);
-  document.getElementById("submoduleList")?.classList.toggle("is-hidden", !isList && !isReconcile);
+  document.getElementById("submoduleList")?.classList.toggle("is-hidden", !isList && !isReconcile && !isPayable);
   document.getElementById("submoduleDelivery")?.classList.toggle("is-hidden", !isDelivery);
   document.getElementById("submoduleSupplier")?.classList.toggle("is-hidden", !isSupplier);
   document.getElementById("submoduleAi")?.classList.toggle("is-hidden", !isAi);
   document.getElementById("reconcileToolbar")?.classList.toggle("is-hidden", !isReconcile);
+  document.getElementById("payableToolbar")?.classList.toggle("is-hidden", !isPayable);
 
   const titleEl = document.getElementById("pageTitle");
   const descEl = document.getElementById("pageDesc");
   if (titleEl) titleEl.textContent = meta.title;
   if (descEl) descEl.textContent = meta.desc;
 
-  setSubmodulePageTitle(isList || isReconcile ? meta.listTitle || meta.title : meta.title);
+  setSubmodulePageTitle(isList || isReconcile || isPayable ? meta.listTitle || meta.title : meta.title);
 
   document.querySelectorAll("[data-submodule]").forEach((el) => {
     const on = el.dataset.submodule === key;
@@ -1351,16 +1631,23 @@ async function switchSubmodule(key) {
     history.replaceState(null, "", "#" + key);
   }
 
-  if (isList || isReconcile) {
+  if (isList || isReconcile || isPayable) {
     if (key !== "open") openShipSelectedIds.clear();
     if (isReconcile) {
       reconcileDetailMode = false;
       reconcileDetailCustomer = "";
       reconcileDetailMonth = "";
+      dueOutlookCache = null;
       updateReconcileToolbarState();
     }
+    if (isPayable) {
+      payableDetailMode = false;
+      payableDetailSupplier = "";
+      payableDetailMonth = "";
+      dueOutlookCache = null;
+      updatePayableToolbarState();
+    }
     renderHead("listHead", ["序号"]);
-    if (isReconcile) await initReconcileFilters();
     await loadLines();
   } else if (isHome && typeof loadOrderDashboard === "function") {
     await loadOrderDashboard(false);
@@ -1884,8 +2171,29 @@ document.getElementById("partSelect").addEventListener("change", async () => {
   if (!spec) return;
   const res = await fetch("/api/master/lookup?product_spec=" + encodeURIComponent(spec));
   const data = await res.json();
-  document.getElementById("customerPartNo").value = data.customer_part_no || "";
+  if (data.customer_part_no) document.getElementById("customerPartNo").value = data.customer_part_no;
+  if (data.product_spec && !entryForm.product_spec.value) entryForm.product_spec.value = data.product_spec;
+  if (data.material && !entryForm.material.value) entryForm.material.value = data.material;
+  if (data.unit_weight_g && !entryForm.unit_weight_g.value) entryForm.unit_weight_g.value = data.unit_weight_g;
 });
+
+async function lookupOrderPartFromBom() {
+  const cpn = (document.getElementById("customerPartNo")?.value || "").trim();
+  if (cpn.length < 2) return;
+  const res = await fetch("/api/bom/lookup?" + new URLSearchParams({ customer_part_no: cpn }));
+  const data = await res.json();
+  if (!res.ok || !data.found) {
+    if (formMsg) formMsg.textContent = data.error || `料号「${cpn}」未在 BOM 中建档，请先在「BOM 录入」中维护`;
+    return;
+  }
+  if (formMsg) formMsg.textContent = "";
+  if (data.product_spec && entryForm.product_spec) entryForm.product_spec.value = data.product_spec;
+  if (data.material && entryForm.material) entryForm.material.value = data.material;
+  if (data.unit_weight_g && entryForm.unit_weight_g) entryForm.unit_weight_g.value = data.unit_weight_g;
+}
+
+document.getElementById("customerPartNo")?.addEventListener("change", lookupOrderPartFromBom);
+document.getElementById("customerPartNo")?.addEventListener("blur", lookupOrderPartFromBom);
 
 document.getElementById("addCustomerBtn").addEventListener("click", async () => {
   const name = prompt("请输入新客户名称：");
@@ -1900,19 +2208,8 @@ document.getElementById("addCustomerBtn").addEventListener("click", async () => 
   } else { alert((await res.json()).error || "新增失败"); }
 });
 
-document.getElementById("addPartBtn").addEventListener("click", async () => {
-  const spec = prompt("请输入品名规格：");
-  if (!spec || !spec.trim()) return;
-  const cpn = prompt("请输入客户料号（可留空）：") || "";
-  const res = await fetch("/api/master/part", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ product_spec: spec.trim(), customer_part_no: cpn.trim() }),
-  });
-  if (res.ok) {
-    await loadMaster();
-    document.getElementById("partSelect").value = spec.trim();
-    document.getElementById("customerPartNo").value = cpn.trim();
-  } else { alert((await res.json()).error || "新增失败"); }
+document.getElementById("addPartBtn").addEventListener("click", () => {
+  alert("料号主数据请在顶部菜单「BOM分析 → BOM录入」中维护。");
 });
 
 /* ========== 手动录入 ========== */
@@ -2935,6 +3232,56 @@ async function updateReconcileSummary(params, detailTotal) {
   }
 }
 
+async function initPayableFilters() {
+  const settlementSel = document.getElementById("payableSettlementMonthFilter");
+  const paymentSel = document.getElementById("payablePaymentMonthFilter");
+  if (!settlementSel || !paymentSel) return;
+  try {
+    const [setRes, payRes] = await Promise.all([
+      fetch("/api/payable/settlement-months"),
+      fetch("/api/payable/payment-months"),
+    ]);
+    const setData = await setRes.json();
+    const payData = await payRes.json();
+    if (setRes.ok && Array.isArray(setData.months)) {
+      const current = settlementSel.value;
+      settlementSel.innerHTML = "<option value=\"\">全部</option>";
+      setData.months.forEach((m) => settlementSel.appendChild(new Option(m, m)));
+      if (current) settlementSel.value = current;
+    }
+    if (payRes.ok && Array.isArray(payData.months)) {
+      const current = paymentSel.value;
+      paymentSel.innerHTML = "<option value=\"\">全部</option>";
+      payData.months.forEach((m) => paymentSel.appendChild(new Option(m, m)));
+      if (current) paymentSel.value = current;
+    }
+  } catch (_e) {
+    /* ignore */
+  }
+}
+
+async function updatePayableSummary(params, detailTotal) {
+  const el = document.getElementById("payableAmountSummary");
+  if (!el) return;
+  if (payableDetailMode && detailTotal != null) {
+    el.textContent = `本组应付 ¥${fmtSmart(String(detailTotal), 2)}`;
+    return;
+  }
+  try {
+    const res = await fetch("/api/payable/supplier-months?" + params.toString());
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      el.textContent = "";
+      return;
+    }
+    const total = data.total_amount || "0";
+    const n = new Set((data.rows || []).map((r) => r.supplier)).size;
+    el.textContent = `应付合计 ¥${total}（${n} 个供应商）`;
+  } catch (_e) {
+    el.textContent = "";
+  }
+}
+
 /* ========== 已录入列表 ========== */
 async function loadLines() {
   const meta = SUBMODULES[currentSubmodule] || SUBMODULES.detail;
@@ -2942,15 +3289,42 @@ async function loadLines() {
   const viewKey = currentSubmodule;
   const isShippedView = viewKey === "shipped";
   const isReconcileView = viewKey === "reconcile";
+  const isPayableView = viewKey === "payable";
   let lines = [];
-  if (isReconcileView) {
-    const params = new URLSearchParams();
-    const dueMonth = document.getElementById("reconcileDueMonthFilter")?.value || "";
-    const shipMonth = document.getElementById("reconcileShipMonthFilter")?.value || "";
-    if (dueMonth) params.set("due_month", dueMonth);
-    if (shipMonth) params.set("ship_month", shipMonth);
+  if (isPayableView) {
+    updatePayableToolbarState();
+    if (payableDetailMode) {
+      const params = new URLSearchParams();
+      const receiveFrom = document.getElementById("payableReceiveFrom")?.value || "";
+      const receiveTo = document.getElementById("payableReceiveTo")?.value || "";
+      params.set("supplier", payableDetailSupplier);
+      params.set("payment_month", payableDetailMonth);
+      if (receiveFrom) params.set("receive_from", receiveFrom);
+      if (receiveTo) params.set("receive_to", receiveTo);
+      const res = await fetch("/api/payable/lines?" + params.toString());
+      if (res.ok) {
+        const raw = await res.json();
+        lines = Array.isArray(raw.lines) ? raw.lines : [];
+      }
+      dueOutlookCache = null;
+      const detailTotal = lines.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+      const el = document.getElementById("payableAmountSummary");
+      if (el) el.textContent = `本组应付 ¥${fmtSmart(String(detailTotal), 2)}`;
+    } else {
+      const res = await fetch("/api/payable/due-outlook");
+      if (res.ok) {
+        const raw = await res.json();
+        if (raw.ok) {
+          dueOutlookCache = raw;
+          updateDueOutlookSummary("payable", raw);
+        }
+      }
+      lines = [];
+    }
+  } else if (isReconcileView) {
     updateReconcileToolbarState();
     if (reconcileDetailMode) {
+      const params = new URLSearchParams();
       params.set("customer", reconcileDetailCustomer);
       params.set("collection_month", reconcileDetailMonth);
       const res = await fetch("/api/reconciliation/lines?" + params.toString());
@@ -2958,15 +3332,20 @@ async function loadLines() {
         const raw = await res.json();
         lines = Array.isArray(raw.lines) ? raw.lines : [];
       }
+      dueOutlookCache = null;
       const detailTotal = lines.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-      await updateReconcileSummary(params, detailTotal);
+      const el = document.getElementById("reconcileAmountSummary");
+      if (el) el.textContent = `本组应收 ¥${fmtSmart(String(detailTotal), 2)}`;
     } else {
-      const res = await fetch("/api/reconciliation/customer-months?" + params.toString());
+      const res = await fetch("/api/reconciliation/due-outlook");
       if (res.ok) {
         const raw = await res.json();
-        lines = Array.isArray(raw.rows) ? raw.rows : [];
+        if (raw.ok) {
+          dueOutlookCache = raw;
+          updateDueOutlookSummary("reconcile", raw);
+        }
       }
-      await updateReconcileSummary(params);
+      lines = [];
     }
   } else if (isShippedView) {
     const res = await fetch("/api/shipment-events");
@@ -3005,6 +3384,7 @@ function renderListFromCache() {
   const viewKey = currentSubmodule;
   const isShippedView = viewKey === "shipped";
   const isReconcileView = viewKey === "reconcile";
+  const isPayableView = viewKey === "payable";
   const cols = listTableCols(viewKey);
   const filtered = applyListColFilters(listRowsCache, viewKey);
   const tbody = document.getElementById("lineListBody");
@@ -3013,7 +3393,7 @@ function renderListFromCache() {
   const shown = filtered.length;
   const filterNote = hasActiveListColFilters() && shown !== total ? `，筛选后 ${shown} 条` : "";
   const summaryEl = document.getElementById("listSummary");
-  if (summaryEl && !isReconcileView) {
+  if (summaryEl && !isReconcileView && !isPayableView) {
     const sortNote = isShippedView
       ? "（最新出货在上）"
       : viewKey === "closed"
@@ -3025,6 +3405,14 @@ function renderListFromCache() {
       ? `${meta.title}：共 ${total} 条${label}${filterNote}${sortNote}`
       : `${meta.title}：共 ${total} 条${label}${filterNote}${sortNote}`;
   }
+  if (isReconcileView && !reconcileDetailMode && dueOutlookCache) {
+    renderDueOutlook("reconcile", dueOutlookCache);
+    return;
+  }
+  if (isPayableView && !payableDetailMode && dueOutlookCache) {
+    renderDueOutlook("payable", dueOutlookCache);
+    return;
+  }
   if (!filtered.length) {
     listEditingId = null;
     const emptyMsg = total
@@ -3032,8 +3420,10 @@ function renderListFromCache() {
       : isShippedView
         ? "暂无出货记录。请在「未结订单」点「出货」登记；历史出货导入功能待上线。"
         : isReconcileView
-          ? "暂无对账数据（无出货记录或当前筛选无匹配）。"
-          : "暂无记录";
+          ? "暂无应收数据（无出货记录或当前筛选无匹配）。"
+          : isPayableView
+            ? "暂无应付数据（无回货记录或当前筛选无匹配）。"
+            : "暂无记录";
     const colSpan = listTableColSpan(viewKey, cols.length);
     tbody.innerHTML = `<tr><td colspan="${colSpan}" class="empty-cell">${emptyMsg}</td></tr>`;
     return;
@@ -3061,36 +3451,30 @@ function renderListFromCache() {
       tbody.querySelectorAll("tr.reconcile-detail-row td:not(:first-child)").forEach(bindHoverTip);
       return;
     }
-    const grouped = buildReconcileSummaryGroupedRows(filtered);
-    const customerCount = grouped.filter((g) => g.kind === "customer_summary").length;
-    const grandLineCount = filtered.reduce((s, r) => s + (Number(r.line_count) || 0), 0);
-    const grandTotalAmt = filtered.reduce((s, r) => s + (parseFloat(r.total_amount) || 0), 0);
-    let lineSeq = 0;
-    tbody.innerHTML =
-      grouped
-        .map((item) => {
-          if (item.kind === "customer_summary") {
-            return `<tr class="reconcile-subtotal-row"><td class="list-td-seq">—</td>${cols
-              .map((c) => `<td class="${listTdClass(c)}">${reconcileCustomerMonthSubtotalCell(c, item)}</td>`)
-              .join("")}<td class="action-cell"></td></tr>`;
-          }
+  }
+  if (isPayableView) {
+    if (payableDetailMode) {
+      let lineSeq = 0;
+      tbody.innerHTML = filtered
+        .map((row) => {
           lineSeq += 1;
-          const row = item.row;
-          return `<tr class="reconcile-summary-row"><td class="list-td-seq">${lineSeq}</td>${cols
-            .map((c) => `<td class="${listTdClass(c)}">${reconcileSummaryMonthCell(row, c)}</td>`)
-            .join("")}<td class="action-cell"><button type="button" class="btn btn-sm btn-outline reconcile-detail-btn" data-customer="${esc(row.customer)}" data-month="${esc(row.collection_time)}">查看明细</button></td></tr>`;
+          const rowCls = [
+            isShipmentTodayHighlight(row) ? "row-today-highlight" : "",
+            "reconcile-detail-row",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          return `<tr data-movement-id="${row.id}"${rowCls ? ` class="${rowCls}"` : ""}><td class="list-td-seq">${lineSeq}</td>${cols
+            .map((c) => `<td class="${listTdClass(c)}">${payableCellValue(row, c)}</td>`)
+            .join("")}</tr>`;
         })
-        .join("") +
-      buildReconcileGrandTotalRowHtml(cols, {
-        customer_count: customerCount,
-        line_count: grandLineCount,
-        total_amount: grandTotalAmt,
-      });
-    if (summaryEl && customerCount > 0) {
-      summaryEl.textContent = `${meta.title}：${customerCount} 个客户，共 ${total} 条${label}${filterNote}（按客户分组）`;
+        .join("");
+      if (summaryEl) {
+        summaryEl.textContent = `${meta.title}：共 ${total} 条明细${filterNote}（${payableDetailSupplier} · ${payableDetailMonth}）`;
+      }
+      tbody.querySelectorAll("tr.reconcile-detail-row td:not(:first-child)").forEach(bindHoverTip);
+      return;
     }
-    tbody.querySelectorAll("tr.reconcile-summary-row td:not(:first-child)").forEach(bindHoverTip);
-    return;
   }
   if (isShippedView) {
     tbody.innerHTML = filtered
@@ -3197,7 +3581,31 @@ document.getElementById("reconcileRefreshBtn")?.addEventListener("click", () => 
 document.getElementById("reconcileBackBtn")?.addEventListener("click", () => {
   if (currentSubmodule === "reconcile" && reconcileDetailMode) closeReconcileDetail();
 });
+document.getElementById("payableSettlementMonthFilter")?.addEventListener("change", () => {
+  if (currentSubmodule === "payable") loadLines();
+});
+document.getElementById("payablePaymentMonthFilter")?.addEventListener("change", () => {
+  if (currentSubmodule === "payable") loadLines();
+});
+document.getElementById("payableReceiveFrom")?.addEventListener("change", () => {
+  if (currentSubmodule === "payable" && payableDetailMode) loadLines();
+});
+document.getElementById("payableReceiveTo")?.addEventListener("change", () => {
+  if (currentSubmodule === "payable" && payableDetailMode) loadLines();
+});
+document.getElementById("payableRefreshBtn")?.addEventListener("click", () => {
+  if (currentSubmodule === "payable") loadLines();
+});
+document.getElementById("payableBackBtn")?.addEventListener("click", () => {
+  if (currentSubmodule === "payable" && payableDetailMode) closePayableDetail();
+});
 document.getElementById("lineListBody")?.addEventListener("click", (e) => {
+  const payableBtn = e.target.closest(".payable-detail-btn");
+  if (payableBtn && currentSubmodule === "payable") {
+    e.preventDefault();
+    openPayableDetail(payableBtn.dataset.supplier || "", payableBtn.dataset.month || "");
+    return;
+  }
   const returnBtn = e.target.closest(".shipment-return-btn");
   if (returnBtn && currentSubmodule === "shipped") {
     e.preventDefault();

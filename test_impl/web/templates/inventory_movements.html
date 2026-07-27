@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT 销售管理系统 · 出入库流水</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260722-tag" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260722-tag" />
+  <link rel="stylesheet" href="/static/inventory.css?v=20260725-inv-mov-unified" />
+</head>
+<body>
+  <div class="app-layout">
+    {% include '_order_sidebar.html' %}
+    <div class="app-main">
+      <main class="content-stack cost-stack">
+        <h3 class="section-h3 submodule-page-title">出入库流水</h3>
+        <section class="card list-card">
+          <form id="invMovForm" class="filter-bar filter-bar-compact">
+            <label class="cost-filter-field inv-bom-field">
+              <span>产品料号</span>
+              <input name="product_part_no" type="text" placeholder="留空查全部" autocomplete="off" value="" />
+            </label>
+            <label class="cost-filter-field inv-bom-field">
+              <span>产品名称</span>
+              <input name="product_name" type="text" placeholder="BOM 品名" autocomplete="off" value="" />
+            </label>
+            <label class="cost-filter-field inv-bom-field">
+              <span>客户名称</span>
+              <input name="customer_name" type="text" placeholder="模糊匹配" autocomplete="off" value="" />
+            </label>
+            <label class="cost-filter-field">
+              <span>日期</span>
+              <input name="on_date" type="date" />
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm">查询</button>
+            <button type="button" id="invMovToday" class="btn btn-outline btn-sm">今天</button>
+          </form>
+          <p id="invMovBomHint" class="field-hint inv-bom-hint" hidden></p>
+          <p id="invMovMsg" class="msg list-msg"></p>
+          <div class="list-meta-row">
+            <p id="invMovCount" class="list-summary">—</p>
+          </div>
+          <div class="list-scroll-host">
+            <div class="table-wrap list-table-wrap">
+              <table class="data-table list-table">
+                <thead>
+                  <tr class="list-header-row">
+                    <th class="list-th-text">时间</th>
+                    <th class="list-th-text">客户名称</th>
+                    <th class="list-th-text">客户料号</th>
+                    <th class="list-th-text">产品名称</th>
+                    <th>动作</th>
+                    <th>工序</th>
+                    <th>数量</th>
+                    <th class="list-th-text">单号</th>
+                    <th class="list-th-text">备注</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="invMovBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <p id="invMovEmpty" class="empty-hint list-empty-hint" hidden>暂无流水记录</p>
+        </section>
+      </main>
+      <footer class="page-footer">
+        <h2 class="page-title">库存 · 出入库流水</h2>
+        <p class="page-desc">按料号或日期查询历史出入库变动（含在途回货、订单出货扣库等）</p>
+      </footer>
+    </div>
+  </div>
+  <script src="/static/inventory_bom_lookup.js?v=20260725-inv-autocomplete"></script>
+  <script src="/static/inventory_movements.js?v=20260725-inv-mov-unified"></script>
+</body>
+</html>

@@ -47,11 +47,12 @@ PROCESS_CATALOG: List[Tuple[str, str]] = [
     ("29", "外购磁铁"),
     ("30", "外购销钉"),
     ("31", "外购轴套"),
-    ("32", "制程损耗"),
-    ("33", "包装"),
-    ("34", "运输"),
-    ("35", "管销"),
-    ("36", "利润"),
+    ("32", "铝挤"),
+    ("33", "制程损耗"),
+    ("34", "包装"),
+    ("35", "运输"),
+    ("36", "管销"),
+    ("37", "利润"),
 ]
 
 # 已并入 01 压铸的旧工艺名（兼容历史数据）
@@ -67,10 +68,18 @@ PROCESS_CODE_BY_NAME: Dict[str, str] = {name: code for code, name in PROCESS_CAT
 
 # 01 压铸为场内自制，其余工序为外发
 INHOUSE_PROCESS_CODE = "01"
+INHOUSE_SUPPLIER_LABEL = "场内自制"
+
+# BOM 工序自定义顺序（存于 process_prices_json）
+PROCESS_ORDER_KEY = "__order__"
 
 
 def is_inhouse_process(code: str) -> bool:
     return str(code or "").strip() == INHOUSE_PROCESS_CODE
+
+
+def is_inhouse_supplier(name: str) -> bool:
+    return str(name or "").strip() == INHOUSE_SUPPLIER_LABEL
 
 
 @dataclass

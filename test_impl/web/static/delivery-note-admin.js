@@ -2,6 +2,28 @@
 (function () {
   let profileMap = {};
   let templateFiles = [];
+  let adminData = null;
+  let allCustomerRows = [];
+
+  const DN_COLS = [{ field: "customer", label: "客户" }];
+
+  const dnColFilter = window.createListColFilter({
+    prefix: "dnColFilter",
+    headSelector: "#dnMaintHead",
+    columns: DN_COLS,
+    getCellKey(row, field) {
+      if (field !== "customer") return "(空白)";
+      const raw = String(row.customer || "").trim();
+      return raw || "(空白)";
+    },
+    onChange(filtered, meta) {
+      updateCustomerListCount(meta.shown, meta.total, meta.filtered);
+      renderCustomerTable(
+        { ...(adminData || {}), customer_rows: filtered },
+        { isFiltered: meta.filtered, totalCount: meta.total }
+      );
+    },
+  });
 
   const RECONCILIATION_PERIOD_OPTIONS = [
     { value: "calendar_month", label: "自然月（1日～月末）" },
@@ -145,12 +167,31 @@
     };
   }
 
+  function updateCustomerListCount(shown, total, filtered) {
+    const el = document.getElementById("dnListCount");
+    if (!el) return;
+    if (!total) {
+      el.textContent = "共 0 条";
+      return;
+    }
+    if (filtered && shown !== total) {
+      el.textContent = `显示 ${shown} / 共 ${total} 条`;
+      return;
+    }
+    el.textContent = `共 ${total} 条`;
+  }
+
+  function refreshCustomerTable() {
+    allCustomerRows = rowsFromConfig(adminData || {});
+    dnColFilter.setRows(allCustomerRows);
+    dnColFilter.bindHeader();
+    dnColFilter.refresh();
+  }
+
   function rowsFromConfig(data) {
     let rows = data.customer_rows || [];
     if (!rows.length && data.mapping && typeof data.mapping === "object") {
-      rows = Object.keys(data.mapping)
-        .sort((a, b) => a.localeCompare(b, "zh"))
-        .map((customer) => ({ customer }));
+      rows = Object.keys(data.mapping).map((customer) => ({ customer }));
     }
     return rows;
   }
@@ -353,21 +394,26 @@
     syncRowDeliveryUi(tr);
   }
 
-  function renderCustomerTable(data) {
+  function renderCustomerTable(data, opts) {
+    const options = opts || {};
     const tbody = document.getElementById("dnCustomerBody");
     if (!tbody) return;
     const rows = rowsFromConfig(data);
+    const totalCount = options.totalCount != null ? options.totalCount : rows.length;
+    updateCustomerListCount(rows.length, totalCount, options.isFiltered);
     if (!rows.length) {
-      tbody.innerHTML =
-        '<tr><td colspan="9" class="empty-cell">暂无客户。请使用上方「新增客户」录入，或在「订单录入」中创建订单时自动带出客户。</td></tr>';
+      tbody.innerHTML = options.isFiltered
+        ? '<tr><td colspan="10" class="empty-cell">无匹配结果，请调整筛选条件</td></tr>'
+        : '<tr><td colspan="10" class="empty-cell">暂无客户。请使用上方「新增客户」录入，或在「订单录入」中创建订单时自动带出客户。</td></tr>';
       return;
     }
     tbody.innerHTML = rows
-      .map((row) => {
+      .map((row, idx) => {
         const mode = deliveryModeFromRow(row);
         const p = rowProfile(row);
         const customSelected = row.template_file || "";
         return `<tr data-customer="${esc(row.customer)}">
+              <td class="list-td-seq">${idx + 1}</td>
               <td class="list-td-text dn-cell-name">${esc(row.customer)}</td>
               <td class="list-td-text dn-cell-delivery">
                 <span class="dn-delivery-display${mode === "custom" ? " is-custom" : ""}">${esc(deliveryDisplayLabel(mode, customSelected))}</span>
@@ -670,12 +716,24 @@
     const data = await parseJsonResponse(res);
     profileMap = data.customer_profiles || {};
     templateFiles = data.template_files || [];
+    adminData = data;
     fillTemplateSelects();
-    renderCustomerTable(data);
+    refreshCustomerTable();
+  }
+
+  function bindClearCustomerFiltersBtn() {
+    const btn = document.getElementById("dnClearFiltersBtn");
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      dnColFilter.clearAll();
+    });
   }
 
   function bindDeliveryNoteAdmin() {
     bindNewCustomerForm();
+    bindClearCustomerFiltersBtn();
+    dnColFilter.bindHeader();
     const refreshBtn = document.getElementById("dnRefreshBtn");
     if (refreshBtn && !refreshBtn.dataset.bound) {
       refreshBtn.dataset.bound = "1";

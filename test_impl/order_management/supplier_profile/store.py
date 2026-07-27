@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
 
@@ -27,6 +28,18 @@ PROFILE_FIELDS = (
 
 EMPTY_PROFILE: Dict[str, str] = {k: "" for k in PROFILE_FIELDS}
 EMPTY_PROFILE["reconciliation_period"] = DEFAULT_SUPPLIER_RECONCILIATION_PERIOD
+EMPTY_PROFILE["created_at"] = ""
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _created_sort_key(created_at: str, json_index: int, name: str) -> tuple:
+    ca = (created_at or "").strip()
+    if ca:
+        return (ca, name.casefold())
+    return (f"1970-01-01T00:00:00.{json_index:06d}Z", name.casefold())
 
 
 def _load_raw() -> Dict[str, dict]:
@@ -50,6 +63,7 @@ def _normalize_row(raw: dict | None) -> Dict[str, str]:
         period_raw,
         default=DEFAULT_SUPPLIER_RECONCILIATION_PERIOD,
     )
+    row["created_at"] = str(src.get("created_at") or "").strip()
     return row
 
 
@@ -78,6 +92,11 @@ def save_profile(supplier: str, info: dict) -> Dict[str, str]:
         raise ValueError("供应商名称不能为空")
     row = _normalize_row(info)
     all_cfg = load_all_profiles()
+    prev = all_cfg.get(supplier) or {}
+    if supplier in all_cfg:
+        row["created_at"] = str(prev.get("created_at") or row.get("created_at") or "").strip()
+    elif not row.get("created_at"):
+        row["created_at"] = _now_iso()
     all_cfg[supplier] = row
     PROFILES_FILE.parent.mkdir(parents=True, exist_ok=True)
     PROFILES_FILE.write_text(
@@ -88,7 +107,15 @@ def save_profile(supplier: str, info: dict) -> Dict[str, str]:
 
 
 def list_profile_suppliers() -> List[str]:
-    return sorted(load_all_profiles().keys(), key=lambda x: (x.casefold(), x))
+    raw = _load_raw()
+    items: List[tuple[str, Dict[str, str], int]] = []
+    for idx, (key, val) in enumerate(raw.items()):
+        name = str(key or "").strip()
+        if not name:
+            continue
+        items.append((name, _normalize_row(val if isinstance(val, dict) else {}), idx))
+    items.sort(key=lambda t: _created_sort_key(t[1].get("created_at", ""), t[2], t[0]), reverse=True)
+    return [name for name, _, _ in items]
 
 
 def _resolve_profile_key(all_cfg: Dict[str, dict], name: str) -> str | None:

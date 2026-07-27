@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from test_impl.common.money import serialize_amount, serialize_price, serialize_qty
 from test_impl.order_management.order_entry.line_store import LineStore, default_db_path
 
+from .month_util import month_display_label, rolling_due_months
 from .payment_schedule import (
     compute_payment_due_date,
     format_terms_label,
@@ -281,3 +282,48 @@ class ReconciliationService:
             )
             months.add(payment_due_month_label(due))
         return sorted(months, reverse=True)
+
+    def due_outlook(self, *, month_count: int = 6) -> Dict[str, Any]:
+        """自本月起重连续 month_count 个收款月的客户汇总。"""
+        cfg = load_reconciliation_config()
+        months = rolling_due_months(month_count)
+        buckets = [self._receivable_due_bucket(m) for m in months]
+        total = sum(Decimal(str(b.get("total_amount") or "0")) for b in buckets)
+        return {
+            "months": buckets,
+            "month_count": len(buckets),
+            "terms_note": format_terms_label(cfg),
+            "total_amount": serialize_amount(total),
+        }
+
+    def _receivable_due_bucket(self, month: str) -> Dict[str, Any]:
+        lines = self.list_lines(collection_month=month)
+        buckets: Dict[str, Dict[str, Any]] = {}
+        for row in lines:
+            name = row["customer"] or "(未填客户)"
+            bucket = buckets.setdefault(
+                name,
+                {"customer": name, "line_count": 0, "total_amount": Decimal("0")},
+            )
+            bucket["line_count"] += 1
+            bucket["total_amount"] += Decimal(str(row["amount"] or "0"))
+        rows = sorted(
+            buckets.values(),
+            key=lambda r: (-r["total_amount"], r["customer"]),
+        )
+        total = sum(r["total_amount"] for r in rows)
+        return {
+            "month": month,
+            "label": month_display_label(month),
+            "rows": [
+                {
+                    "customer": r["customer"],
+                    "line_count": r["line_count"],
+                    "total_amount": serialize_amount(r["total_amount"]),
+                    "collection_month": month,
+                }
+                for r in rows
+            ],
+            "customer_count": len(rows),
+            "total_amount": serialize_amount(total),
+        }

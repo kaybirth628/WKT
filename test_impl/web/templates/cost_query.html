@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WKT 销售管理系统 · 成本查询</title>
+  <title>WKT 销售管理系统 · BOM查询</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260711-title-gray-bg" />
-  <link rel="stylesheet" href="/static/cost.css?v=20260711-title-gray-bg" />
+  <link rel="stylesheet" href="/static/style.css?v=20260720-list-table" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260720-list-table" />
 </head>
 <body>
   <div class="app-layout">
@@ -14,9 +14,9 @@
 
     <div class="app-main">
       <main class="content-stack cost-stack">
-        <h3 class="section-h3 submodule-page-title">成本查询</h3>
+        <h3 class="section-h3 submodule-page-title">BOM查询</h3>
         <section class="card list-card" id="costQuerySection">
-          <form id="costQueryForm" class="filter-bar filter-bar-compact cost-query-filters">
+          <form id="costQueryForm" class="filter-bar filter-bar-compact">
             <label class="cost-filter-field">
               <span>关键字</span>
               <input name="q" type="text" placeholder="客户 / 产品 / 料号 / 模具 / 材质" />
@@ -34,37 +34,66 @@
           </form>
 
           <div class="list-meta-row">
+            <button type="button" id="costQueryClearColFilters" class="btn btn-outline btn-sm">清空列筛选</button>
             <p id="costQueryCount" class="list-summary">共 0 条</p>
           </div>
 
+          <div id="costQueryColFilterPanel" class="list-col-filter-panel is-hidden" role="dialog" aria-modal="true" aria-labelledby="costQueryColFilterPanelTitle">
+            <div class="list-col-filter-panel-head">
+              <span id="costQueryColFilterPanelTitle">筛选</span>
+              <button type="button" class="list-col-filter-close" id="costQueryColFilterPanelClose" aria-label="关闭">×</button>
+            </div>
+            <input type="text" class="list-col-filter-search" id="costQueryColFilterSearch" placeholder="搜索选项…" />
+            <label class="list-col-filter-all"><input type="checkbox" id="costQueryColFilterSelectAll" checked /> <span id="costQueryColFilterSelectAllLabel">全选</span></label>
+            <div id="costQueryColFilterOptions" class="list-col-filter-options"></div>
+            <div class="list-col-filter-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="costQueryColFilterApply">确定</button>
+              <button type="button" class="btn btn-outline btn-sm" id="costQueryColFilterReset">重置</button>
+            </div>
+          </div>
+
           <div class="list-scroll-host">
-            <div class="table-wrap list-table-wrap">
-              <table class="data-table list-table">
-                <thead>
+            <div class="table-wrap list-table-wrap" tabindex="0" aria-label="BOM 查询表格">
+              <table class="data-table list-table cost-query-table">
+                <colgroup>
+                  <col style="width:3%" />
+                  <col style="width:12%" />
+                  <col style="width:17%" />
+                  <col style="width:12%" />
+                  <col style="width:8%" />
+                  <col style="width:7%" />
+                  <col style="width:7%" />
+                  <col style="width:6%" />
+                  <col style="width:9%" />
+                  <col style="width:12%" />
+                  <col style="width:7%" />
+                </colgroup>
+                <thead id="costQueryHead">
                   <tr class="list-header-row">
-                    <th class="list-th-text">客户</th>
-                    <th class="list-th-text">产品名称</th>
-                    <th class="list-th-text">产品料号</th>
-                    <th class="list-th-text">材质</th>
-                    <th class="list-th-text">单重(g)</th>
-                    <th class="list-th-text">机台</th>
-                    <th class="list-th-text">工序数</th>
-                    <th class="list-th-text">单件成本</th>
-                    <th class="list-th-text">录入时间</th>
-                    <th class="list-th-action action-cell">操作</th>
+                    <th scope="col" class="list-th-seq">序号</th>
+                    <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">客户</span><button type="button" class="list-filter-btn" data-col="customer_name" aria-label="筛选客户" title="筛选客户"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">产品名称</span><button type="button" class="list-filter-btn" data-col="product_name" aria-label="筛选产品名称" title="筛选产品名称"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">产品料号</span><button type="button" class="list-filter-btn" data-col="product_part_no" aria-label="筛选产品料号" title="筛选产品料号"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-filterable"><span class="list-th-inner"><span class="list-th-label">材质</span><button type="button" class="list-filter-btn" data-col="material" aria-label="筛选材质" title="筛选材质"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-filterable"><span class="list-th-inner"><span class="list-th-label">单重(g)</span><button type="button" class="list-filter-btn" data-col="unit_weight_g" aria-label="筛选单重" title="筛选单重"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-filterable"><span class="list-th-inner"><span class="list-th-label">机台</span><button type="button" class="list-filter-btn" data-col="machine_tonnage" aria-label="筛选机台" title="筛选机台"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-filterable"><span class="list-th-inner"><span class="list-th-label">工序数</span><button type="button" class="list-filter-btn" data-col="process_count" aria-label="筛选工序数" title="筛选工序数"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-filterable"><span class="list-th-inner"><span class="list-th-label">单件成本</span><button type="button" class="list-filter-btn" data-col="unit_cost" aria-label="筛选单件成本" title="筛选单件成本"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-filterable"><span class="list-th-inner"><span class="list-th-label">录入时间</span><button type="button" class="list-filter-btn" data-col="created_at" aria-label="筛选录入时间" title="筛选录入时间"><span aria-hidden="true">▾</span></button></span></th>
+                    <th scope="col" class="list-th-action action-cell">操作</th>
                   </tr>
                 </thead>
                 <tbody id="costQueryBody"></tbody>
               </table>
             </div>
           </div>
-          <p id="costQueryEmpty" class="empty-hint list-empty-hint" hidden>暂无记录，请先在「成本录入」中保存</p>
+          <p id="costQueryEmpty" class="empty-hint list-empty-hint" hidden>暂无记录，请先在「BOM录入」中保存</p>
         </section>
       </main>
 
       <footer class="page-footer">
-        <h2 class="page-title">成本分析 · 成本查询</h2>
-        <p class="page-desc">检索、修改与删除历史成本录入</p>
+        <h2 class="page-title">BOM分析 · BOM查询</h2>
+        <p class="page-desc">检索、修改与删除 BOM 主数据记录</p>
       </footer>
     </div>
   </div>
@@ -138,6 +167,13 @@
         <div class="items-block">
           <div class="items-head"><h4>工序选择</h4></div>
           <div id="editProcessGrid" class="process-grid process-pick-grid"></div>
+          <div id="editProcessOrderBlock" class="process-order-block" hidden>
+            <div class="items-head">
+              <h5>工艺顺序</h5>
+              <p class="card-desc">已选工序的执行顺序，可用 ↑↓ 调整</p>
+            </div>
+            <ol id="editProcessOrderList" class="process-order-list"></ol>
+          </div>
         </div>
         <div class="cost-edit-form-actions">
           <button type="submit" class="btn btn-primary">保存修改</button>
@@ -148,7 +184,8 @@
     </div>
   </div>
 
-  <script src="/static/cost_common.js?v=20260711-title-gray-bg"></script>
-  <script src="/static/cost_query.js?v=20260711-title-gray-bg"></script>
+  <script src="/static/list-col-filter.js?v=20260725-bom-query-seq"></script>
+  <script src="/static/cost_common.js?v=20260725-bom-query-seq"></script>
+  <script src="/static/cost_query.js?v=20260725-bom-query-seq"></script>
 </body>
 </html>

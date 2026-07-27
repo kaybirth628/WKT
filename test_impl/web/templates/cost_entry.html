@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WKT 销售管理系统 · 成本录入</title>
+  <title>WKT 销售管理系统 · BOM录入</title>
   {% include '_theme_head.html' %}
   <link rel="stylesheet" href="/static/style.css?v=20260711-title-gray-bg" />
-  <link rel="stylesheet" href="/static/cost.css?v=20260711-title-gray-bg" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260727-bom-mode" />
 </head>
 <body>
   <div class="app-layout">
@@ -14,9 +14,65 @@
 
     <div class="app-main">
       <main class="content-stack cost-stack">
-        <h3 class="section-h3 submodule-page-title">成本录入</h3>
-        <div class="cost-entry-layout">
+        <h3 class="section-h3 submodule-page-title">BOM录入</h3>
+
+        <section class="card mode-card">
+          <div class="mode-switch" role="tablist" aria-label="BOM 录入方式">
+            <button type="button" class="mode-btn active" id="bomModeBatchBtn" data-mode="batch" role="tab" aria-selected="true">Excel 批量导入</button>
+            <button type="button" class="mode-btn" id="bomModeManualBtn" data-mode="manual" role="tab" aria-selected="false">手动录入</button>
+          </div>
+        </section>
+
+        <div id="bomBatchPanel" class="mode-panel">
+          <section class="card upload-card">
+            <div class="card-head">
+              <div class="card-icon">表</div>
+              <div class="card-head-text">
+                <h3>Excel 批量导入</h3>
+                <p class="card-desc">威可特「新产品 BOM 表」（.xls / .xlsx）。文件名匹配客户；读取表头「产品料号」；同 Sheet 多料号自动拆分；单价默认 0，导入后可补价。</p>
+              </div>
+            </div>
+            <div class="upload-row">
+              <input type="file" id="bomImportFile" accept=".xlsx,.xlsm,.xls" />
+              <button type="button" id="bomImportParseBtn" class="btn btn-primary">解析预览</button>
+            </div>
+            <p id="bomImportMsg" class="msg"></p>
+          </section>
+
+          <section id="bomImportPreviewArea" class="card preview-card is-hidden">
+            <div id="bomImportCustomer" class="verify-summary" aria-live="polite"></div>
+            <div class="card-head excel-preview-toolbar bom-preview-toolbar">
+              <h3>导入预览</h3>
+              <div id="bomImportStats" class="bom-import-stats"></div>
+              <div class="excel-import-actions">
+                <button type="button" id="bomImportPassedBtn" class="btn btn-primary" disabled title="仅导入「通过」档">导入通过项</button>
+                <button type="button" id="bomImportPendingBtn" class="btn btn-outline" disabled title="导入通过 + 待核">导入通过+待核</button>
+              </div>
+            </div>
+            <p id="bomImportSummary" class="card-desc bom-import-summary"></p>
+            <div class="table-wrap">
+              <table class="data-table bom-import-table">
+                <thead>
+                  <tr>
+                    <th>Sheet</th>
+                    <th>客户</th>
+                    <th>产品料号</th>
+                    <th>产品名称</th>
+                    <th>单重(g)</th>
+                    <th>制程</th>
+                    <th>状态</th>
+                    <th>说明</th>
+                  </tr>
+                </thead>
+                <tbody id="bomImportBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div id="bomManualPanel" class="mode-panel is-hidden">
           <section class="card list-card cost-form-card">
+            <h3 class="section-h3">手动录入</h3>
             <form id="costEntryForm" class="form">
               <div class="cost-header-table">
                 <div class="cost-header-row">
@@ -46,12 +102,12 @@
                     <datalist id="partNoOptions"></datalist>
                     <p id="partLookupHint" class="field-hint" hidden></p>
                   </label>
-                </div>
-                <div class="cost-header-row">
                   <label class="field">
                     <span>模穴</span>
                     <input name="cavity" required placeholder="如：1*2" />
                   </label>
+                </div>
+                <div class="cost-header-row">
                   <label class="field">
                     <span>产品单重 (g)</span>
                     <input name="unit_weight_g" type="number" step="0.01" min="0" required placeholder="如：88" />
@@ -65,8 +121,6 @@
                     <span>机台吨位</span>
                     <input name="machine_tonnage" required placeholder="如：280T" />
                   </label>
-                </div>
-                <div class="cost-header-row cost-header-row--calc">
                   <label class="field">
                     <span>原材单价（用于成本计算）</span>
                     <input name="material_unit_price" type="number" step="0.0001" min="0" value="0" />
@@ -80,6 +134,13 @@
                   <p id="processSelectionSummary" class="card-desc">请勾选本料号适用的工序</p>
                 </div>
                 <div id="processGrid" class="process-grid process-pick-grid"></div>
+                <div id="processOrderBlock" class="process-order-block" hidden>
+                  <div class="items-head">
+                    <h5>工艺顺序</h5>
+                    <p class="card-desc">已选工序的执行顺序，可用 ↑↓ 调整</p>
+                  </div>
+                  <ol id="processOrderList" class="process-order-list"></ol>
+                </div>
               </div>
 
               <div class="form-actions cost-entry-actions">
@@ -93,8 +154,8 @@
       </main>
 
       <footer class="page-footer">
-        <h2 class="page-title">成本分析 · 成本录入</h2>
-        <p class="page-desc">基础信息 → 勾选工序 → 提交后在「成本查询」中检索</p>
+        <h2 class="page-title">BOM分析 · BOM录入</h2>
+        <p class="page-desc">料号主数据在此维护 → 勾选工序 → 提交后在「BOM查询」中检索；订单录入须先在此建档</p>
       </footer>
     </div>
   </div>
@@ -109,7 +170,8 @@
     </div>
   </div>
 
-  <script src="/static/cost_common.js?v=20260711-title-gray-bg"></script>
-  <script src="/static/cost_entry.js?v=20260711-title-gray-bg"></script>
+  <script src="/static/cost_common.js?v=20260727-bom-mode"></script>
+  <script src="/static/cost_bom_import.js?v=20260727-bom-mode"></script>
+  <script src="/static/cost_entry.js?v=20260727-bom-mode"></script>
 </body>
 </html>

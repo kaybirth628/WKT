@@ -130,21 +130,28 @@ select:focus {
 }
 
 .cost-header-table {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  column-gap: 0.75rem;
+  row-gap: 0.55rem;
   margin-bottom: 0.65rem;
+  width: 100%;
+  align-items: end;
 }
 
 .cost-header-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.55rem;
+  display: contents;
 }
 
-.cost-header-row--calc {
-  grid-template-columns: minmax(0, 1fr);
-  max-width: 260px;
+.cost-header-table .field {
+  min-width: 0;
+}
+
+.cost-header-table .field input,
+.cost-header-table .field select {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .cost-entry-layout .items-block {
@@ -187,18 +194,44 @@ select:focus {
   font-size: 0.875rem;
 }
 
-.cost-entry-layout .form-actions {
-  padding-top: 0.65rem;
+.cost-entry-layout .form-actions,
+.cost-entry-layout .cost-entry-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  padding-top: 0.5rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+.cost-entry-layout .cost-entry-actions .btn {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.cost-entry-layout .cost-entry-actions .msg {
+  margin: 0;
+  flex: 1 1 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+.cost-entry-layout .cost-entry-actions .msg:empty {
+  display: none;
 }
 
 @media (max-width: 1100px) {
-  .cost-header-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .cost-header-table {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 640px) {
-  .cost-header-row {
+  .cost-header-table {
     grid-template-columns: 1fr;
   }
 }
@@ -271,6 +304,67 @@ select:focus {
   opacity: 0.45;
 }
 
+.process-supplier-combo {
+  position: relative;
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.process-supplier-combo .process-supplier-search {
+  width: 100%;
+  padding: 0.38rem 0.45rem;
+  font-size: 0.75rem;
+  font-family: inherit;
+  border: 1px solid var(--border, #cfd6de);
+  border-radius: 4px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.process-supplier-combo .process-supplier-search:disabled {
+  opacity: 0.45;
+}
+
+.process-supplier-combo .process-supplier-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  z-index: 40;
+  max-height: 11rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.2rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--border, #cfd6de);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.process-supplier-combo .process-supplier-option {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.process-supplier-combo .process-supplier-option:hover,
+.process-supplier-combo .process-supplier-option.is-selected {
+  background: var(--primary-soft, #e8f1fb);
+}
+
+.process-supplier-combo .process-supplier-option.is-inhouse {
+  font-weight: 600;
+  color: var(--text-secondary, #4b5563);
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.process-supplier-combo .process-supplier-empty {
+  padding: 0.4rem 0.55rem;
+  font-size: 0.72rem;
+  color: var(--text-muted, #9ca3af);
+}
+
 .process-inhouse-tag {
   margin-top: 0.15rem;
   font-size: 0.7rem;
@@ -294,21 +388,73 @@ select:focus {
   min-height: 4.75rem;
 }
 
-/* 成本查询：筛选栏对齐出货明细 filter-bar */
-.cost-query-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 0;
+.process-order-block {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border, #e5e7eb);
 }
 
+.process-order-block .items-head h5 {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.process-order-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.process-order-item {
+  display: grid;
+  grid-template-columns: 2rem 2.5rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--surface-2, #f9fafb);
+}
+
+.process-order-seq {
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  text-align: center;
+}
+
+.process-order-code {
+  font-family: Consolas, "Courier New", ui-monospace, monospace;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #4b5563);
+}
+
+.process-order-name {
+  font-size: 0.9rem;
+}
+
+.process-order-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.process-order-actions .btn-icon {
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.95rem;
+}
+
+/* 成本查询：筛选栏对齐出货明细 filter-bar */
 .cost-filter-field {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--text-secondary);
 }
 
@@ -317,11 +463,12 @@ select:focus {
 }
 
 .cost-filter-field input[type="text"] {
-  min-width: 160px;
+  min-width: 140px;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   font-size: 0.875rem;
+  font-family: inherit;
 }
 
 .list-empty-hint {
@@ -398,10 +545,6 @@ select:focus {
 }
 
 @media (max-width: 900px) {
-  .cost-query-filters {
-    gap: 0.45rem;
-  }
-
   .cost-filter-field {
     flex: 1 1 100%;
   }
@@ -411,4 +554,127 @@ select:focus {
     min-width: 0;
     width: 100%;
   }
+}
+
+.bom-import-card {
+  margin-bottom: 1rem;
+}
+
+.cost-stack .mode-panel {
+  gap: 1.15rem;
+}
+
+.cost-stack .mode-panel > .card + .card {
+  margin-top: 0;
+}
+
+.bom-preview-toolbar {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.bom-preview-toolbar h3 {
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.bom-import-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.bom-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border, #e5e7eb);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.bom-stat em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.bom-stat-pass em { color: #166534; }
+.bom-stat-pending em { color: #b45309; }
+.bom-stat-block em { color: #991b1b; }
+
+.bom-import-summary {
+  margin: 0 0 0.75rem;
+}
+
+.bom-import-table code {
+  font-family: Consolas, "Courier New", ui-monospace, monospace;
+  font-size: 0.8125rem;
+}
+
+.bom-part-cell code {
+  word-break: break-all;
+}
+
+.bom-process-cell {
+  max-width: 200px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.bom-badge {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.bom-badge-pass {
+  background: rgba(22, 163, 74, 0.12);
+  color: #166534;
+}
+
+.bom-badge-pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.bom-badge-block {
+  background: rgba(198, 40, 40, 0.1);
+  color: #991b1b;
+}
+
+.bom-split-tag {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  background: rgba(26, 95, 180, 0.1);
+  color: var(--primary, #1a5fb4);
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+
+.bom-import-issues {
+  max-width: 240px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+tr.bom-tier-blocked td {
+  background: rgba(198, 40, 40, 0.06);
+}
+
+tr.bom-tier-pending td {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.cost-form-card .section-h3 {
+  margin: 0 0 0.75rem;
 }

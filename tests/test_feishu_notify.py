@@ -6,12 +6,20 @@ from unittest.mock import MagicMock, patch
 
 from test_impl.integrations.feishu import (
     FeishuNotifier,
+    list_webhook_urls,
     load_feishu_config,
     public_feishu_config,
     save_feishu_config,
     send_text,
 )
-from test_impl.integrations.wkt_events import notify_line_shipped
+from test_impl.integrations.wkt_events import (
+    notify_audit_action,
+    notify_inventory_movement,
+    notify_line_shipped,
+    notify_system_deploy,
+    parse_changelog_head,
+    parse_version_from_markdown,
+)
 
 
 class TestFeishuNotify(unittest.TestCase):
@@ -54,6 +62,51 @@ class TestFeishuNotify(unittest.TestCase):
         self.assertTrue(pub["configured"])
         self.assertIn("…", pub["webhook_url_masked"])
 
+    @patch("test_impl.integrations.feishu.urllib.request.urlopen")
+    def test_notify_all_webhooks(self, mock_urlopen: MagicMock) -> None:
+        self.cfg_path.write_text(
+            json.dumps(
+                {
+                    "enabled": True,
+                    "webhook_urls": [
+                        "https://open.feishu.cn/hook/a",
+                        "https://open.feishu.cn/hook/b",
+                    ],
+                    "sign_secret": "",
+                    "events": {"audit_action": True},
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        resp = MagicMock()
+        resp.status = 200
+        resp.read.return_value = b'{"code":0}'
+        mock_urlopen.return_value.__enter__.return_value = resp
+        notifier = FeishuNotifier()
+        self.assertTrue(notifier.notify_text("hello", event="audit_action"))
+        self.assertEqual(mock_urlopen.call_count, 2)
+        urls = {call.args[0].full_url for call in mock_urlopen.call_args_list}
+        self.assertEqual(
+            urls,
+            {
+                "https://open.feishu.cn/hook/a",
+                "https://open.feishu.cn/hook/b",
+            },
+        )
+
+    def test_list_webhook_urls_dedupes(self) -> None:
+        urls = list_webhook_urls(
+            {
+                "webhook_url": "https://open.feishu.cn/hook/a",
+                "webhook_urls": [
+                    "https://open.feishu.cn/hook/a",
+                    "https://open.feishu.cn/hook/b",
+                ],
+            }
+        )
+        self.assertEqual(urls, ["https://open.feishu.cn/hook/a", "https://open.feishu.cn/hook/b"])
+
     @patch.object(FeishuNotifier, "notify_async")
     def test_ship_event_message(self, mock_async: MagicMock) -> None:
         notify_line_shipped(
@@ -73,6 +126,75 @@ class TestFeishuNotify(unittest.TestCase):
         self.assertIn("出货", text)
         self.assertIn("怡利", text)
         self.assertIn("40", text)
+
+    @patch.object(FeishuNotifier, "notify_async")
+    def test_inventory_movement_message(self, mock_async: MagicMock) -> None:
+        notify_inventory_movement(
+            {
+                "action_type": "complete",
+                "product_part_no": "PL9-01100",
+                "process_code": "01",
+                "from_process_code": "",
+                "from_status": "",
+                "to_process_code": "01",
+                "to_status": "inhouse",
+                "qty": "100",
+                "doc_no": "WG-20260725-001",
+                "note": "完工转入 压铸",
+            }
+        )
+        mock_async.assert_called_once()
+        text = mock_async.call_args[0][0]
+        self.assertIn("库存出入库", text)
+        self.assertIn("完工转入", text)
+        self.assertIn("PL9-01100", text)
+        self.assertEqual(mock_async.call_args[1]["event"], "inventory_movement")
+
+    @patch.object(FeishuNotifier, "notify_async")
+    def test_audit_action_message(self, mock_async: MagicMock) -> None:
+        notify_audit_action(
+            action="line.create",
+            module="orders",
+            summary="录入订单行：怡利 PO-1",
+            user={"display_name": "张三", "username": "zhangsan"},
+            ip_address="127.0.0.1",
+        )
+        mock_async.assert_called_once()
+        text = mock_async.call_args[0][0]
+        self.assertIn("操作通知", text)
+        self.assertIn("张三", text)
+        self.assertIn("录入订单行", text)
+        self.assertEqual(mock_async.call_args[1]["event"], "audit_action")
+
+    @patch.object(FeishuNotifier, "notify_async")
+    def test_system_deploy_message(self, mock_async: MagicMock) -> None:
+        notify_system_deploy(
+            version="v0.6.0",
+            build="20260725-feishu-audit-deploy",
+            changes=["CL-0149 · 2026-07-25 · 优化：飞书审计通知"],
+            host_label="云端",
+        )
+        mock_async.assert_called_once()
+        text = mock_async.call_args[0][0]
+        self.assertIn("系统更新", text)
+        self.assertIn("v0.6.0", text)
+        self.assertIn("CL-0149", text)
+
+    def test_parse_changelog_head(self) -> None:
+        sample = """
+### CL-0149 · 2026-07-25 · 优化（B）
+- 变更内容：飞书审计统一推送
+### CL-0148 · 2026-07-25 · 优化（B）
+- 变更内容：扩展模块通知
+"""
+        items = parse_changelog_head(sample, limit=2)
+        self.assertEqual(len(items), 2)
+        self.assertIn("CL-0149", items[0])
+        self.assertIn("飞书审计", items[0])
+
+    def test_parse_version_from_markdown(self) -> None:
+        text = "| **版本号** | **v0.6.0** |"
+        self.assertEqual(parse_version_from_markdown(text), "v0.6.0")
 
 
 if __name__ == "__main__":

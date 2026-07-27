@@ -1,0 +1,484 @@
+{
+  "files": 6,
+  "imported": 68,
+  "skipped": 0,
+  "details": [
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "HUV9142V1",
+      "part": "R08AA15A15A80000-X",
+      "record_id": 109,
+      "customer": "东硕"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "DBF7505L1",
+      "part": "R08AA43680A40000-X",
+      "record_id": 110,
+      "customer": "东硕"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "DUG7391",
+      "part": "R08A739724A80000-X",
+      "record_id": 111,
+      "customer": "东硕"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "DUD3500",
+      "part": "R08GA87906B60001-X",
+      "record_id": 112,
+      "customer": "东硕"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "VSD9007S2",
+      "part": "R08GA42700A40000-X",
+      "record_id": 113,
+      "customer": "东硕"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "DBC1481L1",
+      "part": "R08FA78700A70001-X",
+      "record_id": 114,
+      "customer": "DLS"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "DBC1480L1",
+      "part": "R08FA56700200001-X",
+      "record_id": 115,
+      "customer": "DLS"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "DBC15A0",
+      "part": "R08R920926980000-X",
+      "record_id": 116,
+      "customer": "XFT"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "DBB9012",
+      "part": "R08CB09820A70001-X",
+      "record_id": 117,
+      "customer": "XFT"
+    },
+    {
+      "file": "东硕BOM.xls",
+      "sheet": "9011散热片",
+      "part": "R6BRSNDUD2070K00-X",
+      "record_id": 118,
+      "customer": "东硕"
+    },
+    {
+      "file": "怡利BOM.xls",
+      "sheet": "铝壳",
+      "part": "1A321W1M001",
+      "record_id": 119,
+      "customer": "怡利"
+    },
+    {
+      "file": "怡利BOM.xls",
+      "sheet": "GL0L",
+      "part": "1A321W1N001-0A",
+      "record_id": 120,
+      "customer": "怡利"
+    },
+    {
+      "file": "怡利BOM.xls",
+      "sheet": "GL0P",
+      "part": "1A321W1N002-0A",
+      "record_id": 121,
+      "customer": "怡利"
+    },
+    {
+      "file": "怡利BOM.xls",
+      "sheet": "金属转轴",
+      "part": "1A104D0A001-00\n1A104D0A003-00",
+      "record_id": 122,
+      "customer": "怡利"
+    },
+    {
+      "file": "怡利BOM.xls",
+      "sheet": "GL0X",
+      "part": "1A321W2D001-0A",
+      "record_id": 123,
+      "customer": "怡利"
+    },
+    {
+      "file": "怡利BOM.xls",
+      "sheet": "GL0EF",
+      "part": "1A321W2E001-0A",
+      "record_id": 124,
+      "customer": "怡利"
+    },
+    {
+      "file": "怡利BOM.xls",
+      "sheet": "NS01",
+      "part": "1A321W2C001-0A",
+      "record_id": 125,
+      "customer": "怡利"
+    },
+    {
+      "file": "怡利BOM.xls",
+      "sheet": "NS02",
+      "part": "1A321W2C001-0A",
+      "record_id": 126,
+      "customer": "怡利"
+    },
+    {
+      "file": "日月照明BOM格式.xls",
+      "sheet": "轴承支架",
+      "part": "WKT-MJ-LV-25044",
+      "record_id": 127,
+      "customer": "日月照明"
+    },
+    {
+      "file": "日月照明BOM格式.xls",
+      "sheet": "相机卡扣",
+      "part": "WKT-MJ-LV-25044",
+      "record_id": 128,
+      "customer": "日月照明"
+    },
+    {
+      "file": "欧菲光BOM.xls",
+      "sheet": "MS11前壳",
+      "part": "YC013600303900",
+      "record_id": 129,
+      "customer": "欧菲光"
+    },
+    {
+      "file": "欧菲光BOM.xls",
+      "sheet": "MS11后壳",
+      "part": "YC013600304000",
+      "record_id": 130,
+      "customer": "欧菲光"
+    },
+    {
+      "file": "精达BOM.xls",
+      "sheet": "三孔连杆",
+      "part": "EP1210.21.01",
+      "record_id": 131,
+      "customer": "精达"
+    },
+    {
+      "file": "精达BOM.xls",
+      "sheet": "三孔压盖",
+      "part": "EP1210.21.03",
+      "record_id": 132,
+      "customer": "精达"
+    },
+    {
+      "file": "精达BOM.xls",
+      "sheet": "电机外壳",
+      "part": "EP1210.50.01",
+      "record_id": 133,
+      "customer": "精达"
+    },
+    {
+      "file": "精达BOM.xls",
+      "sheet": "缓起",
+      "part": "EP1210.42.01",
+      "record_id": 134,
+      "customer": "精达"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8513滑杆",
+      "part": "B6020000513",
+      "record_id": 135,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8513传导片",
+      "part": "B6010001370",
+      "record_id": 136,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8513散热片",
+      "part": "B6030000533",
+      "record_id": 137,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8513旋钮",
+      "part": "B6020000367",
+      "record_id": 138,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8528滑杆",
+      "part": "B6020000523",
+      "record_id": 139,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8592连杆",
+      "part": "B6020000534",
+      "record_id": 140,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8624滑杆",
+      "part": "B6020000542",
+      "record_id": 141,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8808传导片",
+      "part": "B6020000495",
+      "record_id": 142,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8808散热片",
+      "part": "B6020000496",
+      "record_id": 143,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8812A散热片",
+      "part": "B6020000350",
+      "record_id": 144,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8027A散热片",
+      "part": "B6020000315",
+      "record_id": 145,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8038电机支架",
+      "part": "B6020000280",
+      "record_id": 146,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8038连杆",
+      "part": "B6020000278",
+      "record_id": 147,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8040连杆",
+      "part": "B6020000424",
+      "record_id": 148,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8318连杆",
+      "part": "B6020000309",
+      "record_id": 149,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8526铝底座",
+      "part": "B6020000416",
+      "record_id": 150,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8526铝压盖",
+      "part": "B6020000417",
+      "record_id": 151,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8527散热片",
+      "part": "B6020000437",
+      "record_id": 152,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8527旋钮",
+      "part": "B6020000432",
+      "record_id": 153,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8812传导片",
+      "part": "B6020000232",
+      "record_id": 154,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "8812散热片",
+      "part": "B6020000233",
+      "record_id": 155,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "二郎神连杆",
+      "part": "B6020000128",
+      "record_id": 156,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "二郎神内支架",
+      "part": "B6010000576",
+      "record_id": 157,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "二郎神旋转卡键",
+      "part": "B6010000577",
+      "record_id": 158,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "雷震子铝底座",
+      "part": "B6020000020",
+      "record_id": 159,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "雷震子铝压盖",
+      "part": "B6020000021",
+      "record_id": 160,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "雷震子铝连杆",
+      "part": "B6020000016",
+      "record_id": 161,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "千里眼铝底座",
+      "part": "B6020000124",
+      "record_id": 162,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "千里眼铝压盖",
+      "part": "B6020000125",
+      "record_id": 163,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "三角款电机固定座",
+      "part": "WKT-MJ-LV-123",
+      "record_id": 164,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "三角款连杆",
+      "part": "WKT-MJ-LV-124",
+      "record_id": 165,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "沙和尚连杆",
+      "part": "B6010000275",
+      "record_id": 166,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "沙和尚底座",
+      "part": "B6010000400",
+      "record_id": 167,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "沙和尚压盖",
+      "part": "B6010000401",
+      "record_id": 168,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "小白龙铝底座",
+      "part": "WKT-MJ-LV-115",
+      "record_id": 169,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "小金童连杆",
+      "part": "B6020000019",
+      "record_id": 170,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "至尊宝连杆",
+      "part": "B6020000140",
+      "record_id": 171,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "至尊宝散热片",
+      "part": "B6020000148",
+      "record_id": 172,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "至尊宝传导片",
+      "part": "B6020000147",
+      "record_id": 173,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "至尊宝充电内圈",
+      "part": "B6020000145",
+      "record_id": 174,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "至尊宝充电外圈",
+      "part": "B6020000144",
+      "record_id": 175,
+      "customer": "红黑"
+    },
+    {
+      "file": "红黑BOM格式.xls",
+      "sheet": "HVG02支架（电机支架）",
+      "part": "B6020000165",
+      "record_id": 176,
+      "customer": "红黑"
+    }
+  ],
+  "errors": []
+}

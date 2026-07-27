@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT 销售管理系统 · 库存总览</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260722-tag" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260722-tag" />
+  <link rel="stylesheet" href="/static/inventory.css?v=20260725-inv-autocomplete" />
+</head>
+<body>
+  <div class="app-layout">
+    {% include '_order_sidebar.html' %}
+    <div class="app-main">
+      <main class="content-stack cost-stack">
+        <h3 class="section-h3 submodule-page-title">库存总览</h3>
+        <section class="card list-card">
+          <form id="invBoardForm" class="filter-bar filter-bar-compact">
+            <label class="cost-filter-field inv-bom-field">
+              <span>产品料号</span>
+              <input name="product_part_no" type="text" placeholder="BOM 料号" autocomplete="off" value="" />
+            </label>
+            <label class="cost-filter-field inv-bom-field">
+              <span>产品名称</span>
+              <input name="product_name" type="text" placeholder="BOM 品名" autocomplete="off" value="" />
+            </label>
+            <label class="cost-filter-field inv-bom-field">
+              <span>客户名称</span>
+              <input name="customer_name" type="text" placeholder="模糊匹配" autocomplete="off" value="" />
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm">查询</button>
+          </form>
+          <p id="invBomHint" class="field-hint inv-bom-hint" hidden></p>
+          <p id="invBoardMsg" class="msg list-msg"></p>
+          <div class="list-meta-row">
+            <p id="invBoardCount" class="list-summary">—</p>
+          </div>
+          <div id="invBoardCards" class="inv-board"></div>
+          <p id="invBoardEmpty" class="empty-hint list-empty-hint" hidden>暂无库存数据，请先在「工序出入库」登记</p>
+        </section>
+      </main>
+      <footer class="page-footer">
+        <h2 class="page-title">库存 · 总览</h2>
+        <p class="page-desc">按 BOM 工序查看场内半成品、在途与成品数量</p>
+      </footer>
+    </div>
+  </div>
+  <script src="/static/inventory_bom_lookup.js?v=20260725-inv-autocomplete"></script>
+  <script src="/static/inventory.js?v=20260725-inv-nav-clean"></script>
+</body>
+</html>

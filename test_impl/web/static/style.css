@@ -1433,7 +1433,8 @@ body {
 
 .app-main:has(#submoduleList:not(.is-hidden)) .list-scroll-host,
 .app-main:has(#submoduleDelivery:not(.is-hidden)) .list-scroll-host,
-.app-main:has(#submoduleSupplier:not(.is-hidden)) .list-scroll-host {
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .list-scroll-host,
+.app-main:has(.cost-stack) .list-scroll-host {
   flex: 1;
   width: 100%;
   min-width: 0;
@@ -1449,7 +1450,8 @@ body {
 }
 
 .app-main:has(#submoduleDelivery:not(.is-hidden)) .list-card .list-table-wrap,
-.app-main:has(#submoduleSupplier:not(.is-hidden)) .list-card .list-table-wrap {
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .list-card .list-table-wrap,
+.app-main:has(.cost-stack) .list-card .list-table-wrap {
   overflow-x: auto;
 }
 
@@ -1692,10 +1694,23 @@ body {
   vertical-align: middle;
   text-align: center;
   box-sizing: border-box;
+  border-bottom: none;
 }
 
 .list-card .data-table.list-table td.list-td-text {
   text-align: left;
+}
+
+.list-card .data-table.list-table td.list-td-mono {
+  text-align: left;
+  font-family: Consolas, "Courier New", ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
+.list-card .data-table.list-table td.list-td-money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* 订单列表斑马纹：相邻行分层，减轻长表炫目 */
@@ -3438,6 +3453,23 @@ body {
   margin-bottom: 0.35rem;
 }
 
+/* 表单卡勿 flex 拉伸（否则会占半屏、表头上方大面积留白） */
+.app-main:has(#submoduleDelivery:not(.is-hidden)) .dn-maint-card.list-card:has(.dn-new-form),
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .dn-maint-card.list-card:has(.dn-new-form) {
+  flex: 0 0 auto;
+}
+
+/* 列表卡与 scroll 区随内容高度，不在表头上方留空 */
+.app-main:has(#submoduleDelivery:not(.is-hidden)) .dn-maint-card.list-card:has(.list-scroll-host),
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .dn-maint-card.list-card:has(.list-scroll-host) {
+  flex: 0 1 auto;
+}
+
+.app-main:has(#submoduleDelivery:not(.is-hidden)) .list-scroll-host,
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .list-scroll-host {
+  flex: 0 1 auto;
+}
+
 .app-main:has(.submodule-panel) .dn-maint-card:not(.list-card) {
   padding: var(--wkt-module-card-pad);
   gap: var(--wkt-module-card-gap);
@@ -3446,6 +3478,25 @@ body {
 
 .list-meta-row-end {
   justify-content: flex-end;
+}
+
+.list-footer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.55rem;
+  margin-top: 0.35rem;
+  margin-bottom: 0;
+}
+
+.list-footer-toolbar .list-summary {
+  margin: 0 0 0 auto;
+}
+
+.list-card .list-footer-toolbar.filter-bar-compact {
+  margin-bottom: 0;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border, #e5e7eb);
 }
 
 .dn-maint-desc {
@@ -3683,6 +3734,68 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
   gap: 0.65rem 1rem;
   margin-top: 0.75rem;
+}
+
+.dn-new-form-2row.dn-form,
+.dn-new-form-2row.dn-new-form {
+  display: grid;
+  width: 100%;
+  margin-top: 0.35rem;
+  row-gap: 0.55rem;
+  column-gap: 0.75rem;
+  align-items: end;
+}
+
+.dn-new-form-2row .dn-form-row {
+  display: contents;
+}
+
+.dn-new-form-2row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.dn-new-form-2row input,
+.dn-new-form-2row select {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dn-new-form-2row .dn-form-actions {
+  grid-column: unset;
+  align-self: end;
+  margin: 0;
+}
+
+#dnNewCustomerForm.dn-new-form-2row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+#dnNewCustomerForm .dn-form-actions {
+  grid-column: 5;
+  justify-self: start;
+}
+
+#spNewSupplierForm.dn-new-form-2row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+#spNewSupplierForm .dn-form-actions {
+  grid-column: 4;
+  justify-self: start;
+}
+
+@media (max-width: 900px) {
+  #dnNewCustomerForm.dn-new-form-2row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #spNewSupplierForm.dn-new-form-2row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .dn-form-actions {
@@ -4020,6 +4133,34 @@ body {
 
 .reconcile-summary-only.is-hidden {
   display: none;
+}
+
+.reconcile-summary-only.is-hidden {
+  display: none !important;
+}
+
+.payable-summary-only.is-hidden,
+.payable-detail-only.is-hidden {
+  display: none !important;
+}
+
+.ledger-due-hint-row td {
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+  border-bottom: 1px solid var(--border);
+}
+
+.ledger-due-section-head td {
+  padding: 0.65rem 0.75rem 0.35rem;
+  font-size: 0.875rem;
+  background: var(--bg-soft, #f8fafc);
+  border-top: 1px solid var(--border);
+}
+
+.ledger-due-section-head:first-child td {
+  border-top: none;
 }
 
 .reconcile-detail-row + .reconcile-subtotal-row,

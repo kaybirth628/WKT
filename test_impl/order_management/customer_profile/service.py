@@ -12,6 +12,7 @@ from .store import (
     list_profile_customers,
     load_all_profiles,
     save_profile,
+    sort_names_by_created_at,
 )
 from .store import profile_with_labels as _profile_with_labels
 
@@ -29,7 +30,7 @@ class CustomerProfileService:
         except Exception:
             pass
         names.update(list_profile_customers())
-        return sorted(names, key=lambda x: (x.casefold(), x))
+        return sort_names_by_created_at(names)
 
     def list_rows(self) -> List[Dict[str, Any]]:
         rows = []

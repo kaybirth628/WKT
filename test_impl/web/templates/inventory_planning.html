@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT 销售管理系统 · 排产对照</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260721-station" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260721-station" />
+  <link rel="stylesheet" href="/static/inventory.css?v=20260721-station" />
+</head>
+<body>
+  <div class="app-layout">
+    {% include '_order_sidebar.html' %}
+    <div class="app-main">
+      <main class="content-stack cost-stack">
+        <h3 class="section-h3 submodule-page-title">排产对照</h3>
+        <section class="card list-card">
+          <form id="planFilterForm" class="filter-bar filter-bar-compact">
+            <label class="cost-filter-field inv-bom-field">
+              <span>客户</span>
+              <input name="customer" type="text" placeholder="如：演示客户" value="演示客户" autocomplete="off" />
+            </label>
+            <label class="cost-filter-field inv-bom-field">
+              <span>关键字</span>
+              <input name="q" type="text" placeholder="订单号 / 料号 / 品名" autocomplete="off" />
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm">查询</button>
+            <button type="button" id="planSeedDemo" class="btn btn-outline btn-sm">写入排产演示</button>
+          </form>
+          <p id="planMsg" class="msg list-msg"></p>
+          <p class="inv-plan-hint">未结订单<strong>一行一条</strong>对照库存（只读）。缺口出货=未结−成品；缺口覆盖=未结−成品−半成品。工序出入库请到「工序出入库」登记。</p>
+          <div class="list-meta-row">
+            <p id="planCount" class="list-summary">—</p>
+          </div>
+          <div class="list-scroll-host">
+            <div class="table-wrap list-table-wrap">
+              <table class="data-table list-table inv-plan-table">
+                <thead>
+                  <tr class="list-header-row">
+                    <th></th>
+                    <th class="list-th-text">客户</th>
+                    <th class="list-th-text">订单号</th>
+                    <th>交期</th>
+                    <th class="list-th-text">料号</th>
+                    <th class="list-th-text">品名</th>
+                    <th>未结</th>
+                    <th>成品</th>
+                    <th>半成品</th>
+                    <th>缺口出货</th>
+                    <th>缺口覆盖</th>
+                    <th>建议补量</th>
+                  </tr>
+                </thead>
+                <tbody id="planBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <p id="planEmpty" class="empty-hint list-empty-hint" hidden>暂无未结订单，可点「写入排产演示」生成 A/B/C 示例</p>
+        </section>
+      </main>
+      <footer class="page-footer">
+        <h2 class="page-title">库存 · 排产对照</h2>
+        <p class="page-desc">只读对照未结需求与成品/半成品库存</p>
+      </footer>
+    </div>
+  </div>
+  <script src="/static/inventory_bom_lookup.js?v=20260725-inv-autocomplete"></script>
+  <script src="/static/inventory_planning.js?v=20260725-inv-autocomplete"></script>
+</body>
+</html>

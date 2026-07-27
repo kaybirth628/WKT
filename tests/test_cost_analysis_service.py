@@ -21,13 +21,14 @@ class TestCostAnalysisService(unittest.TestCase):
             self.assertNotIn(merged, processes)
         for old in ["理料", "锚铜", "铝合", "皮模化料", "管制"]:
             self.assertNotIn(old, processes)
-        self.assertEqual(len(processes), 36)
+        self.assertEqual(len(processes), 37)
 
     def test_process_options_have_codes(self) -> None:
         options = self.service.get_process_options()
-        self.assertEqual(len(options), 36)
+        self.assertEqual(len(options), 37)
         self.assertEqual(options[0], {"code": "01", "name": "压铸"})
-        self.assertEqual(options[-1]["code"], "36")
+        self.assertEqual(options[31], {"code": "32", "name": "铝挤"})
+        self.assertEqual(options[-1]["code"], "37")
 
     def test_build_quote_and_total(self) -> None:
         quote = self.service.build_quote(

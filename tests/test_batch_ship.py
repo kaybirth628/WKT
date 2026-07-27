@@ -1,6 +1,7 @@
 import json
 import unittest
 from decimal import Decimal
+from unittest.mock import patch
 
 from test_impl.order_management.delivery_note.wkt_document import (
     build_batch_draft_document,
@@ -8,6 +9,10 @@ from test_impl.order_management.delivery_note.wkt_document import (
 )
 from test_impl.order_management.order_entry.line_models import OrderLine
 from test_impl.order_management.order_entry.line_service import OrderLineService
+
+from bom_helpers import seed_bom
+
+_TEST_SUPPLIER = "测试CNC厂"
 
 
 def _fake_line(
@@ -60,40 +65,56 @@ class TestBatchShip(unittest.TestCase):
 
     def test_ship_lines_batch_uses_actual_qty_not_delivery_note_override(self) -> None:
         lines = OrderLineService(db_path=":memory:")
-        a = lines.create_line(
-            {
-                "customer": "怡利",
-                "order_no": "PO-001",
-                "customer_part_no": "P-001",
-                "product_spec": "散热器A",
-                "po_qty": "100",
-                "unit": "PCS",
+        with patch(
+            "test_impl.order_management.cost_analysis.record_service.list_profile_suppliers",
+            return_value=[_TEST_SUPPLIER],
+        ):
+            seed_bom(
+                lines._bom._records,
+                customer_name="怡利",
+                product_part_no="P-001",
+                product_name="散热器A",
+            )
+            seed_bom(
+                lines._bom._records,
+                customer_name="怡利",
+                product_part_no="P-002",
+                product_name="散热器B",
+            )
+            a = lines.create_line(
+                {
+                    "customer": "怡利",
+                    "order_no": "PO-001",
+                    "customer_part_no": "P-001",
+                    "product_spec": "散热器A",
+                    "po_qty": "100",
+                    "unit": "PCS",
+                }
+            )
+            b = lines.create_line(
+                {
+                    "customer": "怡利",
+                    "order_no": "PO-002",
+                    "customer_part_no": "P-002",
+                    "product_spec": "散热器B",
+                    "po_qty": "200",
+                    "unit": "PCS",
+                }
+            )
+            bad_dn = {
+                "lines": [
+                    {"qty": "100", "order_no": "PO-001"},
+                    {"qty": "200", "order_no": "PO-002"},
+                ],
+                "total_qty": "300",
             }
-        )
-        b = lines.create_line(
-            {
-                "customer": "怡利",
-                "order_no": "PO-002",
-                "customer_part_no": "P-002",
-                "product_spec": "散热器B",
-                "po_qty": "200",
-                "unit": "PCS",
-            }
-        )
-        bad_dn = {
-            "lines": [
-                {"qty": "100", "order_no": "PO-001"},
-                {"qty": "200", "order_no": "PO-002"},
-            ],
-            "total_qty": "300",
-        }
-        items = [{"line_id": a.id, "qty": "10"}, {"line_id": b.id, "qty": "20"}]
-        _, events = lines.ship_lines_batch(items, delivery_note=bad_dn)
-        raw = lines._store.get_shipment_delivery_note_json(events[0].id)
-        snap = json.loads(raw)
-        self.assertEqual(snap["lines"][0]["qty"], "10")
-        self.assertEqual(snap["lines"][1]["qty"], "20")
-        self.assertEqual(snap["total_qty"], "30")
+            items = [{"line_id": a.id, "qty": "10"}, {"line_id": b.id, "qty": "20"}]
+            _, events = lines.ship_lines_batch(items, delivery_note=bad_dn)
+            raw = lines._store.get_shipment_delivery_note_json(events[0].id)
+            snap = json.loads(raw)
+            self.assertEqual(snap["lines"][0]["qty"], "10")
+            self.assertEqual(snap["lines"][1]["qty"], "20")
+            self.assertEqual(snap["total_qty"], "30")
 
 
 if __name__ == "__main__":

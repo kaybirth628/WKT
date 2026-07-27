@@ -6,6 +6,7 @@ window.CostCommon = (function () {
   let supplierNames = [];
 
   const INHOUSE_PROCESS_CODE = "01";
+  const INHOUSE_SUPPLIER_LABEL = "场内自制";
 
   function money(v) {
     const n = parseFloat(v);
@@ -61,6 +62,11 @@ window.CostCommon = (function () {
     return supplierNames.slice();
   }
 
+  function supplierChoices() {
+    const names = supplierNames.filter((n) => n !== INHOUSE_SUPPLIER_LABEL);
+    return [INHOUSE_SUPPLIER_LABEL].concat(names);
+  }
+
   function isOutsourceProcess(code) {
     return String(code || "") !== INHOUSE_PROCESS_CODE;
   }
@@ -69,25 +75,142 @@ window.CostCommon = (function () {
     if (!isOutsourceProcess(code)) {
       return '<span class="process-inhouse-tag">场内自制</span>';
     }
-    const opts = ['<option value="">请选择供应商</option>']
-      .concat(
-        supplierNames.map((name) => {
-          const sel = name === selected ? " selected" : "";
-          return `<option value="${escapeHtml(name)}"${sel}>${escapeHtml(name)}</option>`;
-        })
-      )
-      .join("");
+    const val = selected || "";
     const dis = disabled ? " disabled" : "";
-    return `<select class="process-supplier" data-process-code="${escapeHtml(code)}"${dis}>${opts}</select>`;
+    const display = val || "";
+    const placeholder = val ? "" : "搜索或选择供应商";
+    return `
+      <div class="process-supplier-combo"${disabled ? " data-disabled=1" : ""}>
+        <input type="hidden" class="process-supplier" data-process-code="${escapeHtml(code)}" value="${escapeHtml(val)}"${dis} />
+        <input type="text" class="process-supplier-search" data-process-code="${escapeHtml(code)}"
+          value="${escapeHtml(display)}" placeholder="${placeholder}" autocomplete="off"${dis} />
+        <ul class="process-supplier-list" hidden></ul>
+      </div>`;
   }
 
-  function bindProcessPickerGrid(grid) {
+  function filterSupplierChoices(query) {
+    const q = String(query || "").trim().toLowerCase();
+    const all = supplierChoices();
+    if (!q) return all;
+    return all.filter((name) => name.toLowerCase().includes(q));
+  }
+
+  function renderSupplierList(combo, query) {
+    const list = combo.querySelector(".process-supplier-list");
+    if (!list) return;
+    const hidden = combo.querySelector(".process-supplier");
+    const current = hidden ? hidden.value : "";
+    const items = filterSupplierChoices(query);
+    if (!items.length) {
+      list.innerHTML = '<li class="process-supplier-empty">无匹配供应商</li>';
+      list.hidden = false;
+      return;
+    }
+    list.innerHTML = items
+      .map((name) => {
+        const cls =
+          "process-supplier-option" +
+          (name === INHOUSE_SUPPLIER_LABEL ? " is-inhouse" : "") +
+          (name === current ? " is-selected" : "");
+        return `<li class="${cls}" data-value="${escapeHtml(name)}">${escapeHtml(name)}</li>`;
+      })
+      .join("");
+    list.hidden = false;
+  }
+
+  function setSupplierValue(combo, value) {
+    const hidden = combo.querySelector(".process-supplier");
+    const search = combo.querySelector(".process-supplier-search");
+    const list = combo.querySelector(".process-supplier-list");
+    if (hidden) hidden.value = value || "";
+    if (search) {
+      search.value = value || "";
+      search.placeholder = value ? "" : "搜索或选择供应商";
+    }
+    if (list) list.hidden = true;
+  }
+
+  function bindSupplierCombos(root) {
+    const scope = root || document;
+    scope.querySelectorAll(".process-supplier-combo").forEach((combo) => {
+      if (combo.dataset.bound === "1") return;
+      combo.dataset.bound = "1";
+      const search = combo.querySelector(".process-supplier-search");
+      const list = combo.querySelector(".process-supplier-list");
+      if (!search || !list) return;
+
+      search.addEventListener("focus", () => {
+        if (search.disabled) return;
+        renderSupplierList(combo, "");
+      });
+      search.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        if (search.disabled) return;
+        renderSupplierList(combo, search.value);
+      });
+      search.addEventListener("mousedown", (ev) => ev.stopPropagation());
+      search.addEventListener("input", () => {
+        if (search.disabled) return;
+        const hidden = combo.querySelector(".process-supplier");
+        if (hidden) hidden.value = "";
+        renderSupplierList(combo, search.value);
+      });
+      search.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape") {
+          list.hidden = true;
+          const hidden = combo.querySelector(".process-supplier");
+          if (hidden && hidden.value) search.value = hidden.value;
+        } else if (ev.key === "Enter") {
+          const first = list.querySelector(".process-supplier-option");
+          if (first && !list.hidden) {
+            ev.preventDefault();
+            setSupplierValue(combo, first.dataset.value || "");
+          }
+        }
+      });
+      list.addEventListener("mousedown", (ev) => {
+        const opt = ev.target.closest(".process-supplier-option");
+        if (!opt) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        setSupplierValue(combo, opt.dataset.value || "");
+      });
+      combo.addEventListener("click", (ev) => ev.stopPropagation());
+    });
+
+    if (!document.documentElement.dataset.supplierComboDocBound) {
+      document.documentElement.dataset.supplierComboDocBound = "1";
+      document.addEventListener("click", (ev) => {
+        document.querySelectorAll(".process-supplier-combo").forEach((combo) => {
+          if (!combo.contains(ev.target)) {
+            const listEl = combo.querySelector(".process-supplier-list");
+            const searchEl = combo.querySelector(".process-supplier-search");
+            const hidden = combo.querySelector(".process-supplier");
+            if (listEl) listEl.hidden = true;
+            if (searchEl && hidden && hidden.value) searchEl.value = hidden.value;
+            else if (searchEl && hidden && !hidden.value) searchEl.value = "";
+          }
+        });
+      });
+    }
+  }
+
+  function bindProcessPickerGrid(grid, onSelectionChange) {
     if (!grid) return;
+    bindSupplierCombos(grid);
     grid.querySelectorAll(".process-pick").forEach((cb) => {
       cb.addEventListener("change", () => {
         const code = cb.dataset.processCode;
         const priceInput = grid.querySelector(`input.process-price[data-process-code="${code}"]`);
-        const supplierInput = grid.querySelector(`select.process-supplier[data-process-code="${code}"]`);
+        const combo = grid.querySelector(
+          `.process-supplier-combo:has(.process-supplier[data-process-code="${code}"])`
+        );
+        const supplierInput = grid.querySelector(
+          `input.process-supplier[data-process-code="${code}"]`
+        );
+        const searchInput = grid.querySelector(
+          `input.process-supplier-search[data-process-code="${code}"]`
+        );
         if (priceInput) {
           priceInput.disabled = !cb.checked;
           if (!cb.checked) {
@@ -97,13 +220,139 @@ window.CostCommon = (function () {
         }
         if (supplierInput) {
           supplierInput.disabled = !cb.checked;
-          if (!cb.checked) supplierInput.value = "";
+          if (!cb.checked) {
+            if (combo) setSupplierValue(combo, "");
+            else supplierInput.value = "";
+          }
         }
+        if (searchInput) searchInput.disabled = !cb.checked;
+        if (typeof onSelectionChange === "function") onSelectionChange();
       });
     });
     grid.querySelectorAll(".process-price").forEach((inp) => {
       inp.addEventListener("input", () => {
         inp.classList.toggle("filled", inp.value !== "" && parseFloat(inp.value) > 0);
+      });
+    });
+  }
+
+  const processOrderState = {};
+
+  function gridDomId(gridId) {
+    return String(gridId || "").replace(/^#/, "");
+  }
+
+  function getSelectedProcessCodes(containerSelector) {
+    const codes = [];
+    document.querySelectorAll(`${containerSelector} .process-pick:checked`).forEach((cb) => {
+      codes.push(cb.dataset.processCode);
+    });
+    return codes;
+  }
+
+  function bindProcessOrder(gridId, listId, blockId, processOptions) {
+    const key = gridDomId(gridId);
+    const optionsByCode = {};
+    (processOptions || []).forEach((p) => {
+      optionsByCode[p.code] = p;
+    });
+    processOrderState[key] = {
+      listId,
+      blockId,
+      optionsByCode,
+      customOrder: null,
+      gridSelector: `#${key}`,
+    };
+    refreshProcessOrder(key);
+  }
+
+  function setProcessOrder(gridId, codes) {
+    const key = gridDomId(gridId);
+    const state = processOrderState[key];
+    if (!state) return;
+    state.customOrder = Array.isArray(codes) ? codes.slice() : null;
+    refreshProcessOrder(key);
+  }
+
+  function clearProcessOrder(gridId) {
+    const key = gridDomId(gridId);
+    const state = processOrderState[key];
+    if (!state) return;
+    state.customOrder = null;
+    refreshProcessOrder(key);
+  }
+
+  function getProcessOrder(gridId) {
+    const key = gridDomId(gridId);
+    const state = processOrderState[key];
+    if (!state || !state.customOrder) return null;
+    return state.customOrder.slice();
+  }
+
+  function moveProcessOrder(key, code, delta) {
+    const state = processOrderState[key];
+    if (!state || !state.customOrder) return;
+    const idx = state.customOrder.indexOf(code);
+    if (idx < 0) return;
+    const next = idx + delta;
+    if (next < 0 || next >= state.customOrder.length) return;
+    const arr = state.customOrder.slice();
+    [arr[idx], arr[next]] = [arr[next], arr[idx]];
+    state.customOrder = arr;
+    refreshProcessOrder(key);
+  }
+
+  function refreshProcessOrder(key) {
+    const state = processOrderState[key];
+    if (!state) return;
+    const block = document.getElementById(state.blockId);
+    const list = document.getElementById(state.listId);
+    const selected = getSelectedProcessCodes(state.gridSelector);
+
+    if (!selected.length) {
+      if (block) block.hidden = true;
+      if (list) list.innerHTML = "";
+      state.customOrder = null;
+      return;
+    }
+    if (block) block.hidden = false;
+
+    const ordered = [];
+    if (state.customOrder) {
+      state.customOrder.forEach((code) => {
+        if (selected.includes(code) && !ordered.includes(code)) ordered.push(code);
+      });
+    }
+    selected.forEach((code) => {
+      if (!ordered.includes(code)) ordered.push(code);
+    });
+    state.customOrder = ordered;
+
+    if (!list) return;
+    list.innerHTML = ordered
+      .map((code, idx) => {
+        const opt = state.optionsByCode[code] || { code, name: code };
+        return `
+      <li class="process-order-item" data-process-code="${escapeHtml(code)}">
+        <span class="process-order-seq">${idx + 1}</span>
+        <span class="process-order-code">${escapeHtml(code)}</span>
+        <span class="process-order-name">${escapeHtml(opt.name)}</span>
+        <span class="process-order-actions">
+          <button type="button" class="btn-icon process-order-up" title="上移" aria-label="上移"${idx === 0 ? " disabled" : ""}>↑</button>
+          <button type="button" class="btn-icon process-order-down" title="下移" aria-label="下移"${idx === ordered.length - 1 ? " disabled" : ""}>↓</button>
+        </span>
+      </li>`;
+      })
+      .join("");
+
+    list.querySelectorAll(".process-order-up").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        moveProcessOrder(key, btn.closest(".process-order-item").dataset.processCode, -1);
+      });
+    });
+    list.querySelectorAll(".process-order-down").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        moveProcessOrder(key, btn.closest(".process-order-item").dataset.processCode, 1);
       });
     });
   }
@@ -118,7 +367,7 @@ window.CostCommon = (function () {
         `${containerSelector} input.process-price[data-process-code="${code}"]`
       );
       const supplierInput = document.querySelector(
-        `${containerSelector} select.process-supplier[data-process-code="${code}"]`
+        `${containerSelector} input.process-supplier[data-process-code="${code}"], ${containerSelector} select.process-supplier[data-process-code="${code}"]`
       );
       const price = priceInput && priceInput.value !== "" ? priceInput.value : "0";
       const supplier =
@@ -126,7 +375,10 @@ window.CostCommon = (function () {
       byCode[code] = { price, supplier };
       byName[name] = price;
     });
-    return { byCode, byName };
+    const gridId = containerSelector.replace(/^#/, "");
+    const order = getProcessOrder(gridId);
+    const fallbackOrder = Object.keys(byCode).sort();
+    return { byCode, byName, order: order && order.length ? order : fallbackOrder };
   }
 
   function validateProcessSuppliers(containerSelector) {
@@ -135,7 +387,7 @@ window.CostCommon = (function () {
       const code = cb.dataset.processCode;
       if (!isOutsourceProcess(code)) return;
       const supplierInput = document.querySelector(
-        `${containerSelector} select.process-supplier[data-process-code="${code}"]`
+        `${containerSelector} input.process-supplier[data-process-code="${code}"], ${containerSelector} select.process-supplier[data-process-code="${code}"]`
       );
       if (!supplierInput || !supplierInput.value.trim()) {
         missing.push(cb.dataset.process);
@@ -243,12 +495,19 @@ window.CostCommon = (function () {
 
   return {
     INHOUSE_PROCESS_CODE,
+    INHOUSE_SUPPLIER_LABEL,
     loadOptions,
     loadSuppliers,
     getSupplierNames,
     isOutsourceProcess,
     buildSupplierSelectHtml,
     bindProcessPickerGrid,
+    bindProcessOrder,
+    setProcessOrder,
+    clearProcessOrder,
+    getProcessOrder,
+    refreshProcessOrder,
+    bindSupplierCombos,
     collectProcessEntries,
     validateProcessSuppliers,
     renderProcessGridHtml,

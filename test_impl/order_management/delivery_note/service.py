@@ -1002,8 +1002,11 @@ class DeliveryNoteService:
 
         profiles = load_all_profiles()
         customer_names.update(profiles.keys())
+        from test_impl.order_management.customer_profile.store import sort_names_by_created_at
+
+        ordered_names = sort_names_by_created_at(customer_names)
         rows = []
-        for name in sorted(customer_names, key=lambda x: x.lower()):
+        for name in ordered_names:
             info = get_customer_delivery_info(name)
             profile = profiles.get(name) or get_profile(name)
             delivery_on = is_delivery_enabled(profile)

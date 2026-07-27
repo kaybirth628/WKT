@@ -1,11 +1,15 @@
-# One-click sync local code to cloud (test_impl + scripts + whitelisted master data).
-# Server DB, customer profiles, config, venv are NOT overwritten.
+# One-click sync local CODE to cloud (test_impl + scripts).
+# Default: code-only — cloud data/ is NOT overwritten (cloud is source of truth).
+# -WithMasterData: also push local JSON master data (legacy; overwrites cloud JSON).
+# -FullData: entire data/ including wkt_orders.db (requires YES confirm).
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts\sync-to-cloud.ps1
 # Config: copy config\deploy.local.example.json -> config\deploy.local.json
 
 param(
-    [switch]$PackOnly
+    [switch]$PackOnly,
+    [switch]$FullData,
+    [switch]$WithMasterData
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,7 +40,7 @@ function Load-Config {
 }
 
 function Build-Staging {
-    param([string]$StagingDir)
+    param([string]$StagingDir, [switch]$FullData, [switch]$WithMasterData)
     if (Test-Path $StagingDir) { Remove-Item $StagingDir -Recurse -Force }
     New-Item -ItemType Directory -Path $StagingDir | Out-Null
 
@@ -55,7 +59,23 @@ function Build-Staging {
     }
 
     . (Join-Path $PSScriptRoot "data-sync-rules.ps1")
-    Copy-WktDataForSync -SourceRoot $root -DestDir $StagingDir
+    Copy-WktDataForSync -SourceRoot $root -DestDir $StagingDir -FullData:$FullData -WithMasterData:$WithMasterData
+    if (-not $FullData -and -not $WithMasterData) {
+        Copy-WktFeishuConfigForSync -SourceRoot $root -DestDir $StagingDir
+    }
+
+    $deployInfo = Join-Path $StagingDir "deploy-info"
+    New-Item -ItemType Directory -Path $deployInfo -Force | Out-Null
+    $verSrc = Join-Path $root "docs\VERSION.md"
+    $clSrc = Join-Path $root "docs\change\CHANGELOG.md"
+    if (Test-Path $verSrc) {
+        Copy-Item $verSrc (Join-Path $deployInfo "VERSION.md")
+        Write-Host "Pack deploy-info/VERSION.md ..." -ForegroundColor DarkGray
+    }
+    if (Test-Path $clSrc) {
+        Copy-Item $clSrc (Join-Path $deployInfo "CHANGELOG.md")
+        Write-Host "Pack deploy-info/CHANGELOG.md ..." -ForegroundColor DarkGray
+    }
 }
 
 function New-Archive {
@@ -71,6 +91,7 @@ function New-Archive {
             $items = @("test_impl")
             if (Test-Path "scripts") { $items += "scripts" }
             if (Test-Path "data") { $items += "data" }
+            if (Test-Path "deploy-info") { $items += "deploy-info" }
             & tar -caf $ArchivePath @items
             if ($LASTEXITCODE -ne 0) {
                 & tar -caf $ArchivePath test_impl
@@ -85,31 +106,22 @@ function New-Archive {
 }
 
 function Invoke-RemoteMerge {
-    param($Cfg, [string]$RemoteArchive, [string]$StagingDir)
+    param($Cfg, [string]$RemoteArchive, [string]$StagingDir, [switch]$FullData)
 
     Ensure-PoshSsh
     Import-Module Posh-SSH -ErrorAction Stop
+    . (Join-Path $PSScriptRoot "ssh-auth.ps1")
+    $cred = Get-WktSshCredential -Cfg $Cfg
 
-    $pass = $Cfg.ssh_password
-    if (-not $pass) {
-        $sec = Read-Host "SSH password (root)" -AsSecureString
-        $pass = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-            [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
-        )
-    }
-
-    $cred = New-Object System.Management.Automation.PSCredential($Cfg.ssh_user, (
-            ConvertTo-SecureString $pass -AsPlainText -Force
-        ))
-
-    $session = New-SSHSession -ComputerName $Cfg.ssh_host -Port ([int]$Cfg.ssh_port) -Credential $cred -AcceptKey -ErrorAction Stop
+    $session = New-SSHSession -ComputerName $Cfg.ssh_host -Port ([int]$Cfg.ssh_port) -Credential $cred -AcceptKey -ConnectionTimeout 30 -ErrorAction Stop
     try {
         Write-Host "Upload ..." -ForegroundColor Cyan
-        Set-SCPItem -ComputerName $Cfg.ssh_host -Port ([int]$Cfg.ssh_port) -Credential $cred -Path $RemoteArchive -Destination "/tmp/" -AcceptKey
+        Set-SCPItem -ComputerName $Cfg.ssh_host -Port ([int]$Cfg.ssh_port) -Credential $cred -Path $RemoteArchive -Destination "/tmp/" -AcceptKey -ConnectionTimeout 30
 
         $remoteName = [IO.Path]::GetFileName($RemoteArchive)
         $appDir = $Cfg.remote_app_dir
         $sup = $Cfg.supervisor_name
+        $fullFlag = if ($FullData) { "1" } else { "0" }
         $remoteScript = @"
 set -e
 APP_DIR='$appDir'
@@ -124,13 +136,22 @@ case "`$ARCH" in
 esac
 export WKT_APP_DIR="`$APP_DIR"
 export WKT_SUPERVISOR_NAME='$sup'
+export WKT_FULL_DATA_SYNC='$fullFlag'
 bash "`$STAGING/scripts/server-merge-update.sh" "`$STAGING"
 rm -f "`$ARCH"
 rm -rf "`$STAGING"
 curl -s '${Cfg.health_url}' || true
 "@
+        # Windows CRLF breaks bash on Linux (case ... in\r syntax error)
+        $remoteScript = ($remoteScript -replace "`r`n", "`n") -replace "`r", "`n"
 
-        Write-Host "Merge on server (order DB + delivery_notes untouched) ..." -ForegroundColor Cyan
+        if ($FullData) {
+            Write-Host "Merge on server (FULL data overwrite) ..." -ForegroundColor Yellow
+        } elseif ($WithMasterData) {
+            Write-Host "Merge on server (code + master JSON; order DB untouched) ..." -ForegroundColor Yellow
+        } else {
+            Write-Host "Merge on server (code only; cloud data preserved) ..." -ForegroundColor Green
+        }
         $result = Invoke-SSHCommand -SessionId $session.SessionId -Command $remoteScript -TimeOut 120
         Write-Host $result.Output
         if ($result.ExitStatus -ne 0) {
@@ -143,11 +164,26 @@ curl -s '${Cfg.health_url}' || true
 }
 
 Write-Host ""
-Write-Host "=== WKT sync to cloud ===" -ForegroundColor Cyan
+if ($FullData) {
+    Write-Host "=== WKT FULL sync to cloud (code + entire data/) ===" -ForegroundColor Yellow
+    Write-Host "Will overwrite cloud wkt_orders.db and delivery_notes with local copy." -ForegroundColor Yellow
+    Write-Host "Cloud data/ will be backed up to data.bak-timestamp/ on server." -ForegroundColor DarkGray
+    if (-not $PackOnly) {
+        Write-Host ""
+        Write-Host "Edit config\deploy.local.json ssh_password (root SSH) before continue." -ForegroundColor DarkGray
+        $confirm = Read-Host "Type YES to overwrite ALL cloud data"
+        if ($confirm -ne "YES") {
+            Write-Host "Cancelled (must type YES)." -ForegroundColor Yellow
+            exit 1
+        }
+    }
+} else {
+    Write-Host "=== WKT sync to cloud (code only) ===" -ForegroundColor Cyan
+}
 . (Join-Path $PSScriptRoot "data-sync-rules.ps1")
-Show-WktDataSyncPolicy
+Show-WktDataSyncPolicy -FullData:$FullData -WithMasterData:$WithMasterData
 Write-Host "Also sync: test_impl + scripts" -ForegroundColor DarkGray
-Write-Host "NOT touched: config/, venv/, orders/, imports/" -ForegroundColor DarkGray
+Write-Host "NOT touched on server: order DB, delivery_notes, customer/supplier JSON (except feishu_config.json)" -ForegroundColor DarkGray
 Write-Host ""
 
 $cfg = Load-Config
@@ -157,7 +193,7 @@ $releaseDir = Join-Path $root "release"
 $ext = if (Get-Command tar -ErrorAction SilentlyContinue) { "tar.gz" } else { "zip" }
 $archive = Join-Path $releaseDir "wkt-sync-$stamp.$ext"
 
-Build-Staging -StagingDir $staging
+Build-Staging -StagingDir $staging -FullData:$FullData -WithMasterData:$WithMasterData
 New-Archive -StagingDir $staging -ArchivePath $archive
 Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
 
@@ -166,7 +202,7 @@ if ($PackOnly) {
     exit 0
 }
 
-Invoke-RemoteMerge -Cfg $cfg -RemoteArchive $archive -StagingDir $staging
+Invoke-RemoteMerge -Cfg $cfg -RemoteArchive $archive -StagingDir $staging -FullData:$FullData
 
 Write-Host ""
 Write-Host "Done. Open http://$($cfg.ssh_host):8088/ and hard-refresh (Ctrl+F5)." -ForegroundColor Green

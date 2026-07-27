@@ -1,0 +1,10 @@
+<div class="top-nav-user" id="topNavUser">
+  {% if current_user %}
+  <span class="top-nav-user-label">{{ current_user.display_name or current_user.username }}</span>
+  <a class="top-nav-link top-nav-user-link" href="/admin/audit">操作记录</a>
+  {% if current_user.role == 'admin' %}
+  <a class="top-nav-link top-nav-user-link" href="/admin/users">用户管理</a>
+  {% endif %}
+  <button type="button" class="btn btn-ghost btn-sm" id="logoutBtn">退出</button>
+  {% endif %}
+</div>

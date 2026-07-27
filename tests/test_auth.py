@@ -1,0 +1,86 @@
+"""Auth login, users, audit log tests."""
+from __future__ import annotations
+
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from werkzeug.security import check_password_hash
+
+from test_impl.auth.service import AuthService, AuditService
+from test_impl.auth.store import AuthStore
+
+
+class AuthTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.db_path = Path(self._tmp.name) / "test.db"
+        store = AuthStore(self.db_path)
+        self.auth = AuthService(store=store)
+        self.audit = AuditService(store=store)
+
+    def tearDown(self) -> None:
+        self.auth.store.close()
+        self._tmp.cleanup()
+
+    def test_bootstrap_admin_and_login(self) -> None:
+        user = self.auth.authenticate("admin", "WKT@2026")
+        self.assertEqual(user.username, "admin")
+        self.assertEqual(user.role, "admin")
+        self.assertTrue(user.must_change_password)
+
+    def test_create_user_and_audit(self) -> None:
+        self.auth.authenticate("admin", "WKT@2026")
+        created = self.auth.create_user(
+            username="zhangsan",
+            display_name="张三",
+            password="pass1234",
+            role="user",
+        )
+        self.assertEqual(created["username"], "zhangsan")
+        u = self.auth.authenticate("zhangsan", "pass1234")
+        self.assertEqual(u.display_name, "张三")
+        self.audit.log(
+            user={"id": u.id, "username": u.username, "display_name": u.display_name},
+            action="line.create",
+            module="orders",
+            summary="测试录入",
+        )
+        result = self.audit.query(username="zhangsan")
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["items"][0]["action"], "line.create")
+
+    def test_change_password(self) -> None:
+        admin = self.auth.authenticate("admin", "WKT@2026")
+        self.auth.change_password(admin.id, old_password="WKT@2026", new_password="NewPass1")
+        row = self.auth.store.get_user_by_id(admin.id)
+        assert row is not None
+        self.assertTrue(check_password_hash(row.password_hash, "NewPass1"))
+
+    def test_update_user_and_delete(self) -> None:
+        self.auth.authenticate("admin", "WKT@2026")
+        created = self.auth.create_user(
+            username="lisi",
+            display_name="李四",
+            password="pass1234",
+            role="user",
+        )
+        uid = int(created["id"])
+        updated = self.auth.update_user(uid, display_name="李四（销售）", role="user")
+        self.assertEqual(updated["display_name"], "李四（销售）")
+        admin = self.auth.store.get_user_by_id(1)
+        assert admin is not None
+        self.auth.delete_user(uid, actor_user_id=admin.id)
+        self.assertIsNone(self.auth.store.get_user_by_id(uid))
+
+    def test_cannot_delete_admin_or_self(self) -> None:
+        admin = self.auth.authenticate("admin", "WKT@2026")
+        with self.assertRaises(Exception):
+            self.auth.delete_user(admin.id, actor_user_id=admin.id)
+        with self.assertRaises(Exception):
+            self.auth.delete_user(admin.id, actor_user_id=999)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -31,28 +31,58 @@ class DuplicateLineError(ValueError):
 class OrderLineService:
     """料号行录入服务（SQLite 持久化）。"""
 
-    def __init__(self, db_path: Optional[str | Path] = None, store: Optional[LineStore] = None) -> None:
+    def __init__(
+        self,
+        db_path: Optional[str | Path] = None,
+        store: Optional[LineStore] = None,
+        bom_service=None,
+        inventory_service=None,
+    ) -> None:
+        from test_impl.order_management.cost_analysis.bom_service import BomService
+        from test_impl.order_management.cost_analysis.cost_store import CostStore
+
         self._store = store or LineStore(db_path)
         self._import_pending: List[dict] = []
+        self._bom = bom_service or BomService(
+            cost_store=CostStore(self._store.db_path),
+        )
+        self._inventory = inventory_service
+
+    def set_inventory_service(self, inventory_service) -> None:
+        """Flask 启动后注入库存服务，出货时扣成品仓。"""
+        self._inventory = inventory_service
+
+    def _check_finished_for_ship(self, line: OrderLine, delta: Decimal) -> None:
+        if self._inventory is None:
+            return
+        part = (line.customer_part_no or "").strip()
+        if not part:
+            return
+        self._inventory.ensure_finished_available(part, delta)
+
+    def _deduct_finished_for_ship(
+        self, line: OrderLine, delta: Decimal, *, doc_no: str = ""
+    ) -> None:
+        if self._inventory is None:
+            return
+        part = (line.customer_part_no or "").strip()
+        if not part:
+            return
+        self._inventory.ship_finished(
+            part,
+            delta,
+            doc_no=doc_no or (line.order_no or ""),
+            note=f"订单出货 {line.order_no}",
+        )
 
     @property
     def db_path(self) -> str:
         return self._store.db_path
 
-    def _all_customer_names(self) -> List[str]:
-        names = {c.name for c in self._store.list_customers()}
-        for name in self._store.distinct_customers_from_lines():
-            if name:
-                names.add(name)
-        return dedupe_customer_names(names)
-
     def list_master(self) -> dict:
         return {
             "customers": self._all_customer_names(),
-            "parts": [
-                {"product_spec": p.product_spec, "customer_part_no": p.customer_part_no}
-                for p in self._store.list_parts()
-            ],
+            "parts": self._bom.list_parts_for_master(),
         }
 
     def _ensure_customer(self, name: str) -> None:
@@ -95,13 +125,14 @@ class OrderLineService:
 
     def enrich_line_dict(self, row: dict) -> dict:
         out = dict(row)
-        if not str(out.get("customer_part_no") or "").strip() and out.get("product_spec"):
-            out["customer_part_no"] = self.lookup_customer_part(str(out.get("product_spec")))
         matched = self.resolve_customer(str(out.get("customer") or ""))
         if matched and (
             not str(out.get("customer") or "").strip() or out.get("customer") != matched.name
         ):
             out["customer"] = matched.name
+        out = self._bom.enrich_order_fields(out)
+        if not str(out.get("customer_part_no") or "").strip() and out.get("product_spec"):
+            out["customer_part_no"] = self.lookup_customer_part(str(out.get("product_spec")))
         return out
 
     def enrich_recognized_lines(self, lines: List[dict]) -> List[dict]:
@@ -111,8 +142,17 @@ class OrderLineService:
         part = self._store.upsert_part(product_spec, customer_part_no)
         return {"product_spec": part.product_spec, "customer_part_no": part.customer_part_no}
 
+    def _all_customer_names(self) -> List[str]:
+        names = {c.name for c in self._store.list_customers()}
+        for name in self._store.distinct_customers_from_lines():
+            if name:
+                names.add(name)
+        return dedupe_customer_names(names)
+
     def lookup_customer_part(self, product_spec: str) -> str:
-        return self._store.lookup_part_no(product_spec)
+        return self._bom.lookup_part_no_by_product_name(product_spec) or self._store.lookup_part_no(
+            product_spec
+        )
 
     def _validate_part_no_assignment(
         self,
@@ -132,12 +172,8 @@ class OrderLineService:
 
     def create_line(self, data: dict) -> OrderLine:
         fields = normalize_line_fields(self.enrich_line_dict(data))
-        cpn = fields.get("customer_part_no", "")
-        binding = self._store.get_part_no_binding(cpn)
-        if binding and not binding.get("conflict"):
-            owner = str(binding.get("customer_name") or "").strip()
-            if owner and customer_names_match(owner, fields.get("customer", "")):
-                fields["customer"] = owner
+        if data.get("is_demo"):
+            fields["is_demo"] = True
         self._ensure_customer(fields["customer"])
         dup = self._store.find_duplicate_line(
             fields["customer"], fields["order_no"], fields["product_spec"]
@@ -147,11 +183,15 @@ class OrderLineService:
                 dup.id,
                 f"该料号行已存在（客户「{fields['customer']}」· 订单号「{fields['order_no']}」· 品名「{fields['product_spec']}」），请使用「修改」更新原记录",
             )
-        spec = fields.get("product_spec", "")
         cpn = fields.get("customer_part_no", "")
-        self._validate_part_no_assignment(cpn, fields["customer"])
-        if spec and cpn:
-            self._store.upsert_part(spec, cpn)
+        if str(cpn or "").strip():
+            bom_row = self._bom.require_for_order(str(cpn).strip(), fields["customer"])
+            if not str(fields.get("product_spec") or "").strip():
+                fields["product_spec"] = bom_row.product_name
+            if not str(fields.get("material") or "").strip():
+                fields["material"] = bom_row.material
+            if not str(fields.get("unit_weight_g") or "").strip() and bom_row.unit_weight_g:
+                fields["unit_weight_g"] = bom_row.unit_weight_g
         line = self._store.insert_line(fields)
         line.validate()
         return line
@@ -216,9 +256,16 @@ class OrderLineService:
             raise ValueError(
                 f"本次出货 {serialize_qty(delta)} 不能超过未结数量 {serialize_qty(open_before)}"
             )
+        self._check_finished_for_ship(line, delta)
+        prev_shipped = line.shipped_qty
         new_shipped = round_qty(line.shipped_qty + delta)
         updated = self._store.update_shipped_qty(line_id, str(new_shipped))
         updated.validate()
+        try:
+            self._deduct_finished_for_ship(updated, delta, doc_no=line.order_no or "")
+        except Exception:
+            self._store.update_shipped_qty(line_id, str(prev_shipped))
+            raise
         event = self._store.insert_shipment_event(line_id, str(delta), source=SHIP_SOURCE_OPEN)
         if delivery_note is not None:
             doc = build_draft_document(line, delta)
@@ -277,6 +324,9 @@ class OrderLineService:
                 raise ValueError(f"合并出货须为同一客户，当前包含「{customer}」与「{cust}」")
             parsed.append((line, delta))
 
+        for line, delta in parsed:
+            self._check_finished_for_ship(line, delta)
+
         monthly_seq = None
         if delivery_note is not None:
             monthly_seq = self._store.count_shipment_events_in_calendar_month(
@@ -287,9 +337,15 @@ class OrderLineService:
         events: List[ShipmentEvent] = []
         ship_pairs: List[tuple[OrderLine, Decimal]] = []
         for line, delta in parsed:
+            prev_shipped = line.shipped_qty
             new_shipped = round_qty(line.shipped_qty + delta)
             updated = self._store.update_shipped_qty(line.id, str(new_shipped))
             updated.validate()
+            try:
+                self._deduct_finished_for_ship(updated, delta, doc_no=line.order_no or "")
+            except Exception:
+                self._store.update_shipped_qty(line.id, str(prev_shipped))
+                raise
             event = self._store.insert_shipment_event(line.id, str(delta), source=SHIP_SOURCE_OPEN)
             updated_lines.append(updated)
             events.append(event)
@@ -358,11 +414,11 @@ class OrderLineService:
                 f"修改后将与其他行重复（客户·订单号·品名规格相同），请核对",
             )
         self._ensure_customer(fields["customer"])
-        spec = fields.get("product_spec", "")
         cpn = fields.get("customer_part_no", "")
-        self._validate_part_no_assignment(cpn, fields["customer"], exclude_line_id=line_id)
-        if spec and cpn:
-            self._store.upsert_part(spec, cpn)
+        if str(cpn or "").strip():
+            bom_row = self._bom.require_for_order(str(cpn).strip(), fields["customer"])
+            if not str(fields.get("product_spec") or "").strip():
+                fields["product_spec"] = bom_row.product_name
         updated = self._store.update_line(line_id, fields)
         updated.validate()
         return updated

@@ -40,8 +40,20 @@ class TestCustomerProfileStore(unittest.TestCase):
             },
         )
         self.assertEqual(row["contact"], "李四")
+        self.assertTrue(str(row.get("created_at") or "").strip())
         loaded = store.get_profile("测试客户")
         self.assertEqual(loaded["reconciliation_period"], "month_21_20")
+
+    def test_sort_names_by_created_at(self) -> None:
+        store.save_profile(
+            "客户B",
+            {"address": "B", "reconciliation_period": "month_21_20", "created_at": "2026-07-02T10:00:00+00:00"},
+        )
+        store.save_profile(
+            "客户A",
+            {"address": "A", "reconciliation_period": "month_21_20", "created_at": "2026-07-01T10:00:00+00:00"},
+        )
+        self.assertEqual(store.sort_names_by_created_at(["客户B", "客户A"]), ["客户B", "客户A"])
 
     def test_delete_profile(self) -> None:
         store.save_profile(

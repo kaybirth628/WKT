@@ -1,6 +1,24 @@
 /** 供应商信息维护 */
 (function () {
   let profileMap = {};
+  let allRows = [];
+
+  const SP_COLS = [{ field: "supplier", label: "供应商" }];
+
+  const spColFilter = window.createListColFilter({
+    prefix: "spColFilter",
+    headSelector: "#spMaintHead",
+    columns: SP_COLS,
+    getCellKey(row, field) {
+      if (field !== "supplier") return "(空白)";
+      const raw = String(row.supplier || "").trim();
+      return raw || "(空白)";
+    },
+    onChange(filtered, meta) {
+      updateSupplierListCount(meta.shown, meta.total, meta.filtered);
+      renderTable(filtered, { isFiltered: meta.filtered, totalCount: meta.total });
+    },
+  });
 
   function esc(s) {
     return String(s == null ? "" : s)
@@ -22,6 +40,26 @@
       throw new Error("服务器返回异常，请重启服务后 Ctrl+F5 刷新。HTTP " + res.status);
     }
     return res.json();
+  }
+
+  function updateSupplierListCount(shown, total, filtered) {
+    const el = document.getElementById("spListCount");
+    if (!el) return;
+    if (!total) {
+      el.textContent = "共 0 条";
+      return;
+    }
+    if (filtered && shown !== total) {
+      el.textContent = `显示 ${shown} / 共 ${total} 条`;
+      return;
+    }
+    el.textContent = `共 ${total} 条`;
+  }
+
+  function refreshSupplierTable() {
+    spColFilter.setRows(allRows);
+    spColFilter.bindHeader();
+    spColFilter.refresh();
   }
 
   function rowProfile(row) {
@@ -106,19 +144,25 @@
     tr.querySelector(".sp-cancel-btn")?.classList.toggle("is-hidden", !editing);
   }
 
-  function renderTable(rows) {
+  function renderTable(rows, opts) {
+    const options = opts || {};
     const tbody = document.getElementById("spSupplierBody");
     if (!tbody) return;
+    const totalCount = options.totalCount != null ? options.totalCount : rows.length;
+    updateSupplierListCount(rows.length, totalCount, options.isFiltered);
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty-cell">暂无供应商，请在上方添加</td></tr>';
+      tbody.innerHTML = options.isFiltered
+        ? '<tr><td colspan="9" class="empty-cell">无匹配结果，请调整筛选条件</td></tr>'
+        : '<tr><td colspan="9" class="empty-cell">暂无供应商，请在上方添加</td></tr>';
       return;
     }
     tbody.innerHTML = rows
-      .map((row) => {
+      .map((row, idx) => {
         const p = rowProfile(row);
         const supplier = row.supplier || "";
         return `
       <tr data-supplier="${esc(supplier)}">
+        <td class="list-td-seq">${idx + 1}</td>
         <td class="list-td-text sp-name-cell">${esc(supplier)}</td>
         <td class="list-td-text"><input class="le" data-field="address" value="${esc(p.address)}" disabled /></td>
         <td class="list-td-text"><input class="le" data-field="contact" value="${esc(p.contact)}" disabled /></td>
@@ -242,10 +286,11 @@
     const data = await parseJsonResponse(res);
     if (!res.ok) throw new Error(data.error || "加载失败");
     profileMap = {};
-    (data.rows || []).forEach((row) => {
+    allRows = data.rows || [];
+    allRows.forEach((row) => {
       profileMap[row.supplier] = row;
     });
-    renderTable(data.rows || []);
+    refreshSupplierTable();
     bindNewSupplierForm();
   }
 
@@ -260,7 +305,18 @@
     });
   }
 
+  function bindClearFiltersBtn() {
+    const btn = document.getElementById("spClearFiltersBtn");
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      spColFilter.clearAll();
+    });
+  }
+
   bindRefreshBtn();
+  bindClearFiltersBtn();
+  spColFilter.bindHeader();
 
   window.loadSupplierAdmin = loadSupplierAdmin;
 })();

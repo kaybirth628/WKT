@@ -4,13 +4,17 @@ from __future__ import annotations
 import json
 from typing import List, Optional
 
+from test_impl.order_management.customer_name import customer_names_match
 from test_impl.order_management.order_entry.line_store import LineStore
 from test_impl.order_management.supplier_profile.store import list_profile_suppliers
 
 from .cost_store import CostRecordRow, CostStore
 from .models import (
     PROCESS_BY_CODE,
+    PROCESS_ORDER_KEY,
+    INHOUSE_SUPPLIER_LABEL,
     is_inhouse_process,
+    is_inhouse_supplier,
     process_entry_price,
     process_prices_to_names,
     resolve_process_key,
@@ -44,7 +48,7 @@ class CostRecordService:
     def db_path(self) -> str:
         return self._store.db_path
 
-    def create_record(self, payload: dict) -> CostRecordRow:
+    def create_record(self, payload: dict, *, skip_supplier_check: bool = False) -> CostRecordRow:
         basic = self._validate_basic(payload)
         self._validate_part_no_customer(basic["product_part_no"], basic["customer_name"])
         process_entries = self._normalize_process_entries(
@@ -53,7 +57,9 @@ class CostRecordService:
         )
         if not process_entries:
             raise ValueError("请至少选择一道工序")
-        self._validate_process_suppliers(process_entries)
+        if not skip_supplier_check:
+            self._validate_process_suppliers(process_entries)
+        process_order = self._parse_process_order(payload.get("process_order"), process_entries)
 
         material_unit_price = str(payload.get("material_unit_price", "0") or "0")
         price_map = self._price_map(process_entries)
@@ -70,14 +76,21 @@ class CostRecordService:
             strict_material=False,
         )
 
-        return self._store.insert(
-            self._build_store_payload(basic, material_unit_price, process_entries, quote)
+        store_payload = self._build_store_payload(
+            basic, material_unit_price, process_entries, quote, process_order=process_order
         )
+        if payload.get("is_demo"):
+            store_payload["is_demo"] = True
+        return self._store.insert(store_payload)
 
     def update_record(self, record_id: int, payload: dict) -> CostRecordRow:
         self.get_record(record_id)
         basic = self._validate_basic(payload)
-        self._validate_part_no_customer(basic["product_part_no"], basic["customer_name"])
+        self._validate_part_no_customer(
+            basic["product_part_no"],
+            basic["customer_name"],
+            exclude_record_id=record_id,
+        )
         process_entries = self._normalize_process_entries(
             payload.get("process_prices") or {},
             payload.get("process_suppliers") or {},
@@ -85,6 +98,7 @@ class CostRecordService:
         if not process_entries:
             raise ValueError("请至少选择一道工序")
         self._validate_process_suppliers(process_entries)
+        process_order = self._parse_process_order(payload.get("process_order"), process_entries)
 
         material_unit_price = str(payload.get("material_unit_price", "0") or "0")
         price_map = self._price_map(process_entries)
@@ -102,11 +116,36 @@ class CostRecordService:
         )
         return self._store.update(
             record_id,
-            self._build_store_payload(basic, material_unit_price, process_entries, quote),
+            self._build_store_payload(
+                basic, material_unit_price, process_entries, quote, process_order=process_order
+            ),
         )
 
     def delete_record(self, record_id: int) -> None:
         self._store.delete(record_id)
+
+    def import_bom_rows(
+        self,
+        payloads: List[dict],
+        *,
+        skip_supplier_check: bool = False,
+    ) -> dict:
+        record_ids: List[int] = []
+        errors: List[dict] = []
+        for idx, payload in enumerate(payloads):
+            try:
+                record = self.create_record(
+                    payload,
+                    skip_supplier_check=skip_supplier_check,
+                )
+                record_ids.append(record.id)
+            except ValueError as exc:
+                errors.append({"index": idx, "error": str(exc)})
+        return {
+            "imported": len(record_ids),
+            "record_ids": record_ids,
+            "errors": errors,
+        }
 
     def _build_store_payload(
         self,
@@ -114,11 +153,15 @@ class CostRecordService:
         material_unit_price: str,
         process_entries: dict,
         quote,
+        *,
+        process_order: Optional[List[str]] = None,
     ) -> dict:
         return {
             **basic,
             "material_unit_price": material_unit_price,
-            "process_prices_json": self._entries_to_storage_json(process_entries),
+            "process_prices_json": self._entries_to_storage_json(
+                process_entries, process_order=process_order
+            ),
             "material_cost": str(quote.material_cost()),
             "process_total": str(quote.process_total()),
             "unit_cost": str(quote.unit_cost()),
@@ -159,6 +202,7 @@ class CostRecordService:
                 s["code"]: s["supplier"] for s in selections if s.get("supplier")
             },
             "process_selections": selections,
+            "process_order": [s["code"] for s in selections],
             "selected_processes": [s["name"] for s in selections],
             "selected_process_codes": [s["code"] for s in selections],
             "material_cost": record.material_cost,
@@ -167,12 +211,26 @@ class CostRecordService:
             "quote_price": record.quote_price,
             "created_at": record.created_at,
             "updated_at": record.updated_at,
+            "is_demo": bool(getattr(record, "is_demo", False)),
+            "data_tag": "测" if getattr(record, "is_demo", False) else "实",
         }
 
     def _build_process_selections(self, raw_prices: dict) -> list:
-        entries = self._normalize_process_entries(raw_prices)
-        selections = []
+        order = self._extract_stored_order(raw_prices)
+        clean = {
+            k: v
+            for k, v in (raw_prices or {}).items()
+            if str(k).strip() != PROCESS_ORDER_KEY
+        }
+        entries = self._normalize_process_entries(clean)
+        codes_ordered: List[str] = []
+        if order:
+            codes_ordered.extend([c for c in order if c in entries])
         for code in sorted(entries.keys()):
+            if code not in codes_ordered:
+                codes_ordered.append(code)
+        selections = []
+        for code in codes_ordered:
             entry = entries[code]
             name = PROCESS_BY_CODE[code]
             supplier = entry.get("supplier", "")
@@ -182,10 +240,34 @@ class CostRecordService:
                     "name": name,
                     "price": entry["price"],
                     "supplier": supplier,
-                    "inhouse": is_inhouse_process(code),
+                    "inhouse": is_inhouse_process(code) or is_inhouse_supplier(supplier),
                 }
             )
         return selections
+
+    @staticmethod
+    def _extract_stored_order(raw_prices: dict) -> List[str]:
+        raw = (raw_prices or {}).get(PROCESS_ORDER_KEY)
+        if not isinstance(raw, list):
+            return []
+        return [str(c).strip() for c in raw if str(c).strip()]
+
+    @staticmethod
+    def _parse_process_order(raw_order, entries: dict) -> List[str]:
+        if not isinstance(raw_order, list):
+            return sorted(entries.keys())
+        seen: set[str] = set()
+        ordered: List[str] = []
+        for item in raw_order:
+            code = str(item or "").strip()
+            if not code or code not in entries or code in seen:
+                continue
+            seen.add(code)
+            ordered.append(code)
+        for code in sorted(entries.keys()):
+            if code not in seen:
+                ordered.append(code)
+        return ordered
 
     def _validate_basic(self, payload: dict) -> dict:
         out: dict = {}
@@ -206,16 +288,27 @@ class CostRecordService:
             out[key] = value
         return out
 
-    def _validate_part_no_customer(self, product_part_no: str, customer_name: str) -> None:
+    def _validate_part_no_customer(
+        self,
+        product_part_no: str,
+        customer_name: str,
+        *,
+        exclude_record_id: Optional[int] = None,
+    ) -> None:
         part_no = (product_part_no or "").strip()
         customer = (customer_name or "").strip()
         if not part_no:
             return
-        binding = self._lines.get_part_no_binding(part_no)
+        binding = self._store.get_part_binding(
+            part_no,
+            exclude_record_id=exclude_record_id,
+        )
         if binding and binding.get("conflict"):
             joined = "、".join(binding.get("customers") or [])
-            raise ValueError(f"料号「{part_no}」在订单中存在多个客户（{joined}），请先修正订单数据")
-        if binding and binding.get("customer_name") and binding["customer_name"] != customer:
+            raise ValueError(f"料号「{part_no}」在 BOM 中存在多个客户（{joined}），请先修正 BOM 数据")
+        if binding and binding.get("customer_name") and not customer_names_match(
+            binding["customer_name"], customer
+        ):
             raise ValueError(
                 f"料号「{part_no}」已绑定客户「{binding['customer_name']}」，与所选客户不一致"
             )
@@ -234,7 +327,9 @@ class CostRecordService:
         out: dict = {}
         for name, value in raw.items():
             key = str(name).strip()
-            if not key:
+            if not key or key == PROCESS_ORDER_KEY:
+                continue
+            if isinstance(value, list):
                 continue
             try:
                 code, proc_name = resolve_process_key(key)
@@ -254,6 +349,7 @@ class CostRecordService:
 
     def _validate_process_suppliers(self, entries: dict) -> None:
         known = {name.casefold(): name for name in list_profile_suppliers()}
+        known[INHOUSE_SUPPLIER_LABEL.casefold()] = INHOUSE_SUPPLIER_LABEL
         for code, entry in entries.items():
             if is_inhouse_process(code):
                 continue
@@ -265,14 +361,24 @@ class CostRecordService:
                 raise ValueError(f"供应商「{supplier}」不在供应商列表中")
 
     def _price_map(self, entries: dict) -> dict:
-        return {code: entry["price"] for code, entry in entries.items()}
+        return {
+            code: entry["price"]
+            for code, entry in entries.items()
+            if str(code).strip() != PROCESS_ORDER_KEY
+        }
 
-    def _entries_to_storage_json(self, entries: dict) -> str:
+    def _entries_to_storage_json(
+        self, entries: dict, *, process_order: Optional[List[str]] = None
+    ) -> str:
+        order = self._parse_process_order(process_order, entries)
         payload = {
             code: {
                 "price": entry["price"],
                 "supplier": "" if is_inhouse_process(code) else entry.get("supplier", ""),
             }
             for code, entry in entries.items()
+            if str(code).strip() != PROCESS_ORDER_KEY
         }
+        if order:
+            payload[PROCESS_ORDER_KEY] = order
         return json.dumps(payload, ensure_ascii=False)

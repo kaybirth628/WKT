@@ -36,6 +36,9 @@ data/*.db-wal
 data/*.db-shm
 data/*.db.bak*
 
+# Flask 会话签名密钥（各环境独立）
+data/auth_secret.txt
+
 # 出货生成的 Excel 附件（随订单库，各环境独立）
 data/delivery_notes/attachments/*
 !data/delivery_notes/attachments/.gitkeep

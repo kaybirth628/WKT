@@ -295,5 +295,32 @@
     "payment_terms": "90天",
     "notes": "电镀",
     "reconciliation_period": "month_21_20"
+  },
+  "无锡瑞联精密机械有限公司": {
+    "address": "无锡新区梅村锡贤路108号",
+    "contact": "向峰",
+    "phone": "13862762378",
+    "email": "",
+    "payment_terms": "月结150天",
+    "notes": "车加工",
+    "reconciliation_period": "month_21_20"
+  },
+  "广德康际金属表面处理有限公司": {
+    "address": "安徽省广德县桃州镇建设北路31号",
+    "contact": "陶静文",
+    "phone": "0563-6061799",
+    "email": "",
+    "payment_terms": "",
+    "notes": "电镀",
+    "reconciliation_period": "month_21_20"
+  },
+  "镇江威可特精密电子有限公司": {
+    "address": "江苏省镇江市丹徒区辛丰镇金润大道100号",
+    "contact": "耿得皓",
+    "phone": "15151549516",
+    "email": "",
+    "payment_terms": "月结120天",
+    "notes": "",
+    "reconciliation_period": "month_21_20"
   }
 }

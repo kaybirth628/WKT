@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WKT · 操作记录</title>
+  {% include '_theme_head.html' %}
+  <link rel="stylesheet" href="/static/style.css?v=20260723-auth" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260723-auth" />
+</head>
+<body>
+  <div class="app-layout">
+    {% set active = 'audit' %}
+    {% include '_order_sidebar.html' %}
+    <div class="app-main">
+      <main class="content-stack">
+        <h3 class="section-h3 submodule-page-title">操作记录</h3>
+        <section class="card">
+          <div class="audit-toolbar">
+            <label>模块
+              <select id="auditModule">
+                <option value="">全部</option>
+                <option value="orders">订单</option>
+                <option value="inventory">库存</option>
+                <option value="cost">成本/BOM</option>
+                <option value="partners">客商</option>
+                <option value="delivery">送货单</option>
+                <option value="admin">用户管理</option>
+                <option value="system">系统</option>
+              </select>
+            </label>
+            {% if current_user and current_user.role == 'admin' %}
+            <label>操作人
+              <input type="text" id="auditUsername" placeholder="用户名" />
+            </label>
+            {% endif %}
+            <label>开始
+              <input type="date" id="auditFrom" />
+            </label>
+            <label>结束
+              <input type="date" id="auditTo" />
+            </label>
+            <button type="button" class="btn btn-primary btn-sm" id="auditSearchBtn">查询</button>
+          </div>
+          <p id="auditSummary" class="dash-updated"></p>
+          <div class="table-wrap">
+            <table class="data-table" id="auditTable">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>操作人</th>
+                  <th>模块</th>
+                  <th>动作</th>
+                  <th>摘要</th>
+                  <th>IP</th>
+                </tr>
+              </thead>
+              <tbody id="auditBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  {% include '_auth_user_bar.html' %}
+  <script src="/static/auth.js?v=20260723-auth"></script>
+  <script src="/static/audit_log.js?v=20260723-auth"></script>
+</body>
+</html>

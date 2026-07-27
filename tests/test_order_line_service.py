@@ -3,15 +3,49 @@ import tempfile
 import unittest
 from decimal import Decimal
 
+from test_impl.order_management.cost_analysis import BomService, CostRecordService
+from test_impl.order_management.cost_analysis.cost_store import CostStore
 from test_impl.order_management.order_entry import OrderLineService, DuplicateLineError, intake_to_lines
 from test_impl.order_management.order_entry.line_models import normalize_line_fields
+
+from bom_helpers import seed_bom
 
 
 class TestOrderLineService(unittest.TestCase):
     def setUp(self) -> None:
-        self.svc = OrderLineService(db_path=":memory:")
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        self._db_path = path
+        self.svc = OrderLineService(db_path=path)
+        self.cost_store = CostStore(path)
+        self.record_service = CostRecordService(store=self.cost_store, line_store=self.svc._store)
+        self.svc._bom = BomService(
+            cost_store=self.cost_store,
+            record_service=self.record_service,
+        )
+
+    def tearDown(self) -> None:
+        self.svc._store.close()
+        self.cost_store._conn.close()
+        try:
+            self.svc._bom.store._conn.close()
+        except Exception:
+            pass
+        if os.path.exists(self._db_path):
+            try:
+                os.unlink(self._db_path)
+            except OSError:
+                pass
+
+    def _seed_bom(self, **kwargs) -> None:
+        seed_bom(self.record_service, **kwargs)
 
     def test_create_and_list(self) -> None:
+        self._seed_bom(
+            customer_name="测试客户A",
+            product_name="壳体 Φ50",
+            product_part_no="CPN-001",
+        )
         line = self.svc.create_line(
             {
                 "customer": "测试客户A",
@@ -38,6 +72,99 @@ class TestOrderLineService(unittest.TestCase):
         rows = self.svc.list_lines()
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].product_spec, "壳体 Φ50")
+
+    def test_create_line_with_bom_missing_customer_name(self) -> None:
+        """BOM 未填客户时仍应能按料号匹配，不能误报「未建档」。"""
+        import json
+
+        self.cost_store.insert(
+            {
+                "customer_name": "",
+                "product_name": "前挡板",
+                "mold_no": "M-TEST",
+                "product_part_no": "PL9-12580-10-0A",
+                "cavity": "1*1",
+                "unit_weight_g": "120",
+                "material": "ADC12",
+                "machine_tonnage": "280T",
+                "material_unit_price": "0.02",
+                "process_prices_json": json.dumps({"01": "1.0"}, ensure_ascii=False),
+                "material_cost": "1.0",
+                "process_total": "1.0",
+                "unit_cost": "2.0",
+                "quote_price": "0",
+            }
+        )
+        line = self.svc.create_line(
+            {
+                "customer": "东莞市凯泰智联科技有限公司",
+                "order_date": "2026-04-29",
+                "delivery_date": "2026-05-08",
+                "order_no": "P02026",
+                "product_spec": "前挡板",
+                "customer_part_no": "PL9-12580-10-0A",
+                "unit_weight_g": "0",
+                "material": "ADC12",
+                "po_qty": "15000",
+                "shipped_qty": "0",
+                "unit": "个",
+                "tax_rate": "0.13",
+                "rmb_tax_incl_price": "4",
+            }
+        )
+        self.assertEqual(line.customer_part_no, "PL9-12580-10-0A")
+
+    def test_create_line_rejects_bom_part_with_extra_suffix(self) -> None:
+        from test_impl.order_management.cost_analysis.bom_service import BomNotFoundError
+
+        self._seed_bom(
+            customer_name="东莞市凯泰智联科技有限公司",
+            product_name="前挡板",
+            product_part_no="PL9-12580-10-0A-前挡板",
+        )
+        with self.assertRaises(BomNotFoundError):
+            self.svc.create_line(
+                {
+                    "customer": "东莞市凯泰智联科技有限公司",
+                    "order_date": "2026-04-29",
+                    "delivery_date": "2026-05-08",
+                    "order_no": "P02026",
+                    "product_spec": "前挡板",
+                    "customer_part_no": "PL9-12580-10-0A",
+                    "unit_weight_g": "0",
+                    "material": "ADC12",
+                    "po_qty": "15000",
+                    "shipped_qty": "0",
+                    "unit": "个",
+                    "tax_rate": "0.13",
+                    "rmb_tax_incl_price": "4",
+                }
+            )
+
+    def test_create_line_bom_part_no_unicode_dash(self) -> None:
+        self._seed_bom(
+            customer_name="东莞市凯泰智联科技有限公司",
+            product_name="前挡板",
+            product_part_no="PL9-12580-10-0A",
+        )
+        line = self.svc.create_line(
+            {
+                "customer": "东莞市凯泰智联科技有限公司",
+                "order_date": "2026-04-29",
+                "delivery_date": "2026-05-08",
+                "order_no": "P02026",
+                "product_spec": "前挡板",
+                "customer_part_no": "PL9\u201112580\u201110\u20110A",
+                "unit_weight_g": "120",
+                "material": "ADC12",
+                "po_qty": "100",
+                "shipped_qty": "0",
+                "unit": "个",
+                "tax_rate": "0.13",
+                "rmb_tax_incl_price": "4",
+            }
+        )
+        self.assertEqual(line.customer_part_no, "PL9\u201112580\u201110\u20110A")
 
     def test_duplicate_line_rejected(self) -> None:
         base = {
@@ -68,6 +195,11 @@ class TestOrderLineService(unittest.TestCase):
         self.assertEqual(line.unit_weight_g, "外购件")
 
     def test_tax_rate_percent_input(self) -> None:
+        self._seed_bom(
+            customer_name="客户B",
+            product_name="端盖",
+            product_part_no="C-X",
+        )
         line = self.svc.create_line(
             {
                 "customer": "客户B",
@@ -84,7 +216,11 @@ class TestOrderLineService(unittest.TestCase):
         self.assertEqual(line.rmb_tax_incl_price, Decimal("2.5678"))
 
     def test_lookup_customer_part(self) -> None:
-        self.svc.add_part("冷热传导盖 AC", "B601000137C")
+        self._seed_bom(
+            customer_name="测试",
+            product_name="冷热传导盖 AC",
+            product_part_no="B601000137C",
+        )
         cp = self.svc.lookup_customer_part("冷热传导盖 AC")
         self.assertEqual(cp, "B601000137C")
 
@@ -108,13 +244,18 @@ class TestOrderLineService(unittest.TestCase):
                 }
             )
             svc1._store.close()
+            svc1._bom.store._conn.close()
             svc2 = OrderLineService(db_path=path)
             self.assertEqual(len(svc2.list_lines()), 1)
             self.assertEqual(svc2.list_lines()[0].customer, "持久化客户")
             svc2._store.close()
+            svc2._bom.store._conn.close()
         finally:
             if os.path.exists(path):
-                os.unlink(path)
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
 
     def test_list_master_includes_customers_from_lines(self) -> None:
         self.svc.create_line(
@@ -128,11 +269,16 @@ class TestOrderLineService(unittest.TestCase):
         )
         self.assertIn("锐霸", self.svc.list_master()["customers"])
         self.svc.add_part("新品名", "NEW-CPN")
+        self._seed_bom(customer_name="锐霸", product_name="新品名", product_part_no="NEW-CPN")
         self.assertEqual(self.svc.lookup_customer_part("新品名"), "NEW-CPN")
 
     def test_enrich_recognized_lines_keeps_payment_terms(self) -> None:
         self.svc.add_customer("浙江红黑科技有限公司")
-        self.svc.add_part("冷热传导盖 AC", "B601000137C")
+        self._seed_bom(
+            customer_name="浙江红黑科技有限公司",
+            product_name="冷热传导盖 AC",
+            product_part_no="B601000137C",
+        )
         lines = self.svc.enrich_recognized_lines(
             [
                 {
@@ -148,7 +294,11 @@ class TestOrderLineService(unittest.TestCase):
         self.assertEqual(lines[0]["customer_part_no"], "B601000137C")
 
     def test_auto_fill_customer_part(self) -> None:
-        self.svc.add_part("冷热传导盖 AC", "B601000137C")
+        self._seed_bom(
+            customer_name="浙江红黑科技有限公司",
+            product_name="冷热传导盖 AC",
+            product_part_no="B601000137C",
+        )
         line = self.svc.create_line(
             {
                 "customer": "浙江红黑科技有限公司",
@@ -192,6 +342,8 @@ class TestOrderLineService(unittest.TestCase):
         self.assertTrue(all(ln.open_qty() <= 0 for ln in closed_rows))
 
     def test_search_filter(self) -> None:
+        self._seed_bom(customer_name="Alpha", product_name="件A", product_part_no="CA1")
+        self._seed_bom(customer_name="Beta", product_name="件B", product_part_no="CB1")
         self.svc.create_line(
             {
                 "customer": "Alpha", "order_date": "2026-05-30", "order_no": "PO-S1",
@@ -295,6 +447,8 @@ class TestOrderLineService(unittest.TestCase):
 
     def test_ship_line_with_duplicate_sibling_rows(self) -> None:
         """库中存在同客户·订单号·品名重复行时，出货仍应成功。"""
+        self._seed_bom(customer_name="重复测", product_name="同料号", product_part_no="A1")
+        self._seed_bom(customer_name="重复测", product_name="同料号", product_part_no="A2")
         base = {
             "customer": "重复测",
             "order_date": "2026-05-30",
@@ -351,6 +505,7 @@ class TestOrderLineService(unittest.TestCase):
         self.assertGreaterEqual(updated.updated_at, created)
 
     def test_update_and_delete(self) -> None:
+        self._seed_bom(customer_name="U客户", product_name="件U", product_part_no="UC1")
         line = self.svc.create_line(
             {
                 "customer": "U客户", "order_date": "2026-05-30", "order_no": "PO-U",
@@ -367,6 +522,7 @@ class TestOrderLineService(unittest.TestCase):
         self.assertEqual(self.svc.count_lines(), 0)
 
     def test_sqlite_id_increments_after_delete(self) -> None:
+        self._seed_bom(customer_name="U客户", product_name="件U", product_part_no="UC1")
         line = self.svc.create_line(
             {
                 "customer": "U客户", "order_date": "2026-05-30", "order_no": "PO-U",

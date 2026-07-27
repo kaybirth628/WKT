@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Iterable, List
 
 from test_impl.order_management.reconciliation.period import (
     normalize_reconciliation_period,
@@ -26,6 +27,37 @@ PROFILE_FIELDS = (
 
 EMPTY_PROFILE: Dict[str, str] = {k: "" for k in PROFILE_FIELDS}
 EMPTY_PROFILE["delivery_enabled"] = "1"
+EMPTY_PROFILE["created_at"] = ""
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _created_sort_key(created_at: str, json_index: int, name: str) -> tuple:
+    ca = (created_at or "").strip()
+    if ca:
+        return (ca, name.casefold())
+    return (f"1970-01-01T00:00:00.{json_index:06d}Z", name.casefold())
+
+
+def sort_names_by_created_at(names: Iterable[str]) -> List[str]:
+    profiles = load_all_profiles()
+    index_by_name: Dict[str, int] = {}
+    for idx, key in enumerate(_load_raw().keys()):
+        n = str(key or "").strip()
+        if n:
+            index_by_name[n] = idx
+    unique = sorted({str(n or "").strip() for n in names if str(n or "").strip()})
+    return sorted(
+        unique,
+        key=lambda name: _created_sort_key(
+            (profiles.get(name) or {}).get("created_at", ""),
+            index_by_name.get(name, 999999),
+            name,
+        ),
+        reverse=True,
+    )
 
 
 def is_delivery_enabled(profile: dict | None) -> bool:
@@ -58,6 +90,7 @@ def _normalize_row(raw: dict | None) -> Dict[str, str]:
     row = {k: str(src.get(k) or "").strip() for k in PROFILE_FIELDS if k != "reconciliation_period"}
     period_raw = src.get("reconciliation_period") or src.get("reconciliation_cycle")
     row["reconciliation_period"] = normalize_reconciliation_period(period_raw, default="")
+    row["created_at"] = str(src.get("created_at") or "").strip()
     return row
 
 
@@ -90,6 +123,11 @@ def save_profile(customer: str, info: dict) -> Dict[str, str]:
     if customer not in all_cfg and not period:
         raise ValueError("请选择对账周期")
     row["reconciliation_period"] = period
+    prev = all_cfg.get(customer) or {}
+    if customer in all_cfg:
+        row["created_at"] = str(prev.get("created_at") or row.get("created_at") or "").strip()
+    elif not row.get("created_at"):
+        row["created_at"] = _now_iso()
     all_cfg[customer] = row
     PROFILES_FILE.parent.mkdir(parents=True, exist_ok=True)
     PROFILES_FILE.write_text(
@@ -100,7 +138,7 @@ def save_profile(customer: str, info: dict) -> Dict[str, str]:
 
 
 def list_profile_customers() -> List[str]:
-    return sorted(load_all_profiles().keys(), key=lambda x: (x.casefold(), x))
+    return sort_names_by_created_at(load_all_profiles().keys())
 
 
 def _resolve_profile_key(all_cfg: Dict[str, dict], name: str) -> str | None:

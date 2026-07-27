@@ -39,6 +39,18 @@ class TestSupplierProfileStore(unittest.TestCase):
         with self.assertRaises(ValueError):
             svc.create("供应商a", {})
 
+    def test_list_sorted_by_created_at(self) -> None:
+        store.save_profile("供应商B", {"address": "B", "created_at": "2026-07-02T10:00:00+00:00"})
+        store.save_profile("供应商A", {"address": "A", "created_at": "2026-07-01T10:00:00+00:00"})
+        svc = SupplierProfileService()
+        names = [r["supplier"] for r in svc.list_rows()]
+        self.assertEqual(names[:2], ["供应商B", "供应商A"])
+
+    def test_create_sets_created_at(self) -> None:
+        svc = SupplierProfileService()
+        row = svc.create("新供应商", {"address": "地址"})
+        self.assertTrue(str(row.get("created_at") or "").strip())
+
     def test_delete_supplier(self) -> None:
         svc = SupplierProfileService()
         svc.create("待删供应商", {"address": "地址A"})

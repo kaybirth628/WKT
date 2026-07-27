@@ -48,10 +48,31 @@
         </div>
       </div>
 
-      <a class="top-nav-link top-nav-head-link{% if active == 'reconcile' %} is-active{% endif %}" href="/#reconcile" data-submodule="reconcile">
-        <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('reconcile') }}</span>
-        <span class="top-nav-label">对账</span>
-      </a>
+      <div
+        class="top-nav-dropdown{% if active in ('reconcile', 'payable') %} is-module-active{% endif %}"
+        id="topNavReconcile"
+      >
+        <button
+          type="button"
+          class="top-nav-link top-nav-dropdown-trigger"
+          id="topNavReconcileTrigger"
+          aria-expanded="false"
+          aria-controls="topNavReconcileMenu"
+          aria-haspopup="menu"
+        >
+          <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('reconcile') }}</span>
+          <span class="top-nav-label">对账</span>
+          <span class="top-nav-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="top-nav-dropdown-menu" id="topNavReconcileMenu" role="menu">
+          <a class="top-nav-dropdown-item module-sub{% if active == 'reconcile' %} active{% endif %}" href="/#reconcile" data-submodule="reconcile" role="menuitem">
+            <span class="module-icon">{{ nav_icon('reconcile') }}</span><span class="module-name">应收</span>
+          </a>
+          <a class="top-nav-dropdown-item module-sub{% if active == 'payable' %} active{% endif %}" href="/#payable" data-submodule="payable" role="menuitem">
+            <span class="module-icon">{{ nav_icon('supplier') }}</span><span class="module-name">应付</span>
+          </a>
+        </div>
+      </div>
       <div
         class="top-nav-dropdown{% if active in ('delivery', 'supplier') %} is-module-active{% endif %}"
         id="topNavPartner"
@@ -78,7 +99,7 @@
         </div>
       </div>
       <div
-        class="top-nav-dropdown{% if active in ('cost_entry', 'cost_query') %} is-module-active{% endif %}"
+        class="top-nav-dropdown{% if active in ('bom_entry', 'bom_query', 'cost_entry', 'cost_query') %} is-module-active{% endif %}"
         id="topNavCost"
       >
         <button
@@ -90,22 +111,53 @@
           aria-haspopup="menu"
         >
           <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('cost') }}</span>
-          <span class="top-nav-label">成本分析</span>
+          <span class="top-nav-label">BOM分析</span>
           <span class="top-nav-chevron" aria-hidden="true"></span>
         </button>
         <div class="top-nav-dropdown-menu" id="topNavCostMenu" role="menu">
-          <a class="top-nav-dropdown-item module-sub{% if active == 'cost_entry' %} active{% endif %}" href="/cost/entry" role="menuitem">
-            <span class="module-icon">{{ nav_icon('entry') }}</span><span class="module-name">成本录入</span>
+          <a class="top-nav-dropdown-item module-sub{% if active in ('bom_entry', 'cost_entry') %} active{% endif %}" href="/bom/entry" role="menuitem">
+            <span class="module-icon">{{ nav_icon('entry') }}</span><span class="module-name">BOM录入</span>
           </a>
-          <a class="top-nav-dropdown-item module-sub{% if active == 'cost_query' %} active{% endif %}" href="/cost/query" role="menuitem">
-            <span class="module-icon">{{ nav_icon('open') }}</span><span class="module-name">成本查询</span>
+          <a class="top-nav-dropdown-item module-sub{% if active in ('bom_query', 'cost_query') %} active{% endif %}" href="/bom/query" role="menuitem">
+            <span class="module-icon">{{ nav_icon('open') }}</span><span class="module-name">BOM查询</span>
+          </a>
+        </div>
+      </div>
+      <div
+        class="top-nav-dropdown{% if active in ('inventory', 'inventory_entry', 'inventory_movements') %} is-module-active{% endif %}"
+        id="topNavInventory"
+      >
+        <button
+          type="button"
+          class="top-nav-link top-nav-dropdown-trigger"
+          id="topNavInventoryTrigger"
+          aria-expanded="false"
+          aria-controls="topNavInventoryMenu"
+          aria-haspopup="menu"
+        >
+          <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('open') }}</span>
+          <span class="top-nav-label">库存</span>
+          <span class="top-nav-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="top-nav-dropdown-menu" id="topNavInventoryMenu" role="menu">
+          <a class="top-nav-dropdown-item module-sub{% if active == 'inventory' %} active{% endif %}" href="/inventory" role="menuitem">
+            <span class="module-icon">{{ nav_icon('open') }}</span><span class="module-name">库存总览</span>
+          </a>
+          <a class="top-nav-dropdown-item module-sub{% if active == 'inventory_entry' %} active{% endif %}" href="/inventory/entry" role="menuitem">
+            <span class="module-icon">{{ nav_icon('entry') }}</span><span class="module-name">工序出入库</span>
+          </a>
+          <a class="top-nav-dropdown-item module-sub{% if active == 'inventory_movements' %} active{% endif %}" href="/inventory/movements" role="menuitem">
+            <span class="module-icon">{{ nav_icon('open') }}</span><span class="module-name">出入库流水</span>
           </a>
         </div>
       </div>
       {# AI 数据助手：FEATURE_AI_ASSISTANT=true 时恢复下方链接 #}
     </nav>
+    {% include '_auth_user_bar.html' %}
   </div>
 </header>
+<link rel="stylesheet" href="/static/auth.css?v=20260723-auth" />
+<script src="/static/auth.js?v=20260723-auth" defer></script>
 
 <script>
 (function () {
@@ -171,9 +223,11 @@
     });
   }
 
+  var reconcileNav = setupDropdown("topNavReconcile", "topNavReconcileTrigger", "topNavReconcileMenu");
   var orders = setupDropdown("topNavOrders", "topNavOrdersTrigger", "topNavOrdersMenu");
   var cost = setupDropdown("topNavCost", "topNavCostTrigger", "topNavCostMenu");
   var partner = setupDropdown("topNavPartner", "topNavPartnerTrigger", "topNavPartnerMenu");
+  var inventory = setupDropdown("topNavInventory", "topNavInventoryTrigger", "topNavInventoryMenu");
 
   document.addEventListener("click", function (e) {
     if (!e.target.closest(".top-nav-dropdown")) {

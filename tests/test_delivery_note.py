@@ -1,15 +1,21 @@
+import os
 import tempfile
 import unittest
 from decimal import Decimal
 from pathlib import Path
+from unittest.mock import patch
 
 from test_impl.order_management.delivery_note import DeliveryNoteService, DeliveryTemplateStore
 from test_impl.order_management.order_entry import OrderLineService
+
+from bom_helpers import seed_bom
 
 try:
     from openpyxl import Workbook
 except ImportError:
     Workbook = None  # type: ignore
+
+_TEST_SUPPLIER = "测试CNC厂"
 
 
 class TestDeliveryNote(unittest.TestCase):
@@ -19,9 +25,23 @@ class TestDeliveryNote(unittest.TestCase):
         self.svc = OrderLineService(db_path=":memory:")
         self.templates = DeliveryTemplateStore(self.tpl_root)
         self.dn = DeliveryNoteService(self.svc, self.templates)
+        self.supplier_patcher = patch(
+            "test_impl.order_management.cost_analysis.record_service.list_profile_suppliers",
+            return_value=[_TEST_SUPPLIER],
+        )
+        self.supplier_patcher.start()
 
     def tearDown(self) -> None:
+        self.supplier_patcher.stop()
         self.tmp.cleanup()
+
+    def _seed_bom(self, *, customer_name: str, product_part_no: str, product_name: str = "") -> None:
+        seed_bom(
+            self.svc._bom._records,
+            customer_name=customer_name,
+            product_part_no=product_part_no,
+            product_name=product_name or product_part_no,
+        )
 
     def test_builtin_context_after_ship(self) -> None:
         line = self.svc.create_line(
@@ -44,6 +64,7 @@ class TestDeliveryNote(unittest.TestCase):
     def test_wkt_standard_xlsx_after_ship(self) -> None:
         if Workbook is None:
             self.skipTest("openpyxl not installed")
+        self._seed_bom(customer_name="爱毕黎", product_part_no="P-001", product_name="双嘴钳")
         line = self.svc.create_line(
             {
                 "customer": "爱毕黎",
@@ -238,6 +259,8 @@ class TestDeliveryNote(unittest.TestCase):
         wb.save(files_dir / tpl_name)
         self.templates.set_customer_template(customer, tpl_name)
 
+        self._seed_bom(customer_name=customer, product_part_no="P-A", product_name="件A")
+        self._seed_bom(customer_name=customer, product_part_no="P-B", product_name="件B")
         line_a = self.svc.create_line(
             {
                 "customer": customer,
@@ -285,6 +308,8 @@ class TestDeliveryNote(unittest.TestCase):
         save_bilingual_template(customer, files_dir / tpl_name)
         self.templates.set_customer_template(customer, tpl_name)
 
+        self._seed_bom(customer_name=customer, product_part_no="P-A", product_name="件A")
+        self._seed_bom(customer_name=customer, product_part_no="P-B", product_name="件B")
         line_a = self.svc.create_line(
             {
                 "customer": customer,
@@ -352,6 +377,7 @@ class TestDeliveryNote(unittest.TestCase):
         ws["B3"] = "{{订单下发抬头}}"
         wb.save(tpl_path)
         self.templates.set_customer_template(customer, "迅铂送货单.xlsx")
+        self._seed_bom(customer_name=customer, product_part_no="P-XB", product_name="测试件")
         line = self.svc.create_line(
             {
                 "customer": customer,
