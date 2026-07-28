@@ -33,6 +33,19 @@
 
 ## 变更记录
 
+### CL-0205 · 2026-07-28 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `order_intake/deepseek.py`、`part_no_fill.py`、`intake_service.py` |
+| 变更内容 | 修复大沃等 PO 使用「物料编码」（如 `1-000797`）时 OCR 识别后客户料号全空：扩展 DeepSeek 提示词映射规则；增加 OCR 原文兜底补全 |
+| 根因 | CL-0035 提示词将 customer_part_no 限定为「客户料号/料号」且举例 B 开头；大沃表格列为「物料编码」、原始编码为空，AI 合规留空 |
+| 防复发 | `part_no_fill` 单元测试；提示词明确物料编码/原始编码列映射 |
+| 验证 | `python -m unittest tests.test_order_intake tests.test_field_validation` 通过 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 识别逻辑修复，用户操作流程不变 |
+| 关联 | BF-0011 |
+
 ### CL-0204 · 2026-07-28 · 修复（C）
 
 | 字段 | 内容 |

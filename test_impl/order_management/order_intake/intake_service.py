@@ -8,6 +8,7 @@ from test_impl.order_management.order_entry.line_service import OrderLineService
 
 from .deepseek import DeepSeekStructurer
 from .field_validation import validate_lines
+from .part_no_fill import fill_part_no_from_raw_text
 from .text_extract import extract_text, extract_text_with_meta
 
 ProgressCallback = Optional[Callable[[int, str], None]]
@@ -129,7 +130,9 @@ class IntakeService:
 
         report(45, "AI 结构化…")
         structured = self.structurer.structure(extracted.text)
-        lines = intake_to_lines(normalize_extraction(structured))
+        normalized = normalize_extraction(structured)
+        fill_part_no_from_raw_text(normalized, extracted.text)
+        lines = intake_to_lines(normalized)
 
         if self.line_service:
             lines = self.line_service.enrich_recognized_lines(lines)
@@ -137,7 +140,9 @@ class IntakeService:
         if _count_empty_critical(lines) > 0:
             report(70, "关键字段遗漏，AI 重试补全…")
             structured = self.structurer.structure_retry(extracted.text)
-            lines = intake_to_lines(normalize_extraction(structured))
+            normalized = normalize_extraction(structured)
+            fill_part_no_from_raw_text(normalized, extracted.text)
+            lines = intake_to_lines(normalized)
             if self.line_service:
                 lines = self.line_service.enrich_recognized_lines(lines)
 

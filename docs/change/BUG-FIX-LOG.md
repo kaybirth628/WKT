@@ -29,10 +29,23 @@
 | BOM 查询 | BF-0006 |
 | Agent 治理 | BF-0009 |
 | Git 推送 | BF-0010 |
+| OCR 识别 | BF-0011 |
 
 ---
 
 ## 变更记录
+
+### BF-0011 · 2026-07-28
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0205 |
+| 模块 | `order_intake/deepseek.py`、`part_no_fill.py` |
+| 现象 | 苏州大沃 PO 表格「物料编码」列有值（如 1-000797），识别后 10 行全部「客户料号为空」 |
+| 根因 | DeepSeek SYSTEM_PROMPT 规则 8 仅认「客户料号/料号」列且举例 B 开头；该客户用「物料编码」列名、原始编码为空 |
+| 修复 | 提示词增加物料编码/物料号/原始编码映射；`fill_part_no_from_raw_text` 从 OCR 原文按行或顺序补全 |
+| 防复发 | `test_fill_dawo_material_code_by_product_spec`；`test_material_code_format_ok` |
+| 验证 | 单元测试通过；重启后上传 `苏州大沃-威可特6.11.1.pdf` 应带出 1-000797 等料号 |
 
 ### BF-0010 · 2026-07-28
 

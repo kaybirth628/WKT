@@ -298,7 +298,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260728-bom-clean-entry",
+            "build": "20260728-ocr-material-code",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),

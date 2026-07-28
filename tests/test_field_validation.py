@@ -46,6 +46,16 @@ class TestFieldValidation(unittest.TestCase):
         merged, _ = validate_lines([line], ocr_scheme="RapidOCR", raw_text="无关文字")
         self.assertEqual(merged[0]["_validate"]["fields"]["customer_part_no"]["status"], "warn")
 
+    def test_material_code_format_ok(self) -> None:
+        line = self._sample_line(
+            customer_part_no="1-000797",
+            product_spec="大沃款-扳手 W2808吊环压板",
+        )
+        raw = "1-000797 大沃款-扳手 W2808吊环压板 2500"
+        merged, summary = validate_lines([line], ocr_scheme="PDF 文字层", raw_text=raw)
+        self.assertEqual(merged[0]["_validate"]["fields"]["customer_part_no"]["status"], "ok")
+        self.assertEqual(summary["ok_rows"], 1)
+
     def test_invalid_po_qty(self) -> None:
         line = self._sample_line(po_qty="0")
         merged, _ = validate_lines([line], ocr_scheme="RapidOCR")

@@ -2,6 +2,7 @@ import unittest
 
 from test_impl.order_management.order_intake import normalize_extraction, normalize_order
 from test_impl.order_management.order_intake.intake_service import _to_number_str, _to_tax_rate
+from test_impl.order_management.order_intake.part_no_fill import fill_part_no_from_raw_text
 from test_impl.order_management.order_intake.text_extract import (
     TextExtractionError,
     extract_text,
@@ -86,6 +87,50 @@ class TestNormalizeExtraction(unittest.TestCase):
     def test_normalize_empty(self) -> None:
         out = normalize_extraction({})
         self.assertEqual(out["orders"], [])
+
+
+class TestPartNoFill(unittest.TestCase):
+    def test_fill_dawo_material_code_by_product_spec(self) -> None:
+        raw_text = (
+            "1 1-000797 大沃款-扳手 W2808吊环压板 材料：ADC12 2500 pcs 3.800\n"
+            "2 1-000796 大沃款-扳手 W2808端盖 材料：ADC12 2500 pcs 12.990\n"
+        )
+        orders = normalize_extraction(
+            {
+                "orders": [
+                    {
+                        "customer": "苏州大沃",
+                        "items": [
+                            {"product_spec": "大沃款-扳手 W2808吊环压板", "customer_part_no": ""},
+                            {"product_spec": "大沃款-扳手 W2808端盖", "customer_part_no": ""},
+                        ],
+                    }
+                ]
+            }
+        )
+        fill_part_no_from_raw_text(orders, raw_text)
+        items = orders["orders"][0]["items"]
+        self.assertEqual(items[0]["customer_part_no"], "1-000797")
+        self.assertEqual(items[1]["customer_part_no"], "1-000796")
+
+    def test_fill_sequential_when_spec_missing(self) -> None:
+        raw_text = "1-000797\n1-000796\n"
+        orders = normalize_extraction(
+            {
+                "orders": [
+                    {
+                        "items": [
+                            {"product_spec": "", "customer_part_no": ""},
+                            {"product_spec": "", "customer_part_no": ""},
+                        ]
+                    }
+                ]
+            }
+        )
+        fill_part_no_from_raw_text(orders, raw_text)
+        items = orders["orders"][0]["items"]
+        self.assertEqual(items[0]["customer_part_no"], "1-000797")
+        self.assertEqual(items[1]["customer_part_no"], "1-000796")
 
 
 class TestTextExtract(unittest.TestCase):
