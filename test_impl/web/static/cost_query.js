@@ -13,7 +13,7 @@ const QUERY_COLS = [
   { field: "machine_tonnage", label: "机台" },
   { field: "process_count", label: "工序数" },
   { field: "unit_cost", label: "单件成本" },
-  { field: "created_at", label: "录入时间" },
+  { field: "updated_at", label: "更新时间" },
 ];
 
 function queryCellKey(row, field) {
@@ -43,8 +43,8 @@ function queryCellKey(row, field) {
     case "unit_cost":
       raw = CostCommon.money(row.unit_cost);
       break;
-    case "created_at":
-      raw = CostCommon.formatDate(row.created_at);
+    case "updated_at":
+      raw = CostCommon.formatDate(row.updated_at || row.created_at);
       break;
     default:
       raw = "";
@@ -79,17 +79,17 @@ function updateQueryCount(shown, total, filtered) {
   el.textContent = `共 ${total} 条`;
 }
 
-function sortRecordsByCreatedDesc(rows) {
+function sortRecordsByUpdatedDesc(rows) {
   return (rows || []).slice().sort((a, b) => {
-    const ta = String(a.created_at || "");
-    const tb = String(b.created_at || "");
+    const ta = String(a.updated_at || a.created_at || "");
+    const tb = String(b.updated_at || b.created_at || "");
     if (ta !== tb) return tb.localeCompare(ta);
     return (Number(b.id) || 0) - (Number(a.id) || 0);
   });
 }
 
 function refreshQueryTable() {
-  allRecords = sortRecordsByCreatedDesc(allRecords || []);
+  allRecords = sortRecordsByUpdatedDesc(allRecords || []);
   queryColFilter.setRows(allRecords);
   queryColFilter.bindHeader();
   queryColFilter.refresh();
@@ -154,7 +154,7 @@ function renderTable(items, opts) {
       <td>${escHtml(r.machine_tonnage)}</td>
       <td>${processCount}</td>
       <td class="list-td-money">${CostCommon.money(r.unit_cost)}</td>
-      <td>${escHtml(CostCommon.formatDate(r.created_at))}</td>
+      <td>${escHtml(CostCommon.formatDate(r.updated_at || r.created_at))}</td>
       <td class="action-cell">
         <button type="button" class="btn btn-outline btn-sm" data-action="edit" data-id="${r.id}">修改</button>
         <button type="button" class="btn btn-danger btn-sm" data-action="delete" data-id="${r.id}">删除</button>
@@ -237,7 +237,11 @@ function openDetail(id) {
       <h5>已选工序（${(record.process_selections || record.selected_processes || []).length}）</h5>
       <div class="chip-row">${chips || "—"}</div>
     </div>
-    <p class="detail-meta">录入时间：${CostCommon.formatDate(record.created_at)}</p>`;
+    <p class="detail-meta">更新时间：${CostCommon.formatDate(record.updated_at || record.created_at)}${
+      record.created_at && record.updated_at && record.created_at !== record.updated_at
+        ? ` · 首次录入：${CostCommon.formatDate(record.created_at)}`
+        : ""
+    }</p>`;
 
   modal.hidden = false;
 }
@@ -373,6 +377,18 @@ async function loadRecords() {
   refreshQueryTable();
 }
 
+function applyQueryFromUrl() {
+  const form = document.getElementById("costQueryForm");
+  if (!form) return;
+  const sp = new URLSearchParams(window.location.search);
+  ["q", "customer", "product_part_no"].forEach((key) => {
+    const value = sp.get(key);
+    if (value && form.elements[key]) {
+      form.elements[key].value = value;
+    }
+  });
+}
+
 document.getElementById("costQueryForm").addEventListener("submit", (e) => {
   e.preventDefault();
   loadRecords();
@@ -429,5 +445,6 @@ CostCommon.loadOptions()
   })
   .then(() => {
     queryColFilter.bindHeader();
+    applyQueryFromUrl();
     return loadRecords();
   });

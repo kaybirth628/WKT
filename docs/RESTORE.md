@@ -32,7 +32,7 @@
 - 用户**不用重新学**怎么用系统  
 - CHANGELOG 等级多为 **C 优化** 或 **D 文档**
 
-**例子：** `CL-0104: 修复对账筛选` → 双击「一键推送到 GitHub」→ 里程碑版本**直接回车**。
+**例子：** `CL-0104: 修复对账筛选` → 双击 **「一键推送云端和 GitHub」** → 里程碑版本**直接回车**。
 
 ### 算大改 —— CL + 升 v0.5.x + 打 Git 标签
 
@@ -64,23 +64,30 @@
 
 ---
 
-## 3. 一键推送到 GitHub
+## 3. 一键推送云端和 GitHub
 
-项目根目录双击：**`一键推送到GitHub.bat`**
+项目根目录双击：**`一键推送云端和GitHub.bat`**
+
+1. 提交并推送到 **GitHub**（不含本地订单库 `*.db`）  
+2. 部署 **程序代码** 到云端（**不覆盖**云端生产 `data/` 业务数据）
 
 脚本会依次询问：
 
-1. **【变更记录】** 提交说明，建议 `CL-0104: 简述`（有改动时必填）  
-2. **【里程碑版本】** 留空 = 只推代码；填 `v0.5.2` = 打标签并推送  
+1. **【变更记录】** — 已根据 `CHANGELOG.md` **顶部 CL 条目自动推荐**；**直接回车**即提交，无需手打 CL 编号  
+2. **【里程碑版本】** — **直接回车跳过**（日常小改）；仅大版本发布时填 `v0.6.1`
 
 或 PowerShell：
 
 ```powershell
 cd P:\WKT
-powershell -ExecutionPolicy Bypass -File scripts\git-push.ps1
+powershell -ExecutionPolicy Bypass -File scripts\push-cloud-and-github.ps1
+# 仅 GitHub、不部署云端：
+powershell -ExecutionPolicy Bypass -File scripts\push-cloud-and-github.ps1 -PushOnly
 ```
 
 打新里程碑后，请同步更新 **`docs/VERSION.md`** 与 CHANGELOG「当前发布版本」。
+
+**生产安全规范**：[`docs/change/PRODUCTION-SAFETY.md`](change/PRODUCTION-SAFETY.md)
 
 ---
 
@@ -115,19 +122,20 @@ powershell -ExecutionPolicy Bypass -File scripts\restore-ui-baseline.ps1
 
 ---
 
-## 6. 云端数据与同步（2026-07-25 起）
+## 6. 云端与本地数据（测试阶段 · 云端=生产）
 
-**原则：生产数据以云端为准；本地默认只推功能，不推数据。**
+**原则：云端 `data/` 为正式生产数据，程序只上传代码，不上传本地库覆盖云端。**
 
 | 脚本 | 作用 |
 |------|------|
-| **一键同步云端.bat** | 上传 `test_impl` + `scripts` + **`data/feishu_config.json`**；**不碰** 订单库与客商 JSON |
-| **一键从云端拉取数据.bat** | 把云端 `data/` 拉到本地（本地先备份到 `data.local.bak-*`） |
-| **一键查询云端数据.bat** | 查看云端供应商数、客户数、订单库大小、`data.bak-*` 备份 |
-| **一键恢复云端供应商.bat** | 从云端 `data.bak-*` 恢复 `supplier_profiles.json`（选供应商最多的一份） |
-| **一键全量同步云端.bat** | ⚠️ 用本地 **整包** `data/` 覆盖云端（含订单库），需输入 `YES` |
+| **`一键启动网页.bat`** | 本地启动 Web 服务 |
+| **`一键推送云端和GitHub.bat`** | GitHub + 云端 **代码**部署（含 `feishu_config.json`；**不碰**订单库/客商 JSON） |
+| **`一键下载云端数据覆盖本地.bat`** | 云端 `data/` → 本地（本地先备份 `data.local.bak-*`） |
 
-若在云端录入供应商/客户后列表消失，常见原因是此前默认同步用本地 JSON 覆盖了云端。先用 **一键查询云端数据** 看备份里供应商数量，再用 **一键恢复云端供应商** 或指定备份路径恢复。
+已删除（勿再使用）：全量同步云端、查询云端、恢复云端供应商、写入 SOP 测试数据、清库 `reset_order_db`、旧版单独 GitHub/同步 bat 及对应 `scripts/*.ps1`/`seed_*.py`。  
+`sync-to-cloud.ps1` 的 `-FullData` / `-WithMasterData` 已在脚本层 **禁用**。
+
+本地要与生产数据一致：用 **下载云端覆盖本地**，不要用本地库推云。
 
 ---
 

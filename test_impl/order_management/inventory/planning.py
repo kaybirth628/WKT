@@ -12,6 +12,11 @@ from .store import PROCESS_FINISHED, STATUS_FINISHED, STATUS_INHOUSE, STATUS_OUT
 
 
 class PlanningService:
+    STOCK_WARN_OK = "ok"
+    STOCK_WARN_NO_PART = "no_part"
+    STOCK_WARN_SHORT_SHIP = "short_ship"
+    STOCK_WARN_SHORT_COVER = "short_cover"
+
     def __init__(
         self,
         line_service: OrderLineService,
@@ -19,6 +24,16 @@ class PlanningService:
     ) -> None:
         self._lines = line_service
         self._inv = inventory
+
+    @staticmethod
+    def stock_warn_level(part: str, gap_ship: Decimal, gap_cover: Decimal) -> str:
+        if not (part or "").strip():
+            return PlanningService.STOCK_WARN_NO_PART
+        if gap_ship > 0:
+            return PlanningService.STOCK_WARN_SHORT_SHIP
+        if gap_cover > 0:
+            return PlanningService.STOCK_WARN_SHORT_COVER
+        return PlanningService.STOCK_WARN_OK
 
     def stock_by_part(self, product_part_no: str) -> dict:
         part = (product_part_no or "").strip()
@@ -92,6 +107,7 @@ class PlanningService:
             semi = to_decimal(stock["semifinished_qty"])
             gap_ship = round_qty(max(Decimal("0"), demand - finished))
             gap_cover = round_qty(max(Decimal("0"), demand - finished - semi))
+            warn = self.stock_warn_level(part, gap_ship, gap_cover)
             rows.append(
                 {
                     "line_id": line.id,
@@ -111,6 +127,7 @@ class PlanningService:
                     "gap_ship": str(gap_ship),
                     "gap_cover": str(gap_cover),
                     "suggest_qty": str(gap_cover),
+                    "stock_warn_level": warn,
                     "stages": stock["stages"],
                 }
             )

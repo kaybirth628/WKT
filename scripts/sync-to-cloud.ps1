@@ -12,6 +12,22 @@ param(
     [switch]$WithMasterData
 )
 
+if ($FullData) {
+    throw @"
+FullData cloud sync is DISABLED (cloud = production).
+Do not upload local data/ to overwrite cloud.
+Use '一键下载云端数据覆盖本地.bat' to pull cloud -> local instead.
+See docs/change/PRODUCTION-SAFETY.md
+"@
+}
+if ($WithMasterData) {
+    throw @"
+WithMasterData cloud sync is DISABLED (cloud master JSON = production).
+Use code-only sync via '一键推送云端和GitHub.bat'.
+See docs/change/PRODUCTION-SAFETY.md
+"@
+}
+
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root

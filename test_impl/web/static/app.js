@@ -78,6 +78,32 @@ const LIST_DETAIL_COL_WEIGHTS = [
   1.25, 1.0, 1.0, 1.15, 1.35, 2.1, 1.15, 0.7, 0.65, 0.75, 0.7, 0.7, 0.65, 0.65, 0.85, 0.85, 0.85,
 ];
 
+/** 未结订单：隐藏接单日期，未结数量后仅附加成品库存 */
+const LIST_OPEN_FINISHED_COL = { f: "finished_qty", label: "成品库存", type: "decimal", dp: 1 };
+const LIST_OPEN_FINISHED_WEIGHT = 0.72;
+
+function openListBaseCols() {
+  return LIST_DETAIL_COLS.filter((c) => c.f !== "order_date");
+}
+
+function buildOpenListCols() {
+  const base = openListBaseCols();
+  const idx = base.findIndex((c) => c.f === "open_qty");
+  return [...base.slice(0, idx + 1), LIST_OPEN_FINISHED_COL, ...base.slice(idx + 1)];
+}
+
+function openListColWeights() {
+  const weightByField = Object.fromEntries(
+    LIST_DETAIL_COLS.map((c, i) => [c.f, LIST_DETAIL_COL_WEIGHTS[i]])
+  );
+  const weights = openListBaseCols().map((c) => weightByField[c.f]);
+  const openIdx = openListBaseCols().findIndex((c) => c.f === "open_qty");
+  weights.splice(openIdx + 1, 0, LIST_OPEN_FINISHED_WEIGHT);
+  return weights;
+}
+
+const LIST_OPEN_COLS = buildOpenListCols();
+
 const LIST_CLOSED_EXTRA_WEIGHTS = [1.15, 1.25];
 
 const LIST_SHIPMENT_COL_WEIGHTS = [
@@ -188,6 +214,7 @@ function buildListColPercents(weights) {
 }
 
 const LIST_COL_WIDTHS = buildListColPercents(LIST_DETAIL_COL_WEIGHTS);
+const LIST_OPEN_COL_WIDTHS = buildListColPercents(openListColWeights());
 const LIST_CLOSED_COL_WIDTHS = buildListColPercents([
   ...LIST_DETAIL_COL_WEIGHTS,
   ...LIST_CLOSED_EXTRA_WEIGHTS,
@@ -246,7 +273,7 @@ const SUBMODULES = {
   },
   open: {
     title: "未结订单",
-    desc: "未结数量大于 0；距交期 ≤10 天黄色预警、已过交期红色预警；可合并出货",
+    desc: "未结数量大于 0；交期 ≤10 天黄、已过交期红；成品不足橙；可合并出货",
     listTitle: "未结订单",
     view: "open",
     summary: "未结料号行",
@@ -636,6 +663,7 @@ const LIST_TH_LABEL = {
   po_qty: "PO数量",
   shipped_qty: "已出货",
   open_qty: "未结",
+  finished_qty: "成品",
   rmb_tax_incl_price: "含税单价",
   amount: "含税金额",
   shipped_at: "出货时间",
@@ -703,6 +731,7 @@ function listTableCols(viewKey) {
   }
   if (viewKey === "closed") return [...LIST_DETAIL_COLS, ...LIST_CLOSED_EXTRA_COLS];
   if (viewKey === "closedForced") return LIST_DETAIL_COLS;
+  if (viewKey === "open") return LIST_OPEN_COLS;
   return LIST_DETAIL_COLS;
 }
 
@@ -728,6 +757,7 @@ function listTableColWidths(viewKey) {
     return payableDetailMode ? LIST_PAYABLE_COL_WIDTHS : LIST_PAYABLE_OUTLOOK_COL_WIDTHS;
   }
   if (viewKey === "closed") return LIST_CLOSED_COL_WIDTHS;
+  if (viewKey === "open") return LIST_OPEN_COL_WIDTHS;
   return LIST_COL_WIDTHS;
 }
 
@@ -1479,6 +1509,9 @@ function demoTagHtml(isDemo) {
 }
 
 function cellValue(ln, col) {
+  if (col.f === "finished_qty" && ln.stock_warn_level === "no_part") {
+    return "—";
+  }
   if (col.f === "customer_part_no") {
     const tag = demoTagHtml(ln.is_demo);
     const val = esc(ln.customer_part_no) || "-";
@@ -2454,6 +2487,12 @@ function openDeliveryWarningClass(ln) {
   return "";
 }
 
+/** 未结订单：成品库存不足行色 */
+function openStockWarningClass(ln) {
+  if (ln?.stock_warn_level === "short_ship") return "row-stock-critical";
+  return "";
+}
+
 function renderOpenSeqCell(ln, idx) {
   if (!FEATURE_BATCH_SHIP || currentSubmodule !== "open") {
     return `<td class="list-td-seq">${idx + 1}</td>`;
@@ -3401,9 +3440,16 @@ function renderListFromCache() {
         : viewKey === "closedForced"
           ? "（最新强制结案在上）"
           : "（最新录入在最上）";
-    summaryEl.textContent = isShippedView
+    let summaryText = isShippedView
       ? `${meta.title}：共 ${total} 条${label}${filterNote}${sortNote}`
       : `${meta.title}：共 ${total} 条${label}${filterNote}${sortNote}`;
+    if (viewKey === "open" && filtered.length) {
+      const shortShip = filtered.filter((ln) => ln.stock_warn_level === "short_ship").length;
+      if (shortShip) {
+        summaryText += ` · 成品不足 ${shortShip} 行`;
+      }
+    }
+    summaryEl.textContent = summaryText;
   }
   if (isReconcileView && !reconcileDetailMode && dueOutlookCache) {
     renderDueOutlook("reconcile", dueOutlookCache);
@@ -3502,6 +3548,7 @@ function renderListFromCache() {
         editing ? "row-editing" : "",
         isOrderLineTodayHighlight(ln, viewKey) ? "row-today-highlight" : "",
         viewKey === "open" ? openDeliveryWarningClass(ln) : "",
+        viewKey === "open" ? openStockWarningClass(ln) : "",
         viewKey === "open" && isOrderDateOlderThanMonths(ln.order_date) ? "row-order-overdue" : "",
       ]
         .filter(Boolean)
@@ -4121,7 +4168,9 @@ function renderPreview(lines, validation, ocrText, batchMeta) {
         hintHtml +
         `</td>`;
     }).join("");
-    return `<tr data-idx="${i}" class="${rowWarn ? "pv-row-warn" : ""}">${cells}<td><button type="button" class="btn-remove pv-remove">×</button></td></tr>`;
+    return `<tr data-idx="${i}" class="${rowWarn ? "pv-row-warn" : ""}"${
+      ln._customer_bom_mismatch ? ` data-customer-bom-mismatch="1" data-bom-customer="${esc(ln._bom_customer_name || "")}"` : ""
+    }>${cells}<td><button type="button" class="btn-remove pv-remove">×</button></td></tr>`;
   }).join("");
   tbody.querySelectorAll(".pv").forEach((inp) => {
     const col = COLS.find((c) => c.f === inp.dataset.f);
@@ -4272,6 +4321,26 @@ document.getElementById("recognizeBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("batchSubmitBtn")?.addEventListener("click", async () => {
+  const mismatchRows = [...document.querySelectorAll("#previewBody tr[data-customer-bom-mismatch='1']")];
+  if (mismatchRows.length) {
+    const detail = mismatchRows
+      .map((tr) => {
+        const part = tr.querySelector('[data-f="customer_part_no"]')?.value || "—";
+        const ocr = tr.querySelector('[data-f="customer"]')?.value || "—";
+        const bom = tr.dataset.bomCustomer || "—";
+        return `· 料号 ${part}：识别「${ocr}」→ BOM「${bom}」`;
+      })
+      .join("\n");
+    const useBom = confirm(
+      `以下料号客户名称与 BOM 不一致，是否改用 BOM 客户名称录入？\n\n${detail}\n\n确定 = 改用 BOM 客户\n取消 = 仍按识别客户提交（可能因客户不一致被拒绝）`
+    );
+    if (useBom) {
+      mismatchRows.forEach((tr) => {
+        const inp = tr.querySelector('[data-f="customer"]');
+        if (inp && tr.dataset.bomCustomer) inp.value = tr.dataset.bomCustomer;
+      });
+    }
+  }
   const rows = collectPreviewRows();
   if (!rows.length) return;
   let ok = 0, err = "", dupIds = [];

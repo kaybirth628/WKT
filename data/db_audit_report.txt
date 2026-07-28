@@ -1,0 +1,27 @@
+﻿ERROR: database not found: --detail
+
+=== Detail: duplicate BOM ===
+python : Traceback (most recent call last):
+所在位置 C:\Users\Albert\AppData\Local\Temp\ps-script-a6cef221-5650-4907-988d-20786908b1e2.ps1:86 字符: 1
++ python scripts/audit_global_db.py --detail 2>&1 | Out-File -Encoding  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "P:\WKT\scripts\audit_global_db.py", line 357, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "P:\WKT\scripts\audit_global_db.py", line 352, in main
+    detail_report(db)
+    ~~~~~~~~~~~~~^^^^
+  File "P:\WKT\scripts\audit_global_db.py", line 312, in detail_report
+    for r in conn.execute(
+             ~~~~~~~~~~~~^
+        """
+        ^^^
+    ...<5 lines>...
+        """
+        ^^^
+    ):
+    ^
+sqlite3.OperationalError: no such table: cost_records

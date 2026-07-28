@@ -1,0 +1,33 @@
+---
+description: WKT UI 布局与设计：改 HTML/CSS/交互前必读 docs/design/ui-layout-rules.md V3 全文 + GLOBAL-RULES-INDEX；改完登记 UI-CHANGELOG。
+alwaysApply: true
+---
+
+# WKT UI 设计规则（强制）
+
+## 何时适用
+
+凡 **页面布局、样式、间距、录入/列表交互、新 Web 模块 UI**。
+
+## 动手前（按顺序）
+
+1. **通读** [`docs/design/ui-layout-rules.md`](../../docs/design/ui-layout-rules.md) **V3 全文**（非只看最近几条）
+2. 扫 [`docs/design/GLOBAL-RULES-INDEX.md`](../../docs/design/GLOBAL-RULES-INDEX.md) 确认无遗漏规则源
+3. 读 [`docs/design/UI-CHANGELOG.md`](../../docs/design/UI-CHANGELOG.md) 最新 5 条
+4. 打开参考页（`index.html` / `cost_entry.html` / `cost_query.html`）
+
+## 全局必守（摘要）
+
+- **顶栏 + 全宽 + 页脚一行说明**（勿改回侧栏）
+- **清爽**：少说明、少留白；录入用 `mode-card` +「请先选择录入方式」
+- **紧凑**：`--wkt-module-*`、`--wkt-list-*`；业务区勿用默认 1.5rem 卡片 padding
+- **复用**：`list-table`、CSS 变量、现有 btn/card 类
+- **字体/色**：变量与 `_font_links.html`；料号 `list-td-mono`
+- **tooltip**：`.hover-tip`，禁止 `title`
+
+## 完成后
+
+1. [`UI-CHANGELOG.md`](../../docs/design/UI-CHANGELOG.md)（UI-XXXX）
+2. 用户可见 → 主 [`CHANGELOG.md`](../../docs/change/CHANGELOG.md)（CL-XXXX）
+3. 新范式 → 更新 `ui-layout-rules.md`
+4. bump `?v=` / `build`

@@ -151,6 +151,27 @@ def validate_lines(
                     }
                 )
 
+        if row.get("_customer_bom_mismatch") and row.get("_bom_customer_name"):
+            ocr_c = str(row.get("customer") or "").strip()
+            bom_c = str(row.get("_bom_customer_name") or "").strip()
+            msg = f"料号已绑定 BOM 客户「{bom_c}」，与识别客户「{ocr_c}」不一致"
+            prev = field_checks.get("customer") or {}
+            if prev.get("status") != "warn":
+                warn_field_count += 1
+                warn_details.append(
+                    {
+                        "row": idx + 1,
+                        "field": "customer",
+                        "value": ocr_c,
+                        "message": msg,
+                    }
+                )
+            field_checks["customer"] = {
+                "status": "warn",
+                "value": ocr_c,
+                "message": msg,
+            }
+
         row_status = "warn" if any(v["status"] == "warn" for v in field_checks.values()) else "ok"
         row["_validate"] = {"status": row_status, "fields": field_checks}
         validated.append(row)

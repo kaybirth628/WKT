@@ -1,5 +1,6 @@
-# WKT 销售管理系统 · UI 设计基线（V1.0）
+# WKT 销售管理系统 · UI 设计基线（V1.0 · 已 superseded）
 
+> **⚠️ 2026-07-28 起**：本文件为历史参考。**当前生效**见 **[`ui-layout-rules.md`](ui-layout-rules.md)（V3）**、[`GLOBAL-RULES-INDEX.md`](GLOBAL-RULES-INDEX.md)、[`UI-CHANGELOG.md`](UI-CHANGELOG.md)。  
 > **生效版本**：v0.3.8（2026-05-30 · HP 科技蓝默认主题）  
 > **设计来源**：[`docs/design/DESIGN.md`](DESIGN.md) · HP · `#024ad8`  
 > **适用范围**：`test_impl/web` 及后续所有 Web 模块  

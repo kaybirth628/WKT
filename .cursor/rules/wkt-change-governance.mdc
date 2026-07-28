@@ -1,0 +1,43 @@
+---
+description: WKT 变更治理：每次改代码必须登记 CHANGELOG(CL)；修复必须记 BUG-FIX-LOG(BF)；用户可见变更必须同步 SOP。
+alwaysApply: true
+---
+
+# WKT 变更治理（强制）
+
+## 每次改代码结束前
+
+必读 [`docs/change/AGENT-COMPLIANCE.md`](../../docs/change/AGENT-COMPLIANCE.md) 并完成 Checklist。
+
+## 必须登记
+
+| 变更 | 文档 | 编号 |
+|------|------|------|
+| **任何**代码/行为变更 | `docs/change/CHANGELOG.md` | CL-XXXX |
+| **Bug 修复** | `docs/change/BUG-FIX-LOG.md` | BF-XXXX |
+| 用户可见流程/按钮/规则 | `docs/SOP/系统操作SOP.md` | CL 标 SOP=是 |
+| UI 布局/样式 | `docs/design/UI-CHANGELOG.md` | UI-XXXX |
+
+## 修 Bug 前
+
+1. **搜索** [`BUG-FIX-LOG.md`](../../docs/change/BUG-FIX-LOG.md) 是否已有相同现象/根因
+2. 读关联 CL/BF 的「防复发」与测试
+
+## 修 Bug 后
+
+CL 必填：**根因**、**防复发**、**关联 BF-XXXX**。
+
+## SOP
+
+- 用户可见变化 → **必须**更新 SOP，CL「SOP 同步 = 是」
+- 仅 Agent/内部文档 → 「否」+ **SOP 免同步原因**（不可留空）
+
+## 禁止
+
+- 改代码不记 CL
+- 修复不记 BF/根因
+- 用户可见改动标 SOP=否 且无原因
+
+## 完成回复须含
+
+CL 编号、BF（若有）、SOP 是否同步、测试、是否重启。

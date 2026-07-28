@@ -125,12 +125,48 @@ class OrderLineService:
 
     def enrich_line_dict(self, row: dict) -> dict:
         out = dict(row)
-        matched = self.resolve_customer(str(out.get("customer") or ""))
-        if matched and (
-            not str(out.get("customer") or "").strip() or out.get("customer") != matched.name
-        ):
-            out["customer"] = matched.name
-        out = self._bom.enrich_order_fields(out)
+        ocr_customer = str(out.get("customer") or "").strip()
+        cpn = str(out.get("customer_part_no") or "").strip()
+        if not cpn and out.get("product_spec"):
+            cpn = self.lookup_customer_part(str(out.get("product_spec")))
+            if cpn:
+                out["customer_part_no"] = cpn
+
+        bom_info = self._bom.lookup_for_order(cpn) if cpn else None
+        if bom_info:
+            bom_customer = str(bom_info.get("customer_name") or "").strip()
+            if not str(out.get("product_spec") or "").strip():
+                out["product_spec"] = (
+                    bom_info.get("product_spec") or bom_info.get("product_name") or ""
+                )
+            if not str(out.get("material") or "").strip() and bom_info.get("material"):
+                out["material"] = bom_info["material"]
+            weight = str(bom_info.get("unit_weight_g") or "").strip()
+            if not str(out.get("unit_weight_g") or "").strip() and weight:
+                try:
+                    if float(weight) > 0:
+                        out["unit_weight_g"] = weight
+                except ValueError:
+                    if weight:
+                        out["unit_weight_g"] = weight
+            if bom_customer:
+                out["_bom_customer_name"] = bom_customer
+                if not ocr_customer:
+                    out["customer"] = bom_customer
+                elif not customer_names_match(ocr_customer, bom_customer):
+                    out["_customer_bom_mismatch"] = True
+                else:
+                    out["customer"] = pick_canonical_customer_name([bom_customer, ocr_customer])
+        else:
+            out = self._bom.enrich_order_fields(out)
+
+        if not out.get("_customer_bom_mismatch"):
+            matched = self.resolve_customer(str(out.get("customer") or ""))
+            if matched and (
+                not str(out.get("customer") or "").strip()
+                or out.get("customer") != matched.name
+            ):
+                out["customer"] = matched.name
         if not str(out.get("customer_part_no") or "").strip() and out.get("product_spec"):
             out["customer_part_no"] = self.lookup_customer_part(str(out.get("product_spec")))
         return out

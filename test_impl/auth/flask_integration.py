@@ -56,6 +56,9 @@ def _register_audit_rules() -> None:
     # 库存
     _rule("POST", "/api/inventory/inbound", "inventory.inbound", "inventory", "入库")
     _rule("POST", "/api/inventory/outbound", "inventory.outbound", "inventory", "出库")
+    _rule("POST", "/api/inventory/skip-outbound", "inventory.skip_outbound", "inventory", "跳序出库")
+    _rule("POST", "/api/inventory/repair-out", "inventory.repair_out", "inventory", "返修")
+    _rule("POST", "/api/inventory/repair-in", "inventory.repair_in", "inventory", "返修入库")
     _rule("POST", "/api/inventory/complete", "inventory.complete", "inventory", "完工入库")
     _rule("POST", "/api/inventory/outsource-send", "inventory.outsource_send", "inventory", "外发出库")
     _rule("POST", "/api/inventory/outsource-receive", "inventory.outsource_receive", "inventory", "外发回货")

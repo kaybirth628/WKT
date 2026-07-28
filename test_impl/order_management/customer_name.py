@@ -89,25 +89,31 @@ def dedupe_customer_names(names: Iterable[str]) -> List[str]:
 
 _FILENAME_BOM_SUFFIX_RE = re.compile(r"(?i)(?:新产品)?BOM表?$|产品BOM表?$|BOM格式$")
 _FILENAME_BOM_TAIL_RE = re.compile(r"(?i)_?BOM$")
+_FILENAME_BOM_MIDDLE_RE = re.compile(r"(?i)产品BOM.*$")
+_FILENAME_COPY_SUFFIX_RE = re.compile(r"[\(（]\d+[\)）]+")
 
 # 文件名简称 → 客商档案全称（BOM 批量导入确认）
 _FILENAME_CUSTOMER_ALIASES: dict[str, str] = {
     "日月照明": "江苏日月照明电器有限公司",
     "欧菲光": "安徽欧菲智能车联科技有限公司",
     "红黑": "浙江红黑科技有限公司",
+    "大沃": "苏州大沃工具科技有限公司",
 }
 
 
 def extract_customer_hint_from_filename(filename: str) -> str:
-    """从上传文件名提取客户简称，如「东硕BOM.xls」→「东硕」。"""
+    """从上传文件名提取客户简称，如「东硕BOM.xls」→「东硕」；「大沃产品BOM(1)(1)」→「大沃」。"""
     stem = Path(filename or "").stem.strip()
     if not stem:
         return ""
+    stem = _FILENAME_COPY_SUFFIX_RE.sub("", stem).strip()
     prev = None
     while prev != stem:
         prev = stem
         stem = _FILENAME_BOM_SUFFIX_RE.sub("", stem).strip()
         stem = _FILENAME_BOM_TAIL_RE.sub("", stem).strip()
+        stem = _FILENAME_BOM_MIDDLE_RE.sub("", stem).strip()
+        stem = _FILENAME_COPY_SUFFIX_RE.sub("", stem).strip()
     return stem
 
 
@@ -156,10 +162,16 @@ def resolve_customer_from_hint(
             last_norm = normalize_customer_name(parts[-1]).casefold()
             if last_norm == hint_norm:
                 matches.append(name)
+                continue
+        if len(hint_norm) >= 2 and hint_norm in name_norm:
+            matches.append(name)
 
     matches = dedupe_customer_names(matches)
     if len(matches) == 1:
-        return matches[0], ""
+        canonical = matches[0]
+        if normalize_customer_name(canonical).casefold() == hint_norm:
+            return canonical, ""
+        return canonical, f"客户「{hint}」已匹配为「{canonical}」"
     if len(matches) > 1:
         joined = "、".join(matches[:5])
         extra = f" 等{len(matches)}个" if len(matches) > 5 else ""

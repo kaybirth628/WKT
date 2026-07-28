@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>中小制造业 AI 数字化方案 · 业务介绍 v2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #08101f;
+      --muted: #52607a;
+      --line: #dfe7f2;
+      --paper: #fff;
+      --mist: #f0f4fa;
+      --cyan: #22d3ee;
+      --blue: #3b82f6;
+      --indigo: #6366f1;
+      --teal: #14b8a6;
+      --violet: #8b5cf6;
+      --shadow: 0 36px 90px rgba(8,16,31,.14);
+      --glow: 0 0 60px rgba(34,211,238,.18);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "DM Sans", system-ui, sans-serif;
+      font-size: 15px; line-height: 1.55; color: var(--ink);
+      background: #aeb9cb; -webkit-font-smoothing: antialiased;
+    }
+    .deck { max-width: 1280px; margin: 0 auto; }
+    .slide {
+      width: 100%; aspect-ratio: 16/9; min-height: 720px;
+      background: var(--paper); position: relative; overflow: hidden;
+      page-break-after: always; break-after: page;
+      display: flex; flex-direction: column; margin-bottom: 28px;
+      box-shadow: var(--shadow);
+    }
+    .slide.dark { background: #050912; color: #f8fafc; }
+    .slide.mist { background: linear-gradient(180deg, #f5f8fc 0%, #eef3f9 100%); }
+    .slide::after {
+      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+      background-image: radial-gradient(rgba(59,130,246,.05) 1px, transparent 1px);
+      background-size: 28px 28px; opacity: .55;
+    }
+    .slide.dark::after { opacity: .12; background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px); }
+    .bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+    .veil {
+      position: absolute; inset: 0; z-index: 1;
+      background: linear-gradient(108deg, rgba(5,9,18,.94) 0%, rgba(5,9,18,.72) 48%, rgba(5,9,18,.22) 100%);
+    }
+    .veil.soft { background: linear-gradient(180deg, rgba(5,9,18,.42) 0%, rgba(5,9,18,.88) 100%); }
+    .inner {
+      position: relative; z-index: 2; flex: 1;
+      padding: 42px 54px 22px; display: flex; flex-direction: column; min-height: 0;
+    }
+    .foot {
+      position: relative; z-index: 2; padding: 0 54px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; letter-spacing: .12em; color: #94a3b8;
+    }
+    .slide.dark .foot { color: rgba(248,250,252,.36); }
+    .page-no {
+      padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 700;
+      background: rgba(59,130,246,.08); color: #3b82f6; letter-spacing: .08em;
+    }
+    .slide.dark .page-no { background: rgba(34,211,238,.12); color: #67e8f9; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
+      color: var(--blue); margin-bottom: 10px;
+    }
+    .slide.dark .eyebrow { color: #67e8f9; }
+    .eyebrow::before {
+      content: ""; width: 32px; height: 3px; border-radius: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--indigo));
+    }
+    h1, h2 {
+      font-family: "DM Sans", "Noto Sans SC", sans-serif;
+      font-weight: 700; letter-spacing: -.035em; line-height: 1.08;
+    }
+    h1 { font-size: clamp(2.55rem, 4.8vw, 3.65rem); }
+    h2 { font-size: clamp(1.72rem, 2.85vw, 2.28rem); }
+    .lead { margin-top: 12px; font-size: 1.06rem; color: var(--muted); max-width: 38rem; line-height: 1.65; }
+    .slide.dark .lead { color: rgba(248,250,252,.74); }
+    .gtext {
+      background: linear-gradient(95deg, #fff 0%, #67e8f9 42%, #a5b4fc 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .pill {
+      padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.07);
+      backdrop-filter: blur(10px); color: rgba(248,250,252,.94);
+    }
+    .stat-strip {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 28px;
+    }
+    .stat-box {
+      padding: 16px 18px; border-radius: 16px;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(8px);
+    }
+    .stat-box .val {
+      font-family: "DM Sans", sans-serif; font-size: 1.65rem; font-weight: 700;
+      background: linear-gradient(90deg, #67e8f9, #a5b4fc);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .stat-box .lbl { font-size: 12.5px; color: rgba(248,250,252,.62); margin-top: 4px; }
+
+    /* who cards */
+    .slide-who .inner { gap: 0; }
+    .svc-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+      margin-top: 18px; flex: 1; min-height: 0; align-items: stretch;
+    }
+    .svc {
+      border-radius: 24px; overflow: hidden; height: 100%;
+      background: #fff; border: 1px solid var(--line);
+      box-shadow: 0 16px 40px rgba(8,16,31,.07);
+      display: flex; flex-direction: column;
+    }
+    .svc .art {
+      flex: 1; min-height: 190px; display: grid; place-items: center; position: relative;
+    }
+    .svc .art::after {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 120%, rgba(255,255,255,.55), transparent 60%);
+    }
+    .svc.s1 .art { background: linear-gradient(155deg, #dbeafe, #93c5fd); }
+    .svc.s2 .art { background: linear-gradient(155deg, #ccfbf1, #5eead4); }
+    .svc.s3 .art { background: linear-gradient(155deg, #ede9fe, #c4b5fd); }
+    .svc .ico {
+      position: relative; z-index: 1;
+      width: 100px; height: 100px; border-radius: 28px;
+      display: grid; place-items: center; font-size: 50px;
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 16px 40px rgba(8,16,31,.12), var(--glow);
+    }
+    .svc .body { padding: 20px 22px 22px; flex-shrink: 0; }
+    .svc .tag {
+      display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      color: var(--blue); background: #eff6ff; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px;
+    }
+    .svc.s2 .tag { color: #0f766e; background: #ecfdf5; }
+    .svc.s3 .tag { color: #6d28d9; background: #f5f3ff; }
+    .svc h3 { font-size: 20px; margin-bottom: 6px; }
+    .svc p { font-size: 14.5px; color: var(--muted); line-height: 1.58; }
+
+    /* problem */
+    .prob-layout { flex: 1; display: grid; grid-template-columns: 1.05fr .95fr; gap: 20px; margin-top: 10px; min-height: 0; }
+    .hero-shot {
+      border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,.1);
+      box-shadow: 0 24px 60px rgba(0,0,0,.28);
+    }
+    .hero-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .pain-stack { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+    .pain {
+      display: flex; gap: 14px; align-items: center; padding: 14px 16px;
+      border-radius: 16px; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+    }
+    .pain .ico {
+      width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 20px;
+      background: linear-gradient(145deg, rgba(34,211,238,.18), rgba(99,102,241,.18));
+      border: 1px solid rgba(103,232,249,.2);
+    }
+    .pain strong { display: block; font-size: 15px; }
+    .pain span { font-size: 13px; color: rgba(248,250,252,.6); }
+
+    /* audience */
+    .aud-grid { flex: 1; display: grid; grid-template-columns: 1fr 1.2fr; gap: 18px; margin-top: 14px; min-height: 0; }
+    .aud-left { display: grid; grid-template-rows: repeat(3, 1fr); gap: 12px; }
+    .aud-card {
+      border-radius: 20px; padding: 20px 20px 18px; background: #fff;
+      border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(8,16,31,.05);
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+    .aud-card .mark {
+      width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 24px; background: var(--mist);
+    }
+    .aud-card h3 { font-size: 16px; margin-bottom: 4px; }
+    .aud-card p { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .aud-right {
+      border-radius: 24px; overflow: hidden; position: relative;
+      border: 1px solid var(--line); box-shadow: 0 16px 44px rgba(8,16,31,.08);
+    }
+    .aud-right img { width: 100%; height: 100%; object-fit: cover; }
+    .aud-right .overlay {
+      position: absolute; inset: auto 0 0 0; padding: 20px 22px;
+      background: linear-gradient(transparent, rgba(5,9,18,.82));
+      color: #fff;
+    }
+    .aud-right .overlay h3 { font-size: 18px; margin-bottom: 8px; }
+    .role-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .role {
+      padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18);
+    }
+
+    /* deliver 6 */
+    .del6 {
+      flex: 1; display: grid; grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: 1fr 1fr; gap: 14px; margin-top: 12px; min-height: 0;
+    }
+    .del {
+      border-radius: 20px; background: #fff; border: 1px solid var(--line);
+      overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 12px 32px rgba(8,16,31,.05);
+    }
+    .del .top {
+      height: 110px; display: grid; place-items: center; position: relative;
+    }
+    .del .top svg { width: 78%; height: 78%; }
+    .del .top .n {
+      position: absolute; top: 10px; left: 10px;
+      width: 28px; height: 28px; border-radius: 9px;
+      background: linear-gradient(135deg, var(--cyan), var(--blue));
+      color: #fff; font-family: "DM Sans", sans-serif; font-weight: 700; font-size: 12px;
+      display: grid; place-items: center;
+    }
+    .del .bot { padding: 14px 16px 16px; flex: 1; }
+    .del h3 { font-size: 16px; margin-bottom: 4px; }
+    .del p { font-size: 13px; color: var(--muted); line-height: 1.45; margin-bottom: 8px; }
+    .del .benefit {
+      font-size: 11.5px; font-weight: 700; color: #1d4ed8;
+      background: #eff6ff; padding: 5px 10px; border-radius: 8px; display: inline-block;
+    }
+    .g1 .top { background: linear-gradient(145deg, #e0f2fe, #bae6fd); }
+    .g2 .top { background: linear-gradient(145deg, #ccfbf1, #99f6e4); }
+    .g3 .top { background: linear-gradient(145deg, #ede9fe, #ddd6fe); }
+    .g4 .top { background: linear-gradient(145deg, #fef3c7, #fde68a); }
+    .g5 .top { background: linear-gradient(145deg, #dbeafe, #bfdbfe); }
+    .g6 .top { background: linear-gradient(145deg, #fce7f3, #fbcfe8); }
+
+    /* scenarios */
+    .scene4 {
+      flex: 1; display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 14px; margin-top: 12px; min-height: 0;
+    }
+    .scene {
+      border-radius: 22px; padding: 20px 20px 18px; background: #fff;
+      border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(8,16,31,.05);
+      display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: start;
+    }
+    .scene .icon {
+      width: 56px; height: 56px; border-radius: 16px;
+      display: grid; place-items: center; font-size: 28px;
+    }
+    .scene.s1 .icon { background: #dbeafe; }
+    .scene.s2 .icon { background: #ccfbf1; }
+    .scene.s3 .icon { background: #ede9fe; }
+    .scene.s4 .icon { background: #fef3c7; }
+    .scene h3 { font-size: 16px; margin-bottom: 6px; }
+    .scene .before { font-size: 12.5px; color: #94a3b8; margin-bottom: 4px; }
+    .scene .after { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .scene .after em { font-style: normal; color: #0f766e; font-weight: 600; }
+
+    /* ai 4 */
+    .ai4 {
+      flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; margin-top: 14px; min-height: 0;
+    }
+    .ai-card {
+      border-radius: 22px; padding: 20px 18px 18px; color: #fff;
+      display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden;
+      min-height: 280px;
+    }
+    .ai-card.c1 { background: linear-gradient(165deg, #0369a1, #0ea5e9 55%, #38bdf8); }
+    .ai-card.c2 { background: linear-gradient(165deg, #0f766e, #14b8a6 55%, #2dd4bf); }
+    .ai-card.c3 { background: linear-gradient(165deg, #1e3a8a, #4f46e5 55%, #818cf8); }
+    .ai-card.c4 { background: linear-gradient(165deg, #5b21b6, #8b5cf6 55%, #a78bfa); }
+    .ai-card .lv { font-size: 11px; font-weight: 700; letter-spacing: .16em; opacity: .75; }
+    .ai-card h3 { font-size: 1.28rem; }
+    .ai-card .desc { font-size: 13px; opacity: .88; line-height: 1.5; }
+    .ai-card ul { list-style: none; display: grid; gap: 6px; margin-top: auto; }
+    .ai-card li {
+      font-size: 12.5px; padding: 8px 10px; border-radius: 10px;
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.18);
+    }
+    .ai-card .ghost { position: absolute; right: -6px; top: -6px; font-size: 68px; opacity: .13; }
+
+    /* arch */
+    .arch-wrap {
+      flex: 1; display: flex; flex-direction: column; gap: 10px; margin-top: 10px; justify-content: center;
+    }
+    .arch-row { display: grid; gap: 12px; }
+    .arch-row.r3 { grid-template-columns: repeat(3, 1fr); }
+    .arch-row.r5 { grid-template-columns: repeat(5, 1fr); }
+    .ab {
+      border-radius: 18px; padding: 16px 12px; text-align: center;
+      background: #fff; border: 1px solid var(--line);
+      box-shadow: 0 8px 24px rgba(8,16,31,.04);
+    }
+    .ab.hi { background: linear-gradient(180deg, #eff6ff, #fff); border-color: #93c5fd; }
+    .ab.hub {
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      color: #fff; border: none; box-shadow: 0 18px 44px rgba(37,99,235,.28);
+    }
+    .ab .ic { font-size: 26px; margin-bottom: 6px; }
+    .ab h4 { font-size: 14px; font-weight: 700; }
+    .ab p { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+    .ab.hub p { color: rgba(255,255,255,.78); }
+    .arch-arrow { text-align: center; color: var(--blue); font-size: 18px; font-weight: 700; }
+
+    /* compare */
+    .compare3 {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+      margin-top: 16px; align-items: stretch;
+    }
+    .cmp {
+      border-radius: 22px; overflow: hidden; background: #fff;
+      border: 1px solid var(--line); display: flex; flex-direction: column;
+      box-shadow: 0 12px 32px rgba(8,16,31,.05);
+    }
+    .cmp.dim { background: #f8fafc; }
+    .cmp.win {
+      background: linear-gradient(180deg, #ecfeff, #fff);
+      border: 2px solid #67e8f9; box-shadow: 0 18px 44px rgba(6,182,212,.14);
+    }
+    .cmp .art { height: 110px; display: grid; place-items: center; font-size: 46px; }
+    .cmp.dim .art { background: #f1f5f9; }
+    .cmp.win .art { background: linear-gradient(145deg, #cffafe, #a5f3fc); }
+    .cmp .head { padding: 16px 20px 6px; }
+    .cmp .tag { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .06em; }
+    .cmp.win .tag { color: #0891b2; }
+    .cmp h3 { font-size: 19px; margin-top: 4px; }
+    .cmp ul { list-style: none; padding: 6px 20px 22px; display: grid; gap: 9px; }
+    .cmp li { font-size: 14.5px; color: #475569; padding-left: 20px; position: relative; line-height: 1.48; }
+    .cmp li::before { content: "·"; position: absolute; left: 0; color: var(--blue); font-weight: 700; font-size: 18px; }
+    .cmp.win li { color: #0f172a; font-weight: 500; }
+    .cmp.win li::before { content: "✓"; color: #0891b2; font-size: 14px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .chip {
+      padding: 10px 16px; border-radius: 12px; background: #fff;
+      border: 1px solid var(--line); font-size: 13px; font-weight: 600;
+      box-shadow: 0 6px 18px rgba(8,16,31,.04);
+    }
+    .chip b { color: var(--blue); margin-right: 4px; }
+
+    /* flow */
+    .flow-wrap { margin-top: 14px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+    .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; position: relative; }
+    .steps::before {
+      content: ""; position: absolute; top: 26px; left: 6%; right: 6%; height: 3px;
+      background: linear-gradient(90deg, var(--cyan), var(--blue), var(--teal)); opacity: .26;
+    }
+    .step {
+      position: relative; z-index: 1; background: #fff; border-radius: 18px;
+      border: 1px solid var(--line); padding: 18px 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      box-shadow: 0 10px 28px rgba(8,16,31,.05); min-height: 175px;
+    }
+    .step .dot {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--cyan), var(--indigo));
+      color: #fff; font-family: "DM Sans", sans-serif; font-weight: 700; font-size: 15px;
+      display: grid; place-items: center; box-shadow: 0 8px 20px rgba(59,130,246,.28);
+    }
+    .step .dur {
+      font-size: 10px; font-weight: 700; color: #0891b2;
+      background: #ecfeff; padding: 3px 8px; border-radius: 999px; align-self: flex-start;
+    }
+    .step h3 { font-size: 15px; }
+    .step p { font-size: 13px; color: var(--muted); line-height: 1.5; flex: 1; }
+    .flow-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      padding: 14px 18px; border-radius: 16px;
+      background: linear-gradient(90deg, #eff6ff, #ecfeff); border: 1px solid #bae6fd;
+    }
+    .flow-bar .item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13.5px; font-weight: 600; color: #1e3a8a;
+    }
+    .flow-bar .mini {
+      width: 34px; height: 34px; border-radius: 10px; background: #fff;
+      display: grid; place-items: center; font-size: 17px;
+      box-shadow: 0 4px 12px rgba(37,99,235,.1);
+    }
+
+    /* deliverables */
+    .deliver-grid {
+      flex: 1; display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; margin-top: 14px;
+    }
+    .ditem {
+      border-radius: 20px; padding: 22px 18px; background: #fff;
+      border: 1px solid var(--line); box-shadow: 0 12px 32px rgba(8,16,31,.05);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .ditem .ic {
+      width: 52px; height: 52px; border-radius: 16px;
+      display: grid; place-items: center; font-size: 26px; background: var(--mist);
+    }
+    .ditem h3 { font-size: 16px; }
+    .ditem p { font-size: 13px; color: var(--muted); line-height: 1.5; flex: 1; }
+    .ditem .check { font-size: 12px; font-weight: 700; color: #059669; }
+
+    /* cta */
+    .cta-grid {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 10px;
+    }
+    .cta-box {
+      border-radius: 22px; padding: 22px;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+      display: flex; flex-direction: column; gap: 10px; justify-content: center;
+    }
+    .cta-row {
+      display: flex; gap: 12px; align-items: center; padding: 12px 14px;
+      border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+    }
+    .cta-row .n {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--cyan), var(--indigo));
+      display: grid; place-items: center; font-size: 12px; font-weight: 700;
+    }
+    .cta-row span { font-size: 14px; color: rgba(248,250,252,.88); }
+    .cta-visual { border-radius: 22px; overflow: hidden; border: 1px solid rgba(255,255,255,.12); }
+    .cta-visual img { width: 100%; height: 100%; object-fit: cover; }
+    .banner {
+      margin-top: 12px; padding: 18px 22px; border-radius: 16px;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      background: linear-gradient(90deg, rgba(34,211,238,.18), rgba(99,102,241,.16));
+      border: 1px solid rgba(103,232,249,.28);
+    }
+    .banner strong { display: block; font-size: 1.12rem; }
+    .banner em { font-style: normal; font-size: 13px; color: rgba(248,250,252,.62); }
+    .btn {
+      padding: 11px 20px; border-radius: 999px; background: #fff;
+      color: var(--ink); font-weight: 700; font-size: 13px; white-space: nowrap;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .deck { max-width: none; }
+      .slide { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- 01 封面 -->
+  <section class="slide dark">
+    <img class="bg-img" src="images/deck-v2-transform.png" alt="" />
+    <div class="veil"></div>
+    <div class="inner">
+      <div style="margin:auto 0;">
+        <div class="eyebrow">AI Solution · SME Manufacturing</div>
+        <h1>为中小制造业<br /><span class="gtext">打造 AI 数字化方案</span></h1>
+        <p class="lead">我们帮工厂告别 Excel 孤岛，把订单、生产、库存、对账集成到一套 AI 驱动的经营系统——按需定制、私有化部署、持续迭代。</p>
+        <div class="pill-row">
+          <span class="pill">方案咨询与诊断</span>
+          <span class="pill">业务系统共建</span>
+          <span class="pill">AI 能力集成</span>
+          <span class="pill">长期运营陪伴</span>
+        </div>
+        <div class="stat-strip">
+          <div class="stat-box"><div class="val">离散制造</div><div class="lbl">压铸 · 机加 · 表面处理 · 多外协</div></div>
+          <div class="stat-box"><div class="val">10～200 人</div><div class="lbl">有 Excel 基础、想升级而非推倒重来</div></div>
+          <div class="stat-box"><div class="val">分阶段落地</div><div class="lbl">4～8 周一期 · 边用边长 · 数据自主</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">01 / 12</span></div>
+  </section>
+
+  <!-- 02 我们是谁 -->
+  <section class="slide mist slide-who">
+    <div class="inner">
+      <div class="eyebrow">Who We Are</div>
+      <h2>您的 AI 数字化方案伙伴，不是标准软件供应商</h2>
+      <div class="svc-grid">
+        <article class="svc s1">
+          <div class="art"><div class="ico">🔍</div></div>
+          <div class="body">
+            <span class="tag">STEP 01 · 诊断</span>
+            <h3>先诊断，再设计</h3>
+            <p>进工厂、看表格、访跟单与仓库，梳理真实业务流，找出 Excel 断点与重复录入，输出分期方案与优先级。</p>
+          </div>
+        </article>
+        <article class="svc s2">
+          <div class="art"><div class="ico">🛠️</div></div>
+          <div class="body">
+            <span class="tag">STEP 02 · 共建</span>
+            <h3>按业务定制系统</h3>
+            <p>系统适配您的经营方式，不强迫一线改习惯。先跑通「接单—交付—回款」主链路，再按需扩展模块。</p>
+          </div>
+        </article>
+        <article class="svc s3">
+          <div class="art"><div class="ico">🤖</div></div>
+          <div class="body">
+            <span class="tag">STEP 03 · AI</span>
+            <h3>AI 深度嵌入业务</h3>
+            <p>OCR 读单、Excel 智能解析、交期/缺料预警、经营问答——让 AI 参与日常经营，而非演示噱头。</p>
+          </div>
+        </article>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">02 / 12</span></div>
+  </section>
+
+  <!-- 03 痛点 -->
+  <section class="slide dark">
+    <div class="inner">
+      <div class="eyebrow">The Problem</div>
+      <h2 style="color:#f8fafc;">大量中小工厂，仍困在「表格 + 微信 + 纸单」</h2>
+      <div class="prob-layout">
+        <div class="hero-shot">
+          <img src="images/deck-chaos-to-order.png" alt="从混乱到有序" />
+        </div>
+        <div class="pain-stack">
+          <div class="pain"><div class="ico">📊</div><div><strong>多版本 Excel 各写各的</strong><span>销售、计划、仓库、财务口径对不上</span></div></div>
+          <div class="pain"><div class="ico">💬</div><div><strong>急单改数在微信里</strong><span>无法检索、无法汇总、无法追溯</span></div></div>
+          <div class="pain"><div class="ico">📞</div><div><strong>交期靠打电话问</strong><span>外协在途、缺料情况没人说得清</span></div></div>
+          <div class="pain"><div class="ico">💸</div><div><strong>传统 ERP 用不起、用不好</strong><span>实施贵、周期长、一线不爱用</span></div></div>
+          <div class="pain"><div class="ico">⏱️</div><div><strong>AI 时代是转折点</strong><span>定制系统成本下降，PO/BOM 可直接读进系统</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">03 / 12</span></div>
+  </section>
+
+  <!-- 04 适合谁 -->
+  <section class="slide">
+    <div class="inner">
+      <div class="eyebrow">Who It's For</div>
+      <h2>我们特别适合这样的工厂</h2>
+      <div class="aud-grid">
+        <div class="aud-left">
+          <div class="aud-card">
+            <div class="mark">🏭</div>
+            <div><h3>离散制造 · 多工序多外协</h3><p>压铸、机加、表面处理等，品种多、批量小、交期紧。</p></div>
+          </div>
+          <div class="aud-card">
+            <div class="mark">👥</div>
+            <div><h3>10～200 人 · 信息化预算有限</h3><p>Excel 已跟不上，但买不起、用不好大型 ERP。</p></div>
+          </div>
+          <div class="aud-card">
+            <div class="mark">📑</div>
+            <div><h3>有台账基础 · 希望平滑升级</h3><p>不想推倒重来，愿意分阶段把表格搬进系统。</p></div>
+          </div>
+        </div>
+        <div class="aud-right">
+          <img src="images/deck-hero-hub.png" alt="数字化中枢" />
+          <div class="overlay">
+            <h3>方案受益角色</h3>
+            <div class="role-row">
+              <span class="role">老板 · 看全局</span>
+              <span class="role">跟单 · 少抄单</span>
+              <span class="role">计划 · 答交期</span>
+              <span class="role">仓库 · 知在途</span>
+              <span class="role">财务 · 月结顺</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">04 / 12</span></div>
+  </section>
+
+  <!-- 05 交付成果 -->
+  <section class="slide mist">
+    <div class="inner">
+      <div class="eyebrow">What We Deliver</div>
+      <h2>我们能帮您做成的 6 件事</h2>
+      <div class="del6">
+        <article class="del g1">
+          <div class="top"><div class="n">01</div>
+            <svg viewBox="0 0 200 120" fill="none"><rect x="30" y="20" width="80" height="60" rx="6" fill="#fff" stroke="#0284c7" stroke-width="2"/><circle cx="170" cy="50" r="14" fill="#2563eb"/><path d="M50 40h40M50 52h28M50 64h18" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round"/></svg>
+          </div>
+          <div class="bot"><h3>订单数字化</h3><p>AI 读客户 PO / 合同，结构化入库</p><span class="benefit">→ 录入效率提升 70%+</span></div>
+        </article>
+        <article class="del g2">
+          <div class="top"><div class="n">02</div>
+            <svg viewBox="0 0 200 120" fill="none"><rect x="40" y="30" width="120" height="60" rx="8" fill="#fff" stroke="#0f766e" stroke-width="2"/><path d="M60 55h80M60 70h50" stroke="#14b8a6" stroke-width="4" stroke-linecap="round"/></svg>
+          </div>
+          <div class="bot"><h3>生产外协可视</h3><p>工序在途、跳序、返修有账可查</p><span class="benefit">→ 交期答复有据</span></div>
+        </article>
+        <article class="del g3">
+          <div class="top"><div class="n">03</div>
+            <svg viewBox="0 0 200 120" fill="none"><rect x="50" y="25" width="100" height="70" rx="6" fill="#fff" stroke="#7c3aed" stroke-width="2"/><path d="M70 50h60M70 65h40M70 80h50" stroke="#a78bfa" stroke-width="3" stroke-linecap="round"/></svg>
+          </div>
+          <div class="bot"><h3>库存实时掌握</h3><p>场内 / 在途 / 成品一屏看清</p><span class="benefit">→ 减少超交与缺料</span></div>
+        </article>
+        <article class="del g4">
+          <div class="top"><div class="n">04</div>
+            <svg viewBox="0 0 200 120" fill="none"><path d="M40 85V55l30-20 30 15 30-25 30 10v50H40z" fill="#fef3c7" stroke="#d97706" stroke-width="2"/></svg>
+          </div>
+          <div class="bot"><h3>成本与 BOM 管理</h3><p>工程表智能导入，支撑报价</p><span class="benefit">→ 成本试算更快</span></div>
+        </article>
+        <article class="del g5">
+          <div class="top"><div class="n">05</div>
+            <svg viewBox="0 0 200 120" fill="none"><rect x="45" y="30" width="110" height="60" rx="8" fill="#fff" stroke="#2563eb" stroke-width="2"/><path d="M65 70V55M90 70V45M115 70V50M140 70V38" stroke="#3b82f6" stroke-width="6" stroke-linecap="round"/></svg>
+          </div>
+          <div class="bot"><h3>财务对账自动化</h3><p>应收应付按账期汇总</p><span class="benefit">→ 月结时间减半</span></div>
+        </article>
+        <article class="del g6">
+          <div class="top"><div class="n">06</div>
+            <svg viewBox="0 0 200 120" fill="none"><circle cx="100" cy="55" r="28" fill="#fce7f3" stroke="#db2777" stroke-width="2"/><path d="M85 55h30M100 40v30" stroke="#db2777" stroke-width="3" stroke-linecap="round"/></svg>
+          </div>
+          <div class="bot"><h3>AI 辅助经营决策</h3><p>风险预警、缺料提示、经营问答</p><span class="benefit">→ 从记数据到用数据</span></div>
+        </article>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">05 / 12</span></div>
+  </section>
+
+  <!-- 06 典型场景 -->
+  <section class="slide">
+    <div class="inner">
+      <div class="eyebrow">Use Cases</div>
+      <h2>四个典型场景 ·  Before → After</h2>
+      <div class="scene4">
+        <div class="scene s1">
+          <div class="icon">📄</div>
+          <div>
+            <h3>客户 PO 录入</h3>
+            <div class="before">Before · 人工抄写 15 列，易错易漏</div>
+            <div class="after"><em>After ·</em> AI 识别 PO，人审黄标字段后入库</div>
+          </div>
+        </div>
+        <div class="scene s2">
+          <div class="icon">🏭</div>
+          <div>
+            <h3>外协交期答复</h3>
+            <div class="before">Before · 翻多表 + 打电话问在途</div>
+            <div class="after"><em>After ·</em> 工序在途一屏可见，交期有据可答</div>
+          </div>
+        </div>
+        <div class="scene s3">
+          <div class="icon">💰</div>
+          <div>
+            <h3>月结前对账</h3>
+            <div class="before">Before · 手工拼应收应付，扯皮耗时</div>
+            <div class="after"><em>After ·</em> 按客户账期自动汇总，一键钻取明细</div>
+          </div>
+        </div>
+        <div class="scene s4">
+          <div class="icon">📈</div>
+          <div>
+            <h3>老板看经营</h3>
+            <div class="before">Before · 拖款、缺料、交期风险凭感觉</div>
+            <div class="after"><em>After ·</em> 看板 + AI 摘要，异常主动推送</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">06 / 12</span></div>
+  </section>
+
+  <!-- 07 AI 能力 -->
+  <section class="slide mist">
+    <div class="inner">
+      <div class="eyebrow">AI Capabilities</div>
+      <h2>四层 AI 方案能力 · 逐步释放价值</h2>
+      <div class="ai4">
+        <div class="ai-card c1">
+          <div class="ghost">📄</div><div class="lv">LAYER 01</div><h3>智能录入</h3>
+          <div class="desc">把重复劳动交给 AI，人只审关键项</div>
+          <ul><li>PDF / 图片 PO → 结构化订单</li><li>工程 BOM Excel 批量解析</li><li>客户名 / 料号智能匹配</li></ul>
+        </div>
+        <div class="ai-card c2">
+          <div class="ghost">🔗</div><div class="lv">LAYER 02</div><h3>数据联通</h3>
+          <div class="desc">一处录入，全链路自动引用</div>
+          <ul><li>订单 ↔ 库存 ↔ 对账</li><li>出货扣减 · 不足拦截</li><li>飞书 / 企微变动推送</li></ul>
+        </div>
+        <div class="ai-card c3">
+          <div class="ghost">⚠️</div><div class="lv">LAYER 03</div><h3>智能预警</h3>
+          <div class="desc">风险主动发现，不再事后补救</div>
+          <ul><li>交期 / 缺料风险预警</li><li>拖款 / 成本异常提示</li><li>未结订单交期黄红标</li></ul>
+        </div>
+        <div class="ai-card c4">
+          <div class="ghost">💬</div><div class="lv">LAYER 04</div><h3>经营助手</h3>
+          <div class="desc">用自然语言问经营问题</div>
+          <ul><li>「这单能接吗？」</li><li>本周出货 / 回款摘要</li><li>按客户 / 料号智能问答</li></ul>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">07 / 12</span></div>
+  </section>
+
+  <!-- 08 架构 -->
+  <section class="slide">
+    <div class="inner">
+      <div class="eyebrow">Architecture</div>
+      <h2>我们为您搭建的方案架构</h2>
+      <div class="arch-wrap">
+        <div class="arch-row r3">
+          <div class="ab"><div class="ic">📱</div><h4>业务入口</h4><p>Web · 移动端 · 消息</p></div>
+          <div class="ab hi"><div class="ic">🧠</div><h4>AI 能力层</h4><p>OCR · 解析 · 预警 · 问答</p></div>
+          <div class="ab"><div class="ic">🔒</div><h4>私有化部署</h4><p>数据留在企业手里</p></div>
+        </div>
+        <div class="arch-arrow">▼ 业务数据层 ▼</div>
+        <div class="arch-row r5">
+          <div class="ab"><div class="ic">📋</div><h4>订单</h4><p>接单 / 交期</p></div>
+          <div class="ab"><div class="ic">🏭</div><h4>生产</h4><p>BOM / 外协</p></div>
+          <div class="ab hub"><div class="ic">🗄️</div><h4>统一数据</h4><p>一处录入 · 全链引用</p></div>
+          <div class="ab"><div class="ic">📦</div><h4>库存</h4><p>在途 / 成品</p></div>
+          <div class="ab"><div class="ic">💰</div><h4>财务</h4><p>应收 / 应付</p></div>
+        </div>
+        <div class="arch-arrow">▼ 决策输出层 ▼</div>
+        <div class="arch-row r3">
+          <div class="ab"><div class="ic">📈</div><h4>经营看板</h4><p>交期 / 拖款 / 缺料</p></div>
+          <div class="ab hi"><div class="ic">🤖</div><h4>AI 决策建议</h4><p>预警 · 摘要 · 问答</p></div>
+          <div class="ab"><div class="ic">🔄</div><h4>持续迭代</h4><p>边用边长 · 按需扩展</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">08 / 12</span></div>
+  </section>
+
+  <!-- 09 为什么选我们 -->
+  <section class="slide mist">
+    <div class="inner">
+      <div class="eyebrow">Why Us</div>
+      <h2>为什么选我们，而不是传统路径？</h2>
+      <div class="compare3">
+        <div class="cmp dim">
+          <div class="art">📦</div>
+          <div class="head"><div class="tag">路径 A</div><h3>买标准 ERP</h3></div>
+          <ul><li>实施贵、周期长</li><li>模块多但用不起来</li><li>小改动也要排期加钱</li></ul>
+        </div>
+        <div class="cmp dim">
+          <div class="art">📊</div>
+          <div class="head"><div class="tag">路径 B</div><h3>继续堆 Excel</h3></div>
+          <ul><li>零成本但逐渐失控</li><li>人越多越乱</li><li>管理层看不见全局</li></ul>
+        </div>
+        <div class="cmp win">
+          <div class="art">🤖</div>
+          <div class="head"><div class="tag">我们的方案 ✦</div><h3>AI 定制数字化</h3></div>
+          <ul>
+            <li>按业务定制，贴合工厂</li>
+            <li>AI 降低开发与录入成本</li>
+            <li>分阶段上线，边用边长</li>
+            <li>私有化部署，数据自主</li>
+          </ul>
+        </div>
+      </div>
+      <div class="chip-row">
+        <div class="chip"><b>●</b>懂制造现场</div>
+        <div class="chip"><b>●</b>AI 原生方案设计</div>
+        <div class="chip"><b>●</b>快速迭代响应</div>
+        <div class="chip"><b>●</b>培训可交接</div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">09 / 12</span></div>
+  </section>
+
+  <!-- 10 合作流程 -->
+  <section class="slide">
+    <div class="inner">
+      <div class="eyebrow">How We Work</div>
+      <h2>合作流程 · 从初诊到长期陪伴</h2>
+      <div class="flow-wrap">
+        <div class="steps">
+          <div class="step"><div class="dot">1</div><span class="dur">1～2 周</span><h3>免费初诊</h3><p>带 Excel / PO，梳理痛点，输出分期方案</p></div>
+          <div class="step"><div class="dot">2</div><span class="dur">1 周</span><h3>方案确认</h3><p>明确一期范围、周期、部署与验收标准</p></div>
+          <div class="step"><div class="dot">3</div><span class="dur">4～8 周</span><h3>一期共建</h3><p>跑通主链路：接单 → 交付 → 回款</p></div>
+          <div class="step"><div class="dot">4</div><span class="dur">按需</span><h3>二期扩展</h3><p>BOM、库存、AI 预警、经营助手</p></div>
+          <div class="step"><div class="dot">5</div><span class="dur">长期</span><h3>持续陪伴</h3><p>培训交接、版本迭代、技术支持</p></div>
+        </div>
+        <div class="flow-bar">
+          <div class="item"><div class="mini">📄</div>智能录入</div>
+          <div class="item"><div class="mini">🔗</div>数据联通</div>
+          <div class="item"><div class="mini">⚠️</div>智能预警</div>
+          <div class="item"><div class="mini">💬</div>经营助手</div>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">10 / 12</span></div>
+  </section>
+
+  <!-- 11 交付清单 -->
+  <section class="slide mist">
+    <div class="inner">
+      <div class="eyebrow">Deliverables</div>
+      <h2>您将获得的交付物</h2>
+      <div class="deliver-grid">
+        <div class="ditem">
+          <div class="ic">🖥️</div>
+          <h3>私有化业务系统</h3>
+          <p>部署在您的服务器或指定云主机，数据完全自主可控。</p>
+          <span class="check">✓ 含一期全部功能模块</span>
+        </div>
+        <div class="ditem">
+          <div class="ic">📖</div>
+          <h3>操作 SOP 与培训</h3>
+          <p>图文手册 + 现场陪跑，确保一线能独立日常使用。</p>
+          <span class="check">✓ 按角色分册交付</span>
+        </div>
+        <div class="ditem">
+          <div class="ic">🗄️</div>
+          <h3>数据迁移支持</h3>
+          <p>协助将现有 Excel 主数据、客户档案、历史订单导入系统。</p>
+          <span class="check">✓ 脱敏处理 · 分批迁移</span>
+        </div>
+        <div class="ditem">
+          <div class="ic">🔄</div>
+          <h3>迭代与技术支持</h3>
+          <p>版本更新、Bug 修复、小需求快速响应，系统随业务成长。</p>
+          <span class="check">✓ 变更记录可追溯</span>
+        </div>
+      </div>
+    </div>
+    <div class="foot"><span>中小制造业 AI 数字化方案 · v2</span><span class="page-no">11 / 12</span></div>
+  </section>
+
+  <!-- 12 CTA -->
+  <section class="slide dark">
+    <img class="bg-img" src="images/deck-v2-transform.png" alt="" style="opacity:.38" />
+    <div class="veil soft"></div>
+    <div class="inner">
+      <div class="eyebrow">Start Here</div>
+      <h2 style="color:#f8fafc;">30 分钟，评估您的 AI 数字化空间</h2>
+      <div class="cta-grid">
+        <div class="cta-box">
+          <div class="cta-row"><div class="n">1</div><span>准备 2～3 份脱敏 Excel 或客户 PO</span></div>
+          <div class="cta-row"><div class="n">2</div><span>说明目前最痛的环节（录单 / 交期 / 对账…）</span></div>
+          <div class="cta-row"><div class="n">3</div><span>获得分期方案建议与一期范围评估</span></div>
+        </div>
+        <div class="cta-visual">
+          <img src="images/deck-four-capabilities.png" alt="AI 方案能力" style="object-position:left center" />
+        </div>
+      </div>
+      <div class="banner">
+        <div>
+          <strong>预约方案沟通</strong>
+          <em>帮助中小制造企业 · 用 AI 把 Excel 时代的业务，升级为智能经营</em>
+        </div>
+        <div class="btn">联系您的对接人</div>
+      </div>
+    </div>
+    <div class="foot"><span>Thank You</span><span class="page-no">12 / 12</span></div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -108,11 +108,32 @@ function syncOutboundToOptions() {
     return;
   }
   toSel.disabled = false;
+  if (selectedAction === "skip_outbound") {
+    syncSkipOutboundToOptions();
+    return;
+  }
   const next = nextStep(fromCode);
   const opts = next
     ? [{ value: next.code, label: stepLabel(next) }]
     : [{ value: "", label: "请选择下道工序" }];
   fillRouteSelect(toSel, opts, next ? next.code : "");
+}
+
+function syncSkipOutboundToOptions() {
+  const fromSel = document.getElementById("invOutboundFrom");
+  const toSel = document.getElementById("invOutboundTo");
+  if (!fromSel || !toSel) return;
+  const fromCode = fromSel.value;
+  const prevTo = toSel.value;
+  const opts = route
+    .filter((s) => s.code !== fromCode)
+    .map((s) => ({ value: s.code, label: stepLabel(s) }));
+  if (!opts.length) {
+    fillRouteSelect(toSel, [{ value: "", label: "无可用目标工序" }], "");
+    return;
+  }
+  const keep = opts.some((o) => o.value === prevTo) ? prevTo : opts[0].value;
+  fillRouteSelect(toSel, opts, keep);
 }
 
 function prevStep(code) {
@@ -127,6 +148,14 @@ function stageRow(code) {
 
 function currentAdjustContext() {
   if (selectedKey === "FIN") {
+    const scope = document.getElementById("invAdjustScope")?.value || "finished";
+    if (scope === "repair") {
+      return {
+        status: "repair",
+        current: boardRow?.finished_repair_qty || "0",
+        label: "成品返修在途",
+      };
+    }
     return {
       status: "finished",
       current: boardRow?.finished_qty || "0",
@@ -143,11 +172,24 @@ function currentAdjustContext() {
       label: "在途",
     };
   }
+  if (scope === "repair") {
+    return {
+      status: "repair",
+      current: stage?.repair_qty || "0",
+      label: "返修在途",
+    };
+  }
   return {
     status: "inhouse",
     current: stage?.inhouse_qty || "0",
     label: "场内",
   };
+}
+
+function resolveRepairProcessCode() {
+  if (selectedKey === "FIN") return "FIN";
+  if (selectedKey) return selectedKey;
+  return route[0]?.code || "";
 }
 
 async function ensureSuppliers() {
@@ -225,10 +267,13 @@ function renderStations() {
         (hasTransit ? " is-transit-pending" : "") +
         selected;
       const pendingHint = hasTransit ? `<div class="inv-stage-pending">待回货</div>` : "";
+      const repairQty = Number(s.repair_qty);
+      const hasRepair = Number.isFinite(repairQty) && repairQty > 0;
       return `<button type="button" class="${cls}" data-key="${esc(s.process_code)}" data-kind="process">
         <div class="inv-stage-name">${esc(s.process_code)} ${esc(s.process_name)}</div>
         <div class="inv-stage-qty">场内 <b>${esc(s.inhouse_qty)}</b></div>
         <div class="inv-stage-qty">在途 <b>${esc(s.outsource_qty)}</b></div>
+        <div class="inv-stage-qty">返修 <b>${esc(s.repair_qty || "0")}</b></div>
         ${pendingHint}
       </button>`;
     })
@@ -252,7 +297,8 @@ function renderStations() {
   </div>`;
   const finishedHtml = `<button type="button" class="inv-stage inv-stage-clickable is-finished${finSelected}" data-key="FIN" data-kind="finished">
     <div class="inv-stage-name">成品库存</div>
-    <div class="inv-stage-qty"><b>${esc(boardRow.finished_qty)}</b> PCS</div>
+    <div class="inv-stage-qty">成品 <b>${esc(boardRow.finished_qty)}</b> PCS</div>
+    <div class="inv-stage-qty">返修 <b>${esc(boardRow.finished_repair_qty || "0")}</b> PCS</div>
   </button>`;
   host.innerHTML = `${head}<div class="inv-stages">${stageHtml}${finishedHtml}</div>`;
   host.querySelectorAll(".inv-stage-clickable").forEach((btn) => {
@@ -288,6 +334,9 @@ async function renderActionPanel() {
   const actions = [
     { id: "inbound", label: "入库" },
     { id: "outbound", label: "出库" },
+    { id: "skip_outbound", label: "跳序出库" },
+    { id: "repair_out", label: "返修" },
+    { id: "repair_in", label: "返修入库" },
     { id: "adjust", label: "校正库存" },
   ];
   if (!selectedAction) selectedAction = "inbound";
@@ -309,7 +358,36 @@ async function renderActionPanel() {
   document.getElementById("invActionType").value = selectedAction;
   const isInbound = selectedAction === "inbound";
   const isOutbound = selectedAction === "outbound";
+  const isSkipOutbound = selectedAction === "skip_outbound";
+  const isRepairOut = selectedAction === "repair_out";
+  const isRepairIn = selectedAction === "repair_in";
   const isAdjust = selectedAction === "adjust";
+
+  const hintEl = document.getElementById("invActionHint");
+  if (hintEl) {
+    if (isSkipOutbound) {
+      hintEl.hidden = false;
+      hintEl.textContent =
+        "跳序：从「从工序」场内扣减，在「到工序」增加在途（可跨道或逆向回补，如 1→3 或 3→2）。入库规则不变。";
+    } else if (isOutbound) {
+      hintEl.hidden = false;
+      hintEl.textContent = "顺序出库：仅允许发往下道相邻工序。";
+    } else if (isRepairOut) {
+      hintEl.hidden = false;
+      hintEl.textContent =
+        "返修：从当前选中工序「场内」或「成品」扣减，同位置增加「返修在途」。请先点选上方工序卡片。";
+    } else if (isRepairIn) {
+      hintEl.hidden = false;
+      hintEl.textContent = "返修入库：返修在途扣减，恢复为场内或成品库存。";
+    } else if (isAdjust) {
+      hintEl.hidden = false;
+      const ctx = currentAdjustContext();
+      hintEl.textContent = `校正：设定${ctx.label}正确余额（当前 ${ctx.current}）。可选场内 / 在途 / 返修在途。`;
+    } else {
+      hintEl.hidden = true;
+      hintEl.textContent = "";
+    }
+  }
 
   const inboundSel = document.getElementById("invInboundProcess");
   const outboundFromSel = document.getElementById("invOutboundFrom");
@@ -332,12 +410,18 @@ async function renderActionPanel() {
     outboundFrom = "FIN";
   } else if (selectedKey && selectedKey !== "FIN") {
     outboundFrom = selectedKey;
-  } else if (isOutbound && outboundFromSel?.value) {
+  } else if ((isOutbound || isSkipOutbound) && outboundFromSel?.value) {
     outboundFrom = outboundFromSel.value;
   }
   const fromOpts = route.map((s) => ({ value: s.code, label: stepLabel(s) }));
-  fromOpts.push({ value: "FIN", label: "成品（出库给客户）" });
+  if (!isSkipOutbound) {
+    fromOpts.push({ value: "FIN", label: "成品（出库给客户）" });
+  }
   fillRouteSelect(outboundFromSel, fromOpts, outboundFrom);
+  if (isSkipOutbound && outboundFrom === "FIN") {
+    outboundFrom = route[0]?.code || "";
+    if (outboundFromSel) outboundFromSel.value = outboundFrom;
+  }
   syncOutboundToOptions();
   if (isOutbound && outboundToSel && outboundFrom !== "FIN") {
     const nxt = nextStep(outboundFrom);
@@ -345,8 +429,8 @@ async function renderActionPanel() {
   }
 
   if (inboundField) inboundField.hidden = !isInbound && !isAdjust;
-  if (outboundFromField) outboundFromField.hidden = !isOutbound;
-  if (outboundToField) outboundToField.hidden = !isOutbound;
+  if (outboundFromField) outboundFromField.hidden = !(isOutbound || isSkipOutbound);
+  if (outboundToField) outboundToField.hidden = !(isOutbound || isSkipOutbound);
 
   const adjustCode = resolveAdjustProcessCode();
   document.getElementById("invProcessCode").value = isAdjust
@@ -362,10 +446,42 @@ async function renderActionPanel() {
   const adjustScopeField = document.getElementById("invAdjustScopeField");
   const qtyInput = document.querySelector("#invQtyField input[name=qty]");
   const qtyLabel = document.getElementById("invQtyLabel");
-  const isOutsourceStation =
-    adjustCode && route.some((s) => s.code === adjustCode && s.is_outsource);
-  if (adjustScopeField) adjustScopeField.hidden = !(isAdjust && isOutsourceStation && selectedKey !== "FIN");
-  if (qtyLabel) qtyLabel.textContent = isAdjust ? "正确数量 (PCS)" : "数量 (PCS)";
+  const adjustStep = route.find((s) => s.code === adjustCode);
+  const adjustScopeSel = document.getElementById("invAdjustScope");
+  if (adjustScopeSel && isAdjust) {
+    const prevScope = adjustScopeSel.value;
+    if (selectedKey === "FIN") {
+      fillRouteSelect(
+        adjustScopeSel,
+        [
+          { value: "finished", label: "成品" },
+          { value: "repair", label: "返修在途" },
+        ],
+        prevScope === "inhouse" || prevScope === "outsource" ? "finished" : prevScope
+      );
+    } else {
+      fillRouteSelect(
+        adjustScopeSel,
+        [
+          { value: "inhouse", label: "场内" },
+          { value: "outsource", label: "在途" },
+          { value: "repair", label: "返修在途" },
+        ],
+        prevScope === "finished" ? "inhouse" : prevScope
+      );
+    }
+  }
+  if (adjustScopeField) {
+    adjustScopeField.hidden = !isAdjust;
+  }
+  if (qtyLabel) {
+    if (isAdjust) {
+      const ctx = currentAdjustContext();
+      qtyLabel.textContent = `${ctx.label}正确数量 (PCS)`;
+    } else {
+      qtyLabel.textContent = "数量 (PCS)";
+    }
+  }
   if (qtyInput) {
     qtyInput.min = isAdjust ? "0" : "0.1";
     qtyInput.step = "0.1";
@@ -384,11 +500,15 @@ async function renderActionPanel() {
     const toStep = route.find((s) => s.code === toCode);
     needSupplier = Boolean(toStep?.is_outsource);
     bomSupplier = toStep?.supplier || "";
-  } else if (isAdjust && isOutsourceStation && selectedKey !== "FIN") {
+  } else if (isSkipOutbound) {
+    const toCode = outboundToSel?.value || "";
+    const toStep = route.find((s) => s.code === toCode);
+    needSupplier = Boolean(toStep?.is_outsource);
+    bomSupplier = toStep?.supplier || "";
+  } else if (isAdjust && selectedKey !== "FIN") {
     const scope = document.getElementById("invAdjustScope")?.value || "inhouse";
-    needSupplier = scope === "outsource";
-    const step = route.find((s) => s.code === adjustCode);
-    bomSupplier = step?.supplier || "";
+    needSupplier = scope === "outsource" && Boolean(adjustStep?.is_outsource);
+    bomSupplier = adjustStep?.supplier || "";
   }
   supplierField.hidden = !needSupplier;
   if (needSupplier) {
@@ -621,10 +741,10 @@ document.getElementById("invOutboundFrom")?.addEventListener("change", () => {
   const code = document.getElementById("invOutboundFrom")?.value || "";
   selectedKey = code === "FIN" ? "FIN" : code;
   syncOutboundToOptions();
-  if (selectedAction === "outbound") renderActionPanel();
+  if (selectedAction === "outbound" || selectedAction === "skip_outbound") renderActionPanel();
 });
 document.getElementById("invOutboundTo")?.addEventListener("change", () => {
-  if (selectedAction === "outbound") renderActionPanel();
+  if (selectedAction === "outbound" || selectedAction === "skip_outbound") renderActionPanel();
 });
 
 document.getElementById("invSubmitForm")?.addEventListener("submit", async (e) => {
@@ -684,11 +804,40 @@ document.getElementById("invSubmitForm")?.addEventListener("submit", async (e) =
         return;
       }
     }
+  } else if (action === "skip_outbound") {
+    url = "/api/inventory/skip-outbound";
+    payload.from_process_code = document.getElementById("invOutboundFrom")?.value || "";
+    payload.to_process_code = document.getElementById("invOutboundTo")?.value || "";
+    if (!payload.from_process_code || !payload.to_process_code) {
+      setMsg("跳序出库须选择从工序与到工序", false);
+      return;
+    }
+    if (payload.from_process_code === payload.to_process_code) {
+      setMsg("起止工序不能相同", false);
+      return;
+    }
+    const toStep = route.find((s) => s.code === payload.to_process_code);
+    if (toStep?.is_outsource) {
+      payload.supplier_name = (document.getElementById("invSupplierHidden") || {}).value || "";
+      if (!payload.supplier_name.trim()) {
+        setMsg("发往外发工序须选择供应商", false);
+        return;
+      }
+    }
+  } else if (action === "repair_out" || action === "repair_in") {
+    url = action === "repair_out" ? "/api/inventory/repair-out" : "/api/inventory/repair-in";
+    payload.process_code = resolveRepairProcessCode();
+    if (!payload.process_code) {
+      setMsg("请先点选上方工序卡片或载入成品", false);
+      return;
+    }
   } else if (action === "adjust") {
     url = "/api/inventory/adjust";
     payload.target_qty = form.qty.value;
     if (selectedKey === "FIN") {
-      payload.status = "finished";
+      const scope = document.getElementById("invAdjustScope")?.value || "finished";
+      payload.status = scope === "repair" ? "repair" : "finished";
+      if (scope === "repair") payload.process_code = "FIN";
     } else {
       payload.process_code = resolveAdjustProcessCode();
       if (!payload.process_code) {
@@ -696,10 +845,11 @@ document.getElementById("invSubmitForm")?.addEventListener("submit", async (e) =
         return;
       }
       const scope = document.getElementById("invAdjustScope")?.value || "inhouse";
-      payload.status = scope === "outsource" ? "outsource" : "inhouse";
+      payload.status = scope === "outsource" ? "outsource" : scope === "repair" ? "repair" : "inhouse";
       if (payload.status === "outsource") {
         payload.supplier_name = (document.getElementById("invSupplierHidden") || {}).value || "";
-        if (!payload.supplier_name.trim()) {
+        const step = route.find((s) => s.code === payload.process_code);
+        if (step?.is_outsource && !payload.supplier_name.trim()) {
           setMsg("在途校正须选择供应商", false);
           return;
         }

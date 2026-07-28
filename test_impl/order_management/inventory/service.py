@@ -24,11 +24,15 @@ from .store import (
     STATUS_FINISHED,
     STATUS_INHOUSE,
     STATUS_OUTSOURCE,
+    STATUS_REPAIR,
     InventoryStore,
 )
 
 ACTION_INBOUND = "inbound"
 ACTION_OUTBOUND = "outbound"
+ACTION_SKIP_OUTBOUND = "skip_outbound"
+ACTION_REPAIR_OUT = "repair_out"
+ACTION_REPAIR_IN = "repair_in"
 ACTION_COMPLETE = "complete"
 ACTION_OUT_SEND = "outsource_send"
 ACTION_OUT_RECV = "outsource_receive"
@@ -38,6 +42,9 @@ ACTION_ADJUST = "balance_adjust"
 ACTION_LABELS = {
     ACTION_INBOUND: "入库",
     ACTION_OUTBOUND: "出库",
+    ACTION_SKIP_OUTBOUND: "跳序出库",
+    ACTION_REPAIR_OUT: "返修",
+    ACTION_REPAIR_IN: "返修入库",
     ACTION_COMPLETE: "入库",
     ACTION_OUT_SEND: "出库",
     ACTION_OUT_RECV: "入库",
@@ -49,6 +56,9 @@ ACTION_LABELS = {
 DOC_PREFIX = {
     ACTION_INBOUND: "RK",
     ACTION_OUTBOUND: "CK",
+    ACTION_SKIP_OUTBOUND: "TK",
+    ACTION_REPAIR_OUT: "FX",
+    ACTION_REPAIR_IN: "FR",
     ACTION_COMPLETE: "RK",
     ACTION_OUT_SEND: "CK",
     ACTION_OUT_RECV: "RK",
@@ -176,6 +186,11 @@ class InventoryService:
                 if b["status"] == STATUS_FINISHED:
                     row["finished_qty"] = str(round_qty(to_decimal(row["finished_qty"]) + qty))
                     continue
+                if b["status"] == STATUS_REPAIR and b["process_code"] == PROCESS_FINISHED:
+                    row["finished_repair_qty"] = str(
+                        round_qty(to_decimal(row.get("finished_repair_qty", "0")) + qty)
+                    )
+                    continue
                 for stage in row["stages"]:
                     if stage["process_code"] != b["process_code"]:
                         continue
@@ -189,6 +204,10 @@ class InventoryService:
                             stage["suppliers"].append(
                                 {"supplier_name": b["supplier_name"], "qty": b["qty"]}
                             )
+                    elif b["status"] == STATUS_REPAIR:
+                        stage["repair_qty"] = str(
+                            round_qty(to_decimal(stage.get("repair_qty", "0")) + qty)
+                        )
             result.append(row)
         cust_q = (customer_name or "").strip()
         if cust_q:
@@ -337,6 +356,68 @@ class InventoryService:
             to_supplier=to_supplier,
             doc_no=self._resolve_doc_no(ACTION_OUTBOUND, doc_no),
             note=note or f"出库 {from_code}→{to_code}",
+            deltas=[
+                (from_code, STATUS_INHOUSE, "", -amount),
+                (to_code, STATUS_OUTSOURCE, to_supplier, amount),
+            ],
+        )
+
+    def skip_outbound(
+        self,
+        product_part_no: str,
+        from_process_code: str,
+        to_process_code: str,
+        qty,
+        *,
+        supplier_name: str = "",
+        doc_no: str = "",
+        note: str = "",
+    ) -> dict:
+        """跳序出库：任意工序场内 → 任意工序在途（可跨道、可逆向，不记欠账表）。"""
+        part = product_part_no.strip()
+        from_code = from_process_code.strip()
+        to_code = to_process_code.strip()
+        amount = round_qty(qty)
+        if not from_code or not to_code:
+            raise ValueError("跳序出库须选择从工序与到工序")
+        if from_code == to_code:
+            raise ValueError("跳序出库的起止工序不能相同")
+        if from_code == PROCESS_FINISHED:
+            raise ValueError("成品请使用「出库 → 成品（出库给客户）」")
+        if to_code == PROCESS_FINISHED:
+            raise ValueError("跳序目标须为某道工序在途，成品请先末道入库")
+
+        route = self.get_route(part)
+        from_step = self._find(route, from_code)
+        to_step = self._find(route, to_code)
+
+        have = self._store.get_qty(part, from_code, STATUS_INHOUSE, "")
+        if have < amount:
+            raise ValueError(
+                f"「{from_code} {from_step['name']}」场内仅有 {round_qty(have)}，无法跳序出库 {amount}"
+            )
+
+        supplier = (supplier_name or "").strip()
+        if to_step["is_outsource"]:
+            if not supplier:
+                supplier = to_step.get("supplier") or ""
+            if not supplier:
+                raise ValueError("发往外发工序须选择供应商")
+        to_supplier = supplier if to_step["is_outsource"] else ""
+
+        note_text = (note or "").strip() or f"跳序 {from_code}→{to_code}"
+        return self._store.record_movement(
+            product_part_no=part,
+            action_type=ACTION_SKIP_OUTBOUND,
+            qty=amount,
+            process_code=to_code,
+            from_process_code=from_code,
+            from_status=STATUS_INHOUSE,
+            to_process_code=to_code,
+            to_status=STATUS_OUTSOURCE,
+            to_supplier=to_supplier,
+            doc_no=self._resolve_doc_no(ACTION_SKIP_OUTBOUND, doc_no),
+            note=note_text,
             deltas=[
                 (from_code, STATUS_INHOUSE, "", -amount),
                 (to_code, STATUS_OUTSOURCE, to_supplier, amount),
@@ -502,6 +583,133 @@ class InventoryService:
             doc_no=self._resolve_doc_no(ACTION_ADJUST),
             note=full_note,
             deltas=[(code, st, supplier if st == STATUS_OUTSOURCE else "", delta)],
+        )
+
+    def repair_out(
+        self,
+        product_part_no: str,
+        qty,
+        *,
+        process_code: str = "",
+        note: str = "",
+        doc_no: str = "",
+    ) -> dict:
+        """返修：半成品场内或成品 → 返修在途（同工序/成品桶）。"""
+        part = product_part_no.strip()
+        code = (process_code or "").strip()
+        amount = round_qty(qty)
+        if amount <= 0:
+            raise ValueError("返修数量必须大于 0")
+        route = self.get_route(part)
+        if code == PROCESS_FINISHED:
+            have = self.finished_qty(part)
+            if have < amount:
+                raise ValueError(
+                    f"成品库存不足：仅有 {round_qty(have)}，无法返修 {amount}"
+                )
+            label = "成品"
+            return self._store.record_movement(
+                product_part_no=part,
+                action_type=ACTION_REPAIR_OUT,
+                qty=amount,
+                process_code=PROCESS_FINISHED,
+                from_process_code=PROCESS_FINISHED,
+                from_status=STATUS_FINISHED,
+                to_process_code=PROCESS_FINISHED,
+                to_status=STATUS_REPAIR,
+                doc_no=self._resolve_doc_no(ACTION_REPAIR_OUT, doc_no),
+                note=note or f"返修 {label}",
+                deltas=[
+                    (PROCESS_FINISHED, STATUS_FINISHED, "", -amount),
+                    (PROCESS_FINISHED, STATUS_REPAIR, "", amount),
+                ],
+            )
+        if not code:
+            raise ValueError("返修须指定工序或成品")
+        step = self._find(route, code)
+        have = self._store.get_qty(part, code, STATUS_INHOUSE, "")
+        if have < amount:
+            raise ValueError(
+                f"「{code} {step['name']}」场内仅有 {round_qty(have)}，无法返修 {amount}"
+            )
+        return self._store.record_movement(
+            product_part_no=part,
+            action_type=ACTION_REPAIR_OUT,
+            qty=amount,
+            process_code=code,
+            from_process_code=code,
+            from_status=STATUS_INHOUSE,
+            to_process_code=code,
+            to_status=STATUS_REPAIR,
+            doc_no=self._resolve_doc_no(ACTION_REPAIR_OUT, doc_no),
+            note=note or f"返修 {code} {step['name']}",
+            deltas=[
+                (code, STATUS_INHOUSE, "", -amount),
+                (code, STATUS_REPAIR, "", amount),
+            ],
+        )
+
+    def repair_in(
+        self,
+        product_part_no: str,
+        qty,
+        *,
+        process_code: str = "",
+        note: str = "",
+        doc_no: str = "",
+    ) -> dict:
+        """返修入库：返修在途 → 恢复场内或成品库存。"""
+        part = product_part_no.strip()
+        code = (process_code or "").strip()
+        amount = round_qty(qty)
+        if amount <= 0:
+            raise ValueError("返修入库数量必须大于 0")
+        route = self.get_route(part)
+        if code == PROCESS_FINISHED:
+            have = self._store.get_qty(part, PROCESS_FINISHED, STATUS_REPAIR, "")
+            if have < amount:
+                raise ValueError(
+                    f"成品返修在途仅有 {round_qty(have)}，无法返修入库 {amount}"
+                )
+            return self._store.record_movement(
+                product_part_no=part,
+                action_type=ACTION_REPAIR_IN,
+                qty=amount,
+                process_code=PROCESS_FINISHED,
+                from_process_code=PROCESS_FINISHED,
+                from_status=STATUS_REPAIR,
+                to_process_code=PROCESS_FINISHED,
+                to_status=STATUS_FINISHED,
+                doc_no=self._resolve_doc_no(ACTION_REPAIR_IN, doc_no),
+                note=note or "返修入库 成品",
+                deltas=[
+                    (PROCESS_FINISHED, STATUS_REPAIR, "", -amount),
+                    (PROCESS_FINISHED, STATUS_FINISHED, "", amount),
+                ],
+            )
+        if not code:
+            raise ValueError("返修入库须指定工序或成品")
+        step = self._find(route, code)
+        have = self._store.get_qty(part, code, STATUS_REPAIR, "")
+        if have < amount:
+            raise ValueError(
+                f"「{code} {step['name']}」返修在途仅有 {round_qty(have)}，无法返修入库 {amount}"
+            )
+        return self._store.record_movement(
+            product_part_no=part,
+            action_type=ACTION_REPAIR_IN,
+            qty=amount,
+            process_code=code,
+            from_process_code=code,
+            from_status=STATUS_REPAIR,
+            to_process_code=code,
+            to_status=STATUS_INHOUSE,
+            doc_no=self._resolve_doc_no(ACTION_REPAIR_IN, doc_no),
+            note=note or f"返修入库 {code} {step['name']}",
+            deltas=[
+                (code, STATUS_REPAIR, "", -amount),
+                (code, STATUS_INHOUSE, "", amount),
+            ],
         )
 
     def finished_qty(self, product_part_no: str) -> Decimal:
@@ -874,6 +1082,7 @@ class InventoryService:
             "is_demo": demo,
             "data_tag": "测" if demo else "实",
             "finished_qty": "0",
+            "finished_repair_qty": "0",
             "stages": [
                 {
                     "process_code": s["code"],
@@ -881,6 +1090,7 @@ class InventoryService:
                     "is_outsource": s["is_outsource"],
                     "inhouse_qty": "0",
                     "outsource_qty": "0",
+                    "repair_qty": "0",
                     "suppliers": [],
                 }
                 for s in route
@@ -908,6 +1118,7 @@ class InventoryService:
                 STATUS_INHOUSE: "场内",
                 STATUS_OUTSOURCE: "在途",
                 STATUS_FINISHED: "成品",
+                STATUS_REPAIR: "返修在途",
             }.get(status, status),
             "qty": str(round_qty(row.get("qty"))),
         }
@@ -947,6 +1158,9 @@ class InventoryService:
         return action in (
             ACTION_INBOUND,
             ACTION_OUTBOUND,
+            ACTION_SKIP_OUTBOUND,
+            ACTION_REPAIR_OUT,
+            ACTION_REPAIR_IN,
             ACTION_COMPLETE,
             ACTION_OUT_SEND,
             ACTION_OUT_RECV,
@@ -968,11 +1182,22 @@ class InventoryService:
         from_code = str(row.get("from_process_code") or "").strip()
         to_code = str(row.get("to_process_code") or "").strip()
         code = str(row.get("process_code") or "").strip()
-        if action in (ACTION_OUTBOUND, ACTION_OUT_SEND, ACTION_SHIP):
+        if action in (ACTION_OUTBOUND, ACTION_SKIP_OUTBOUND, ACTION_OUT_SEND, ACTION_SHIP):
             if from_code == PROCESS_FINISHED:
                 return "成品出库"
             if from_code and to_code:
-                return f"{self._process_display(from_code)} → {self._process_display(to_code)}"
+                arrow = "⇢" if action == ACTION_SKIP_OUTBOUND else "→"
+                return f"{self._process_display(from_code)} {arrow} {self._process_display(to_code)}"
+        if action == ACTION_REPAIR_OUT:
+            if from_code == PROCESS_FINISHED or code == PROCESS_FINISHED:
+                return "成品 → 返修在途"
+            if from_code:
+                return f"返修 · {self._process_display(from_code)}"
+        if action == ACTION_REPAIR_IN:
+            if to_code == PROCESS_FINISHED or code == PROCESS_FINISHED:
+                return "返修入库 · 成品"
+            if to_code:
+                return f"返修入库 · {self._process_display(to_code)}"
         if action in (ACTION_INBOUND, ACTION_OUT_RECV, ACTION_COMPLETE):
             if to_code == PROCESS_FINISHED:
                 return f"入库成品 · {self._process_display(code)}"

@@ -36,6 +36,12 @@ data/*.db-wal
 data/*.db-shm
 data/*.db.bak*
 
+# 从云端拉取前的本地 data 备份（勿提交）
+data.local.bak-*/
+
+# Agent debug logs（本地）
+debug-*.log
+
 # Flask 会话签名密钥（各环境独立）
 data/auth_secret.txt
 

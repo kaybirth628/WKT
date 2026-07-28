@@ -10,7 +10,10 @@ alwaysApply: true
 1. **用户明确指令**（最高）
 2. **Superpowers 技能**（`.cursor/skills/`，见 `using-superpowers`）
 3. **Karpathy 准则**（`.cursor/rules/karpathy-guidelines.mdc`）
-4. **AGENTS.md**（CHANGELOG / SOP / VERSION / 测试）
+4. **UI 布局规则**（`.cursor/rules/wkt-ui-design.mdc`）
+5. **变更治理**（`.cursor/rules/wkt-change-governance.mdc`）
+6. **生产安全**（`.cursor/rules/wkt-production-safety.mdc` → `docs/change/PRODUCTION-SAFETY.md`）
+7. **AGENTS.md**
 
 ## Superpowers
 
@@ -32,8 +35,16 @@ alwaysApply: true
 
 对照源码：`test_impl/order_management/order_entry/line_store.py`（`_SCHEMA`、`_migrate_schema`）。
 
-**不改库结构**的纯 UI/逻辑调整：无需改 data-model，但须在 CHANGELOG 说明。
+**不改库结构**的纯 UI/逻辑调整：无需改 data-model，但须 CHANGELOG +（修复类）BF + UI-CHANGELOG（若改布局）。
+
+## 变更治理（强制）
+
+每次改代码 → [`docs/change/AGENT-COMPLIANCE.md`](../../docs/change/AGENT-COMPLIANCE.md) Checklist：
+
+- **CL-XXXX** 必写
+- **修复** → **BF-XXXX** + 修前先查 [`BUG-FIX-LOG.md`](../../docs/change/BUG-FIX-LOG.md)
+- **用户可见** → 更新 SOP；否则 CL 写「SOP 免同步原因」
 
 ## 会话入口
 
-新会话先读：`AGENTS.md` → CHANGELOG 顶部 → `docs/architecture/data-model.md`（若涉及数据）。
+新会话先读：`AGENTS.md` → CHANGELOG 顶部 → **`PRODUCTION-SAFETY.md`** →（修 Bug）`BUG-FIX-LOG.md` →（涉及数据）`data-model.md` →（涉及 UI）`ui-layout-rules.md` V3。

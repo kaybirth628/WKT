@@ -89,6 +89,24 @@ class TestCostRecordService(unittest.TestCase):
         by_q = self.service.list_records(q="前挡板")
         self.assertEqual(len(by_q), 1)
 
+    def test_list_records_ordered_by_updated_at(self) -> None:
+        first = self.service.create_record(_sample_payload(product_part_no="PART-A"))
+        second = self.service.create_record(
+            _sample_payload(
+                customer_name="其他客户",
+                product_name="其他产品",
+                product_part_no="PART-B",
+                process_prices={"22": {"price": "2", "supplier": _TEST_SUPPLIER}},
+            )
+        )
+        updated = self.service.update_record(
+            first.id,
+            _sample_payload(product_part_no="PART-A", product_name="前挡板（已覆盖）"),
+        )
+        rows = self.service.list_records()
+        self.assertEqual(rows[0].id, updated.id)
+        self.assertEqual(rows[1].id, second.id)
+
     def test_reject_missing_basic_field(self) -> None:
         payload = _sample_payload(customer_name="")
         with self.assertRaisesRegex(ValueError, "客户名称"):

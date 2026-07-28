@@ -12,6 +12,7 @@ from test_impl.order_management.inventory.store import (
     STATUS_FINISHED,
     STATUS_INHOUSE,
     STATUS_OUTSOURCE,
+    STATUS_REPAIR,
     InventoryStore,
 )
 from test_impl.order_management.order_entry.line_store import LineStore
@@ -141,6 +142,39 @@ class TestInventoryService(unittest.TestCase):
         outbound = next(r for r in items if r["action_type"] == "outbound")
         self.assertIn("01", outbound["route_display"])
 
+    def test_skip_outbound_forward_and_reverse(self) -> None:
+        """跳序：1→3 跳过 2；3 入库后再 3→2 回补。"""
+        self.inv.inbound(_PART, "01", "100")
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("100"))
+
+        with self.assertRaises(ValueError):
+            self.inv.outbound(_PART, "01", "28", "40")
+
+        mov = self.inv.skip_outbound(_PART, "01", "28", "40", note="2道来不及先发3道")
+        self.assertEqual(mov["action_type"], "skip_outbound")
+        self.assertTrue(str(mov["doc_no"]).startswith("TK-"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("60"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "28", STATUS_OUTSOURCE, ""), Decimal("40"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("0"))
+
+        self.inv.inbound(_PART, "28", "40")
+        self.assertEqual(self.inv.store.get_qty(_PART, "28", STATUS_INHOUSE), Decimal("40"))
+
+        self.inv.skip_outbound(
+            _PART, "28", "02", "40", supplier_name=_SUPPLIER, note="3道做完回补2道"
+        )
+        self.assertEqual(self.inv.store.get_qty(_PART, "28", STATUS_INHOUSE), Decimal("0"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("40"))
+
+        self.inv.inbound(_PART, "02", "40", supplier_name=_SUPPLIER)
+        self.assertEqual(self.inv.store.get_qty(_PART, "02", STATUS_INHOUSE), Decimal("40"))
+
+        skip_rows = [
+            r for r in self.inv.list_movements(product_part_no=_PART) if r["action_type"] == "skip_outbound"
+        ]
+        self.assertEqual(len(skip_rows), 2)
+        self.assertEqual(skip_rows[0]["action_label"], "跳序出库")
+
     def test_seed_board_demo_ten_parts(self) -> None:
         parts = [f"BOARD-DEMO-{i:02d}" for i in range(1, 11)]
         result = self.inv.seed_board_demo(
@@ -236,6 +270,62 @@ class TestInventoryService(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             self.inv.adjust_balance(_PART, target_qty="50", process_code="01", status=STATUS_INHOUSE)
         self.assertIn("无需校正", str(ctx.exception))
+
+    def test_adjust_outsource_balance(self) -> None:
+        self.inv.inbound(_PART, "01", "50")
+        self.inv.outbound(_PART, "01", "02", "30", supplier_name=_SUPPLIER)
+        self.assertEqual(
+            self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("30")
+        )
+        self.inv.adjust_balance(
+            _PART,
+            target_qty="25",
+            process_code="02",
+            status=STATUS_OUTSOURCE,
+            supplier_name=_SUPPLIER,
+        )
+        self.assertEqual(
+            self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("25")
+        )
+
+    def test_adjust_repair_balance(self) -> None:
+        self.inv.inbound(_PART, "01", "40")
+        self.inv.repair_out(_PART, "15", process_code="01")
+        self.inv.adjust_balance(
+            _PART, target_qty="10", process_code="01", status=STATUS_REPAIR
+        )
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_REPAIR), Decimal("10"))
+
+    def test_repair_semi_and_finished(self) -> None:
+        self.inv.inbound(_PART, "01", "100")
+        self.inv.repair_out(_PART, "20", process_code="01")
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("80"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_REPAIR), Decimal("20"))
+        self.inv.repair_in(_PART, "20", process_code="01")
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("100"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_REPAIR), Decimal("0"))
+
+        self.inv.outbound(_PART, "01", "02", "100", supplier_name=_SUPPLIER)
+        self.inv.inbound(_PART, "02", "100", supplier_name=_SUPPLIER)
+        self.inv.outbound(_PART, "02", "28", "100")
+        self.inv.inbound(_PART, "28", "100")
+        self.inv.outbound(_PART, "28", "34", "100")
+        self.inv.inbound(_PART, "34", "100")
+        self.assertEqual(self.inv.finished_qty(_PART), Decimal("100"))
+
+        self.inv.repair_out(_PART, "30", process_code="FIN")
+        self.assertEqual(self.inv.finished_qty(_PART), Decimal("70"))
+        self.assertEqual(
+            self.inv.store.get_qty(_PART, PROCESS_FINISHED, STATUS_REPAIR), Decimal("30")
+        )
+        board = self.inv.board(product_part_no=_PART)[0]
+        self.assertEqual(float(board["finished_repair_qty"]), 30.0)
+
+        self.inv.repair_in(_PART, "30", process_code="FIN")
+        self.assertEqual(self.inv.finished_qty(_PART), Decimal("100"))
+        self.assertEqual(
+            self.inv.store.get_qty(_PART, PROCESS_FINISHED, STATUS_REPAIR), Decimal("0")
+        )
 
 
 if __name__ == "__main__":

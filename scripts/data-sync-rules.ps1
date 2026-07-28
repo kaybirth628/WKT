@@ -1,7 +1,7 @@
-# WKT 主数据同步规则（一键云端 / GitHub 参考）
-# 默认（CodeOnly）：不同步任何 data/，云端数据以服务器为准。
-# -WithMasterData：同步 JSON 主数据（客户/供应商/送货单模板等），仍排除 *.db、delivery_notes。
-# -FullData：整包 data/（含 wkt_orders.db、delivery_notes）覆盖云端（危险，需 YES 确认）。
+# WKT 主数据同步规则
+# 【生产阶段】默认 CodeOnly：不同步任何 data/，云端 data 为权威。
+# -FullData / -WithMasterData 已在 sync-to-cloud.ps1 入口禁用。
+# 见 docs/change/PRODUCTION-SAFETY.md
 
 function Get-WktDataSyncExcludeDirs {
     param([switch]$FullData)

@@ -133,6 +133,17 @@ fi
 
 find "${APP_DIR}/test_impl" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
+PIP=""
+if [ -x "${APP_DIR}/venv/bin/pip" ]; then
+  PIP="${APP_DIR}/venv/bin/pip"
+elif [ -x "${APP_DIR}/.venv/bin/pip" ]; then
+  PIP="${APP_DIR}/.venv/bin/pip"
+fi
+if [ -n "${PIP}" ] && [ -f "${APP_DIR}/test_impl/web/requirements.txt" ]; then
+  echo "==> 安装/更新 Python 依赖 ..."
+  "${PIP}" install -r "${APP_DIR}/test_impl/web/requirements.txt" -q || true
+fi
+
 if [ "$FULL_DATA" != "1" ]; then
   if command -v supervisorctl >/dev/null 2>&1; then
     supervisorctl restart "${SUP}" 2>/dev/null || true

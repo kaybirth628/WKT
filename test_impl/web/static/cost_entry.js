@@ -435,22 +435,24 @@ CostCommon.loadOptions()
 
 function switchBomMode(mode) {
   const isBatch = mode === "batch";
+  const isManual = mode === "manual";
   const batchPanel = document.getElementById("bomBatchPanel");
   const manualPanel = document.getElementById("bomManualPanel");
+  const modeHint = document.getElementById("bomModeHint");
   const batchBtn = document.getElementById("bomModeBatchBtn");
   const manualBtn = document.getElementById("bomModeManualBtn");
   if (batchPanel) batchPanel.classList.toggle("is-hidden", !isBatch);
-  if (manualPanel) manualPanel.classList.toggle("is-hidden", isBatch);
+  if (manualPanel) manualPanel.classList.toggle("is-hidden", !isManual);
+  if (modeHint) modeHint.classList.toggle("is-hidden", isBatch || isManual);
   if (batchBtn) {
     batchBtn.classList.toggle("active", isBatch);
     batchBtn.setAttribute("aria-selected", isBatch ? "true" : "false");
   }
   if (manualBtn) {
-    manualBtn.classList.toggle("active", !isBatch);
-    manualBtn.setAttribute("aria-selected", !isBatch ? "true" : "false");
+    manualBtn.classList.toggle("active", isManual);
+    manualBtn.setAttribute("aria-selected", isManual ? "true" : "false");
   }
 }
 
 document.getElementById("bomModeBatchBtn")?.addEventListener("click", () => switchBomMode("batch"));
 document.getElementById("bomModeManualBtn")?.addEventListener("click", () => switchBomMode("manual"));
-switchBomMode("batch");

@@ -7,8 +7,11 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from test_impl.order_management.customer_name import (
+    _FILENAME_CUSTOMER_ALIASES,
     extract_customer_hint_from_filename,
+    normalize_customer_name,
     resolve_customer_from_hint,
+    dedupe_customer_names,
 )
 from test_impl.order_management.cost_analysis.cost_store import CostStore, normalize_part_no
 from test_impl.order_management.cost_analysis.models import (
@@ -661,6 +664,9 @@ def parse_bom_workbook(file_bytes: bytes, *, filename: str = "") -> List[dict]:
 
 
 def build_import_payload(parsed: dict) -> dict:
+    customer = str(parsed.get("customer_name") or "").strip()
+    if customer in _FILENAME_CUSTOMER_ALIASES:
+        customer = _FILENAME_CUSTOMER_ALIASES[customer]
     process_prices: Dict[str, Any] = {}
     process_suppliers: Dict[str, str] = {}
     process_order: List[str] = []
@@ -675,7 +681,7 @@ def build_import_payload(parsed: dict) -> dict:
             process_suppliers[code] = supplier
 
     return {
-        "customer_name": parsed.get("customer_name", ""),
+        "customer_name": customer,
         "product_name": parsed.get("product_name", ""),
         "mold_no": parsed.get("mold_no", "") or "待补",
         "product_part_no": parsed.get("product_part_no", ""),
@@ -716,7 +722,9 @@ def _tier_for_row(parsed: dict, store: CostStore) -> Tuple[str, List[str]]:
     if part:
         binding = store.get_part_binding(part)
         if binding and binding.get("customer_name"):
-            issues.append(f"料号已存在（客户：{binding['customer_name']}）")
+            issues.append(
+                f"料号已存在（客户：{binding['customer_name']}），导入时将按料号覆盖"
+            )
 
     blocking = [
         i
@@ -726,7 +734,6 @@ def _tier_for_row(parsed: dict, store: CostStore) -> Tuple[str, List[str]]:
         or i.startswith("缺少产品名称")
         or i.startswith("未解析")
         or i.startswith("无法识别工序")
-        or i.startswith("料号已存在")
         or i.startswith("未找到客户")
         or i.startswith("无法从文件名")
         or i.startswith("文件名「")
@@ -737,6 +744,22 @@ def _tier_for_row(parsed: dict, store: CostStore) -> Tuple[str, List[str]]:
     if issues:
         return "pending", issues
     return "passed", issues
+
+
+def _resolve_sheet_customer(raw: str, customer_names: List[str]) -> tuple[str, List[str]]:
+    """Excel 客户简称 → 客商档案全称。"""
+    hint = _norm_text(raw)
+    warnings: List[str] = []
+    if not hint:
+        return "", warnings
+    resolved, note = resolve_customer_from_hint(hint, customer_names)
+    if resolved:
+        if note:
+            warnings.append(note)
+        return resolved, warnings
+    if note:
+        warnings.append(note)
+    return hint, warnings
 
 
 def _apply_filename_customer(
@@ -756,13 +779,90 @@ def _apply_filename_customer(
     for row in parsed_rows:
         copy = dict(row)
         warnings = list(copy.get("warnings") or [])
-        if not _norm_text(copy.get("customer_name")) and resolved:
+        sheet_customer = _norm_text(copy.get("customer_name"))
+        if sheet_customer:
+            copy["sheet_customer_raw"] = sheet_customer
+            resolved_c, c_warnings = _resolve_sheet_customer(sheet_customer, customer_names)
+            copy["customer_name"] = resolved_c or sheet_customer
+            warnings.extend(c_warnings)
+        elif resolved:
             copy["customer_name"] = resolved
-        elif not _norm_text(copy.get("customer_name")) and customer_error:
+        elif customer_error:
             warnings.append(customer_error)
         copy["warnings"] = warnings
         out.append(copy)
+
+    row_customers = dedupe_customer_names(
+        _norm_text(r.get("customer_name")) for r in out if _norm_text(r.get("customer_name"))
+    )
+    if row_customers:
+        if len(row_customers) == 1:
+            meta["customer_resolved"] = row_customers[0]
+            meta["customer_error"] = ""
+        else:
+            joined = "、".join(row_customers[:5])
+            extra = f" 等{len(row_customers)}个" if len(row_customers) > 5 else ""
+            meta["customer_resolved"] = f"{joined}{extra}"
+            meta["customer_error"] = ""
     return out, meta
+
+
+def revalidate_preview_item(
+    parsed: dict,
+    customer_name: str,
+    *,
+    store: CostStore,
+    fields: Optional[dict] = None,
+) -> dict:
+    """人工确认/修改字段后重新计算档位与 payload。"""
+    row = dict(parsed or {})
+    overrides = dict(fields or {})
+    if customer_name:
+        overrides.setdefault("customer_name", customer_name)
+    for key in (
+        "customer_name",
+        "product_part_no",
+        "product_name",
+        "unit_weight_g",
+        "mold_no",
+        "machine_tonnage",
+        "material",
+        "cavity",
+    ):
+        if key not in overrides:
+            continue
+        val = str(overrides.get(key) or "").strip()
+        if val in ("—", "-"):
+            val = ""
+        row[key] = val
+    confirmed = _norm_text(row.get("customer_name"))
+    row["customer_name"] = confirmed
+    row["warnings"] = [
+        w
+        for w in (row.get("warnings") or [])
+        if not any(
+            str(w).startswith(p)
+            for p in (
+                "未找到客户",
+                "无法从文件名",
+                "文件名「",
+                "系统尚无客户",
+            )
+        )
+    ]
+    raw = _norm_text(row.get("sheet_customer_raw"))
+    if confirmed and raw and raw != confirmed:
+        row["warnings"].append(f"客户已人工确认为「{confirmed}」（表内原为「{raw}」）")
+    tier, issues = _tier_for_row(row, store)
+    return {
+        "tier": tier,
+        "issues": issues,
+        "parsed": row,
+        "payload": build_import_payload(row),
+        "process_display": " → ".join(
+            p.get("name") or p.get("code", "") for p in row.get("processes") or []
+        ),
+    }
 
 
 def preview_import_rows(

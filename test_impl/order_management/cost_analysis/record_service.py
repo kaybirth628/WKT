@@ -83,21 +83,30 @@ class CostRecordService:
             store_payload["is_demo"] = True
         return self._store.insert(store_payload)
 
-    def update_record(self, record_id: int, payload: dict) -> CostRecordRow:
+    def update_record(
+        self,
+        record_id: int,
+        payload: dict,
+        *,
+        skip_supplier_check: bool = False,
+        skip_customer_check: bool = False,
+    ) -> CostRecordRow:
         self.get_record(record_id)
         basic = self._validate_basic(payload)
-        self._validate_part_no_customer(
-            basic["product_part_no"],
-            basic["customer_name"],
-            exclude_record_id=record_id,
-        )
+        if not skip_customer_check:
+            self._validate_part_no_customer(
+                basic["product_part_no"],
+                basic["customer_name"],
+                exclude_record_id=record_id,
+            )
         process_entries = self._normalize_process_entries(
             payload.get("process_prices") or {},
             payload.get("process_suppliers") or {},
         )
         if not process_entries:
             raise ValueError("请至少选择一道工序")
-        self._validate_process_suppliers(process_entries)
+        if not skip_supplier_check:
+            self._validate_process_suppliers(process_entries)
         process_order = self._parse_process_order(payload.get("process_order"), process_entries)
 
         material_unit_price = str(payload.get("material_unit_price", "0") or "0")
@@ -129,20 +138,46 @@ class CostRecordService:
         payloads: List[dict],
         *,
         skip_supplier_check: bool = False,
+        overwrite: bool = False,
     ) -> dict:
         record_ids: List[int] = []
         errors: List[dict] = []
+        created = 0
+        updated = 0
+        removed_duplicates = 0
         for idx, payload in enumerate(payloads):
             try:
-                record = self.create_record(
-                    payload,
-                    skip_supplier_check=skip_supplier_check,
+                part_no = str(payload.get("product_part_no") or "").strip()
+                existing_ids = (
+                    self._store.list_ids_by_part_no(part_no) if overwrite and part_no else []
                 )
+                if existing_ids:
+                    keep_id = existing_ids[0]
+                    for dup_id in existing_ids[1:]:
+                        self._store.delete(dup_id)
+                        removed_duplicates += 1
+                    # BOM 批量导入：以产品料号为键，后导入覆盖先导入（含重复上传同一 Excel）
+                    record = self.update_record(
+                        keep_id,
+                        payload,
+                        skip_supplier_check=skip_supplier_check,
+                        skip_customer_check=True,
+                    )
+                    updated += 1
+                else:
+                    record = self.create_record(
+                        payload,
+                        skip_supplier_check=skip_supplier_check,
+                    )
+                    created += 1
                 record_ids.append(record.id)
             except ValueError as exc:
                 errors.append({"index": idx, "error": str(exc)})
         return {
             "imported": len(record_ids),
+            "created": created,
+            "updated": updated,
+            "removed_duplicates": removed_duplicates,
             "record_ids": record_ids,
             "errors": errors,
         }

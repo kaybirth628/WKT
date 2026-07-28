@@ -1,8 +1,10 @@
 # WKT 销售管理系统 · 变更日志（CHANGELOG）
 
-> 规则：每一次变更都必须在此登记，并**同步**更新《系统操作 SOP》（`docs/SOP/系统操作SOP.md`）。  
+> 规则：每一次变更都必须在此登记，并**同步**更新《系统操作 SOP》（`docs/SOP/系统操作SOP.md`）（用户可见变更）。  
+> **Bug 修复**须同时登记 [`BUG-FIX-LOG.md`](BUG-FIX-LOG.md)（BF-XXXX）并填写下方 **根因 / 防复发**。  
+> Agent 合规流程见 [`AGENT-COMPLIANCE.md`](AGENT-COMPLIANCE.md)。  
 > 里程碑版本发布时，同步更新《版本记录》（`docs/VERSION.md`）。  
-> 未登记变更日志、未同步 SOP 的改动，视为不合规（违反准则）。
+> 未登记变更日志、未同步 SOP（且无免同步原因）、修复类未记 BF 的改动，视为不合规。
 
 ## 当前发布版本
 
@@ -20,12 +22,244 @@
 | 合规等级 | A / B / C / D |
 | 涉及模块 | 受影响的子模块或文件 |
 | 变更内容 | 做了什么 |
+| 根因 | **修复类必填**；其他填「—」 |
+| 防复发 | 测试/规则/SOP 如何防止再犯 |
 | 验证 | 如何验证通过 |
-| SOP 同步 | 是否已同步更新 SOP |
+| SOP 同步 | 是 / 否 |
+| SOP 免同步原因 | 仅当「否」时填写 |
+| 关联 | BF-XXXX / UI-XXXX / CL-YYYY（可选） |
 
 ---
 
 ## 变更记录
+
+### CL-0204 · 2026-07-28 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `.gitignore`、`scripts/git-push.ps1` |
+| 变更内容 | 修复推送失败：`git add -A` 误纳入 `data.local.bak-*` 本地备份；加入 gitignore + 提交前自动 unstage 数据库/备份路径 |
+| 根因 | 下载云端覆盖本地时产生多份 `data.local.bak-*`，未 gitignore，`git add -A` 整包暂存后触发 Assert-NoDatabaseStaged |
+| 防复发 | `.gitignore` `data.local.bak-*/`；`Invoke-SafeGitStage` |
+| 验证 | `git add -A` 后 staged 中 bak 数量为 0；一键推送可过 commit 步骤 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 开发脚本 |
+| 关联 | BF-0010 |
+
+### CL-0203 · 2026-07-28 · 优化（D）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `scripts/git-push.ps1` |
+| 变更内容 | 推送 GitHub 时 **自动推荐** commit 信息：读取 CHANGELOG 最新 CL 条目，**直接回车**即可提交；里程碑 tag 默认跳过 |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | 运行 `一键推送云端和GitHub.bat`，见绿色 Recommended 行，回车两次完成 commit+push |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 开发脚本交互优化 |
+
+### CL-0202 · 2026-07-28 · 重构（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 删除 `scripts/inspect-cloud-data.ps1`、`restore-cloud-suppliers.ps1`、`seed_sop_test_data.py`、`reset_order_db.ps1`、`seed_board_demo.py`、`force-restart-cloud.ps1`；SOP、data-model |
+| 变更内容 | 删除无 bat 入口及违背生产安全的废弃/清库脚本；文档改为「下载云端覆盖本地」 |
+| 根因 | — |
+| 防复发 | 仅保留 3 个 bat；`PRODUCTION-SAFETY.md` |
+| 验证 | 上述文件不存在；`test_sop_seed.py` 仍通过（直接用 `sop_seed` 模块） |
+| SOP 同步 | 是 |
+| SOP 免同步原因 | — |
+
+### CL-0201 · 2026-07-28 · 重构（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 根目录 bat、`scripts/push-cloud-and-github.ps1`、`sync-to-cloud.ps1`、`PRODUCTION-SAFETY.md`、`.cursor/rules/wkt-production-safety.mdc`、`RESTORE.md`、SOP §九 |
+| 变更内容 | 测试阶段运维精简为 **3 个 bat**：启动网页 / 推送云端+GitHub / 下载云端覆盖本地；删除全量同步、查询云端、恢复供应商、SOP 测试数据等 bat；**禁用** `-FullData`/`-WithMasterData`；写入生产安全强制规范 |
+| 根因 | — |
+| 防复发 | `wkt-production-safety.mdc` alwaysApply；`sync-to-cloud.ps1` 入口 throw |
+| 验证 | 根目录仅 3 个 `一键*.bat`；执行全量同步参数应报错 |
+| SOP 同步 | 是 |
+| 关联 | — |
+
+### CL-0200 · 2026-07-28 · 文档（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `docs/change/AGENT-COMPLIANCE.md`、`BUG-FIX-LOG.md`、`.cursor/rules/wkt-change-governance.mdc`、`AGENTS.md`、`系统操作SOP.md` §4.1/§七 |
+| 变更内容 | 建立 Agent 变更治理：强制 CL+BF+SOP 规则；回溯登记 BOM 导入 Bug BF-0001～0008；**补写 SOP** BOM 批量导入现行流程（mode 选择、预览编辑、底部批量上传、料号覆盖、成功提示） |
+| 根因 | — |
+| 防复发 | `wkt-change-governance.mdc` alwaysApply；修 Bug 前查 BUG-FIX-LOG |
+| 验证 | 文档齐全；SOP §4.1 与当前 `cost_entry.html` 一致 |
+| SOP 同步 | 是 |
+| 关联 | BF-0009 |
+
+### CL-0199 · 2026-07-28 · 文档（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `docs/design/ui-layout-rules.md`（V3）、`GLOBAL-RULES-INDEX.md`、Agent rules/skill、`AGENTS.md` |
+| 变更内容 | 将 **全部** 全局 UI 规则（顶栏、主题、字体、间距、组件、list-table、录入模板等）合并入 V3 规范；改 UI 须先参照全文 |
+| 验证 | `docs/design/GLOBAL-RULES-INDEX.md` 可索引所有规则源；UI-0006 已登记 |
+| SOP 同步 | 否 |
+
+### CL-0198 · 2026-07-28 · 文档（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `docs/design/`、`.cursor/rules/wkt-ui-design.mdc`、`.cursor/skills/wkt-ui-design/`、`AGENTS.md` |
+| 变更内容 | 固化用户「清爽布局」偏好：`ui-layout-rules.md`（V2 权威）、`UI-CHANGELOG.md`、Agent 规则与 skill；新功能须 follow |
+| 验证 | Agent 改 UI 前可读 rules + design 目录；UI-0005 已登记 |
+| SOP 同步 | 否 |
+
+### CL-0197 · 2026-07-28 · 优化（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_entry.html`、`cost_entry.js`、`cost_bom_import.js`、`cost.css` |
+| 变更内容 | BOM 录入对齐订单录入清爽模式：mode-card +「请先选择录入方式」；去除上传区/页脚长说明；初始不展开子面板 |
+| 验证 | 进入页仅见两个模式按钮与提示；选模式后才出现上传或表单 |
+| SOP 同步 | 否 |
+
+### CL-0196 · 2026-07-28 · 优化（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_entry.html`、`cost.css` |
+| 变更内容 | BOM 导入/upload 区去掉多余留白；预览表取消内嵌纵向滚动，改为整页自然展开；表格字体/颜色与全局 list-table 一致 |
+| 验证 | 导入规则区无大块空白；10+ 行预览无内部滚动条；字号与 BOM 查询页一致 |
+| SOP 同步 | 否 |
+
+### CL-0195 · 2026-07-28 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_bom_import.js`、`cost_entry.html`、`cost.css` |
+| 变更内容 | 修复批量上传成功后界面回到预览/选文件前的混淆状态：成功后清空预览表、回到初始上传页，并在顶部显示绿色「批量上传成功」横幅（含前往 BOM 查询链接） |
+| 验证 | 批量上传成功后预览区隐藏、文件已清空、成功提示可见 |
+| SOP 同步 | 否 |
+
+### CL-0194 · 2026-07-28 · 优化（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_entry.html`、`cost_bom_import.js`、`cost.css` |
+| 变更内容 | BOM 导入预览：顶部去掉文件区/导入按钮与系统识别条；客户栏改为纯文本输入（无下拉）；人工审核后表格底部增加 **批量上传** 按钮 |
+| 验证 | 解析后仅见预览表 + 底部上传；客户输入框无 datalist 箭头 |
+| SOP 同步 | 否 |
+
+### CL-0193 · 2026-07-28 · 优化（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_bom_import.js`、`cost_entry.html`、`cost.css`、`bom_form_import.py` |
+| 变更内容 | BOM 导入预览表：**Sheet/客户/料号/品名/单重**均可编辑；说明/制程列悬停显示全文；表格对齐全局 list-table 间距与列宽 |
+| 验证 | `test_revalidate_field_override_part_no`；预览表修改后 revalidate 再导入 |
+| SOP 同步 | 否 |
+
+### CL-0192 · 2026-07-28 · 新增（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `bom_form_import.py`、`app.py`、`cost_bom_import.js`、`cost_entry.html` |
+| 变更内容 | BOM 批量导入：解析后**人工确认客户**——表格内可编辑客户、支持「统一客户」批量应用到全部/阻断行；`POST /api/cost/bom-import/revalidate` 重新校验档位后再导入 |
+| 验证 | `test_revalidate_manual_customer_unblocks_row`；东硕 BOM 中 DLS/XFT 行可批量改为鑫福泰-东硕后导入 |
+| SOP 同步 | 否 |
+
+### CL-0191 · 2026-07-28 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_store.py`、`cost_query.js`、`cost_query.html` |
+| 变更内容 | BOM 查询改为按 **updated_at（更新时间）** 排序与展示；修复 SQLite `datetime()` 无法解析 ISO 时区导致覆盖后旧记录仍排后；批量导入覆盖后全部被更新记录排到列表最前 |
+| 验证 | `test_list_records_ordered_by_updated_at`；本地重复导入同一 BOM 后查询列表顶部均为刚覆盖记录 |
+| SOP 同步 | 否 |
+
+### CL-0190 · 2026-07-28 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `record_service.py`、`cost_bom_import.js`、`cost_entry.html` |
+| 变更内容 | 明确 BOM 批量导入覆盖规则：**仅按产品料号**匹配，后导入覆盖先导入（含重复上传同一 Excel）；覆盖更新时不再因客户简称/全称不一致而失败；移除「相同料号覆盖」勾选项（改为固定行为） |
+| 验证 | `test_import_overwrite_reupload_same_excel`、`test_import_overwrite_same_part_different_customer_alias` |
+| SOP 同步 | 否 |
+
+### CL-0189 · 2026-07-28 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_bom_import.js`、`cost_query.js`、`bom_form_import.py`、`cost_store.py` |
+| 变更内容 | 修复 BOM 批量导入成功后无提示：结果横幅保留成功/失败明细与「前往 BOM 查询」链接；导入 payload 将简称「大沃」等统一展开为客商全称；BOM 查询客户筛选改为模糊匹配并支持 URL 参数 |
+| 验证 | `test_bom_form_import`；导入后结果区可见；`/cost/query?q=大沃` 可定位记录 |
+| SOP 同步 | 否 |
+
+### CL-0188 · 2026-07-28 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `customer_name.py`、`bom_form_import.py`、`cost_bom_import.js` |
+| 变更内容 | 修复 BOM 批量导入误报「客户未匹配」：文件名 `大沃产品BOM(1)(1)` 正确剥离为「大沃」；表内已匹配客户时顶栏显示成功而非文件名错误；新增「大沃」别名 |
+| 验证 | `test_filename_dawo_product_bom_copy_suffix`、`test_preview_meta_uses_sheet_customer_when_filename_fails` |
+| SOP 同步 | 否 |
+
+### CL-0187 · 2026-07-28 · 新增（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `record_service.py`、`cost_store.py`、`bom_form_import.py`、`cost_bom_import.js`、`cost_entry.html`、`app.py` |
+| 变更内容 | BOM 批量导入支持 **相同料号覆盖**：`POST /api/cost/bom-import/commit` 默认 `overwrite=true`，更新最新 BOM 并删除同料号重复行；预览「料号已存在」改为待核（非阻断）；UI 勾选「相同料号覆盖已有 BOM」 |
+| 验证 | `test_import_overwrite_same_part_no`、`test_existing_part_preview_not_blocked` |
+| SOP 同步 | 否 |
+
+### CL-0186 · 2026-07-28 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `bom_form_import.py`、`record_service.py`、`cost_bom_import.js`；移除误加的 `supplier_name.py` |
+| 变更内容 | 纠正 CL-0185：BOM 批量导入改为匹配 **客户档案**（表内/文件名简称如「大沃」→「苏州大沃工具科技有限公司」）；**不再**匹配供应商档案，工序供应商按 Excel 原文写入；订单 OCR 仍优先 BOM 料号并在客户不一致时提示 |
+| 验证 | `test_bom_form_import.test_sheet_customer_short_name_resolved_on_preview`；全量 unittest |
+| SOP 同步 | 否 |
+
+### CL-0185 · 2026-07-28 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `supplier_name.py`、`bom_form_import.py`、`record_service.py`、`line_service.py`、`field_validation.py`、`app.js`、`cost_bom_import.js` |
+| 变更内容 | BOM 批量导入：外发供应商简称（如「大沃」）自动匹配供应商档案全称（如「苏州大沃工具科技有限公司」）；导入 commit 启用供应商校验。订单 OCR：优先按 BOM 料号回填；料号一致但客户不一致时标黄并在提交前询问是否改用 BOM 客户 |
+| 验证 | `tests/test_supplier_name.py`、`test_bom_form_import`、`test_order_line_service`；`/api/health` build=`20260728-bom-supplier-match` |
+| SOP 同步 | 否 |
+
+### CL-0184 · 2026-07-28 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `app.js`、`index.html`、`app.py` |
+| 变更内容 | 未结订单列表：隐藏接单日期；去掉出货/排产缺口与库存预警列，仅保留「成品库存」一列 |
+| 验证 | 未结订单列表列数与展示符合预期；`/api/health` build=`20260728-open-fg-only` |
+| SOP 同步 | 否 |
+
+### CL-0183 · 2026-07-28 · 新增（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `planning.py`、`app.py`、`app.js`、`style.css`、`_order_sidebar.html` |
+| 变更内容 | 未结订单列表绑定成品/半成品库存：`GET /api/lines?view=open` 返回 `finished_qty`、`gap_ship`、`gap_cover`、`stock_warn_level`；列表增列与行色预警（成品不足橙、需排产蓝）；汇总行统计缺口行数；恢复「库存 → 排产对照」页入口 |
+| 验证 | `python -m unittest discover -s tests -p "test_*.py"`；未结订单见库存列与预警色；`/api/health` build=`20260728-open-stock-warn` |
+| SOP 同步 | 否（列表增强，流程不变） |
+
+### CL-0182 · 2026-07-28 · 新增（C）
+
+- 涉及模块：`inventory/service.py`、`store.py`、`inventory_entry.js/html`、`app.py`、`test_inventory.py`
+- 变更内容：**校正库存**支持场内 / 在途 / 返修在途（成品含成品返修在途）；新增 **返修**（FX）与 **返修入库**（FR），半成品场内或成品 → 返修在途 → 恢复库存。
+- 验证：`tests/test_inventory.py`；本地 `/inventory/entry`。
+- SOP 同步：否。
+
+### CL-0181 · 2026-07-28 · 新增（C）
+
+- 涉及模块：`inventory/service.py`、`inventory_entry.js/html`、`app.py`、`test_inventory.py`
+- 变更内容：库存 **跳序出库**（TK 单号）：任意工序场内 → 任意工序在途，可跨道或逆向回补；顺序出库仍限相邻工序。不建欠账表，靠流水记录。
+- 验证：`tests/test_inventory.py`；本地 `/inventory/entry` 载入料号 → 跳序出库。
+- SOP 同步：否（本地预览）。
 
 ### CL-0180 · 2026-07-27 · 优化（C）
 

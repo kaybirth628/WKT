@@ -1715,15 +1715,15 @@ body {
 
 /* 订单列表斑马纹：相邻行分层，减轻长表炫目 */
 
-.list-card .data-table.list-table tbody tr:nth-child(odd):not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing):not(.is-editing) td {
+.list-card .data-table.list-table tbody tr:nth-child(odd):not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-stock-critical):not(.row-stock-warn):not(.row-editing):not(.is-editing) td {
   background-color: var(--list-row-bg);
 }
 
-.list-card .data-table.list-table tbody tr:nth-child(even):not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing):not(.is-editing) td {
+.list-card .data-table.list-table tbody tr:nth-child(even):not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-stock-critical):not(.row-stock-warn):not(.row-editing):not(.is-editing) td {
   background-color: var(--list-row-bg-alt);
 }
 
-.list-card .data-table.list-table tbody tr:not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-editing):not(.is-editing):hover td {
+.list-card .data-table.list-table tbody tr:not(.row-new-highlight):not(.row-today-highlight):not(.row-order-overdue):not(.row-delivery-warning):not(.row-delivery-overdue):not(.row-stock-critical):not(.row-stock-warn):not(.row-editing):not(.is-editing):hover td {
   background-color: color-mix(in srgb, var(--success) 20%, var(--surface)) !important;
 }
 
@@ -1803,6 +1803,55 @@ body {
 
 .list-card .data-table.list-table tbody tr.row-today-highlight.row-delivery-overdue td {
   background-color: color-mix(in srgb, #dc2626 34%, #6d28d9 18%) !important;
+}
+
+.list-card .data-table.list-table tbody tr.row-stock-critical:not(.row-delivery-overdue):not(.row-delivery-warning) td {
+  background-color: color-mix(in srgb, #ea580c 32%, var(--surface)) !important;
+}
+
+.list-card .data-table.list-table tbody tr.row-stock-critical:not(.row-delivery-overdue):not(.row-delivery-warning) {
+  box-shadow: inset 3px 0 0 #c2410c;
+}
+
+.list-card .data-table.list-table tbody tr.row-stock-critical:not(.row-delivery-overdue):not(.row-delivery-warning):hover td {
+  background-color: color-mix(in srgb, #ea580c 42%, var(--surface)) !important;
+}
+
+.list-card .data-table.list-table tbody tr.row-stock-warn:not(.row-delivery-overdue):not(.row-delivery-warning):not(.row-stock-critical) td {
+  background-color: color-mix(in srgb, #2563eb 24%, var(--surface)) !important;
+}
+
+.list-card .data-table.list-table tbody tr.row-stock-warn:not(.row-delivery-overdue):not(.row-delivery-warning):not(.row-stock-critical) {
+  box-shadow: inset 3px 0 0 #1d4ed8;
+}
+
+.list-card .data-table.list-table tbody tr.row-stock-warn:not(.row-delivery-overdue):not(.row-delivery-warning):not(.row-stock-critical):hover td {
+  background-color: color-mix(in srgb, #2563eb 34%, var(--surface)) !important;
+}
+
+.stock-warn-tag {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.stock-warn-tag.is-critical {
+  color: #9a3412;
+  background: color-mix(in srgb, #ea580c 22%, #fff);
+}
+
+.stock-warn-tag.is-warn {
+  color: #1e40af;
+  background: color-mix(in srgb, #2563eb 18%, #fff);
+}
+
+.stock-warn-tag.is-muted {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--muted) 12%, var(--surface));
 }
 
 .data-table.list-table tbody tr.row-new-highlight:hover td {

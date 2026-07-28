@@ -176,7 +176,7 @@ erDiagram
 | `rmb_tax_incl_price` | TEXT → Decimal | 人民币含税单价 |
 | `payment_terms` | TEXT | 账期 |
 | `closure_type` | TEXT | 结案方式：空=未强制结案；`forced`=强制结案（不记出货、不纳入对账） |
-| `is_demo` | INTEGER | 1=测试数据（UI **测** 徽标）；`scripts/seed_sop_test_data.py` 写入 |
+| `is_demo` | INTEGER | 1=测试数据（UI **测** 徽标）；库存演示 API / `test_impl/demo/sop_seed.py`（测试） |
 | `created_at` | TEXT ISO | 系统录入时间 |
 | `updated_at` | TEXT ISO | 最后更新时间 |
 
@@ -541,7 +541,7 @@ flowchart LR
 | 操作 | 命令 / 路径 |
 |------|-------------|
 | 查看库路径 | `GET /api/health` → `db_path` |
-| 清空重来 | `scripts\reset_order_db.ps1` |
+| 本地对齐云端生产 data | 根目录 **`一键下载云端数据覆盖本地.bat`** |
 | 表结构源码 | `line_store.py` → `_SCHEMA`、`_migrate_schema` |
 | 代码符号索引 | CodeGraph：`codegraph query OrderLine` |
 

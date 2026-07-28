@@ -35,6 +35,7 @@ from test_impl.order_management.cost_analysis.bom_form_import import (
     parse_bom_workbook,
     preview_import_batch,
     preview_import_rows,
+    revalidate_preview_item,
 )
 from test_impl.order_management.customer_name import (
     extract_customer_hint_from_filename,
@@ -147,7 +148,12 @@ def _last_shipment_fields(info: tuple[str, str] | None) -> dict:
     return {"last_shipped_at": shipped_at, "last_delivery_doc_no": doc_no}
 
 
-def _line_to_dict(line, last_shipment: tuple[str, str] | None = None) -> dict:
+def _line_to_dict(
+    line,
+    last_shipment: tuple[str, str] | None = None,
+    *,
+    stock: dict | None = None,
+) -> dict:
     payload = {
         "id": line.id,
         "customer": line.customer,
@@ -174,6 +180,17 @@ def _line_to_dict(line, last_shipment: tuple[str, str] | None = None) -> dict:
     }
     if last_shipment is not None:
         payload.update(_last_shipment_fields(last_shipment))
+    if stock is not None:
+        payload.update(
+            {
+                "finished_qty": stock.get("finished_qty", "0"),
+                "semifinished_qty": stock.get("semifinished_qty", "0"),
+                "gap_ship": stock.get("gap_ship", "0"),
+                "gap_cover": stock.get("gap_cover", "0"),
+                "suggest_qty": stock.get("suggest_qty", "0"),
+                "stock_warn_level": stock.get("stock_warn_level", "ok"),
+            }
+        )
     return payload
 
 
@@ -253,7 +270,7 @@ def inventory_movements_page():
 
 @app.route("/inventory/planning")
 def inventory_planning_page():
-    return redirect("/inventory")
+    return render_template("inventory_planning.html", active="inventory_planning")
 
 
 @app.route("/cost/entry")
@@ -281,7 +298,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260727-bom-mode",
+            "build": "20260728-bom-clean-entry",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -506,6 +523,34 @@ def inventory_outbound():
         return jsonify({"error": str(exc)}), 400
 
 
+@app.route("/api/inventory/skip-outbound", methods=["POST"])
+def inventory_skip_outbound():
+    data = request.get_json(force=True) or {}
+    part = str(data.get("product_part_no") or "").strip()
+    qty = data.get("qty")
+    from_code = str(data.get("from_process_code") or "").strip()
+    to_code = str(data.get("to_process_code") or "").strip()
+    if not part:
+        return jsonify({"error": "产品料号不能为空"}), 400
+    if qty in (None, ""):
+        return jsonify({"error": "数量不能为空"}), 400
+    if not from_code or not to_code:
+        return jsonify({"error": "跳序出库须选择从工序与到工序"}), 400
+    try:
+        result = inventory_service.skip_outbound(
+            part,
+            from_code,
+            to_code,
+            qty,
+            supplier_name=str(data.get("supplier_name") or "").strip(),
+            doc_no=str(data.get("doc_no") or "").strip(),
+            note=str(data.get("note") or "").strip(),
+        )
+        return jsonify({"ok": True, "movement": result})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
 @app.route("/api/inventory/complete", methods=["POST"])
 def inventory_complete():
     payload, err = _inv_payload()
@@ -601,6 +646,50 @@ def inventory_adjust():
             process_code=str(data.get("process_code") or "").strip(),
             status=str(data.get("status") or "").strip(),
             supplier_name=str(data.get("supplier_name") or "").strip(),
+            note=str(data.get("note") or "").strip(),
+        )
+        return jsonify({"ok": True, "movement": result})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/inventory/repair-out", methods=["POST"])
+def inventory_repair_out():
+    data = request.get_json(force=True) or {}
+    part = str(data.get("product_part_no") or "").strip()
+    qty = data.get("qty")
+    if not part:
+        return jsonify({"error": "产品料号不能为空"}), 400
+    if qty in (None, ""):
+        return jsonify({"error": "数量不能为空"}), 400
+    try:
+        result = inventory_service.repair_out(
+            part,
+            qty,
+            process_code=str(data.get("process_code") or "").strip(),
+            doc_no=str(data.get("doc_no") or "").strip(),
+            note=str(data.get("note") or "").strip(),
+        )
+        return jsonify({"ok": True, "movement": result})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/inventory/repair-in", methods=["POST"])
+def inventory_repair_in():
+    data = request.get_json(force=True) or {}
+    part = str(data.get("product_part_no") or "").strip()
+    qty = data.get("qty")
+    if not part:
+        return jsonify({"error": "产品料号不能为空"}), 400
+    if qty in (None, ""):
+        return jsonify({"error": "数量不能为空"}), 400
+    try:
+        result = inventory_service.repair_in(
+            part,
+            qty,
+            process_code=str(data.get("process_code") or "").strip(),
+            doc_no=str(data.get("doc_no") or "").strip(),
             note=str(data.get("note") or "").strip(),
         )
         return jsonify({"ok": True, "movement": result})
@@ -801,6 +890,12 @@ def list_lines():
     if (view or "").strip().lower() == "closed":
         last_map = line_service.get_last_shipment_info_for_lines([ln.id for ln in lines])
         return jsonify([_line_to_dict(ln, last_map.get(ln.id)) for ln in lines])
+    if (view or "").strip().lower() == "open":
+        stock_map = {
+            row["line_id"]: row
+            for row in planning_service.compare_open_lines(customer=customer, q=q)
+        }
+        return jsonify([_line_to_dict(ln, stock=stock_map.get(ln.id)) for ln in lines])
     return jsonify([_line_to_dict(ln) for ln in lines])
 
 
@@ -1724,11 +1819,56 @@ def cost_bom_import_commit():
     if not payloads:
         return jsonify({"error": "导入项缺少 payload"}), 400
     skip_supplier = bool(data.get("skip_supplier_check", True))
+    overwrite = bool(data.get("overwrite", True))
     result = cost_record_service.import_bom_rows(
         payloads,
         skip_supplier_check=skip_supplier,
+        overwrite=overwrite,
     )
     return jsonify({"ok": True, **result})
+
+
+@app.route("/api/cost/bom-import/revalidate", methods=["POST"])
+def cost_bom_import_revalidate():
+    data = request.get_json(force=True) or {}
+    raw_items = data.get("items") or []
+    if not isinstance(raw_items, list) or not raw_items:
+        return jsonify({"error": "没有可校验的数据"}), 400
+    store = cost_record_service._store
+    results = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        parsed = item.get("parsed")
+        if not isinstance(parsed, dict):
+            continue
+        customer = str(item.get("customer_name") or parsed.get("customer_name") or "").strip()
+        fields = item.get("fields") if isinstance(item.get("fields"), dict) else {}
+        updated = revalidate_preview_item(
+            parsed,
+            customer,
+            store=store,
+            fields=fields,
+        )
+        updated["index"] = item.get("index")
+        if item.get("sheet_name"):
+            updated["sheet_name"] = str(item.get("sheet_name") or "").strip()
+        results.append(updated)
+    if not results:
+        return jsonify({"error": "校验项缺少 parsed"}), 400
+    passed = sum(1 for p in results if p["tier"] == "passed")
+    pending = sum(1 for p in results if p["tier"] == "pending")
+    blocked = sum(1 for p in results if p["tier"] == "blocked")
+    return jsonify(
+        {
+            "ok": True,
+            "items": results,
+            "passed": passed,
+            "pending": pending,
+            "blocked": blocked,
+            "total": len(results),
+        }
+    )
 
 
 @app.route("/api/cost/records/<int:record_id>", methods=["GET"])

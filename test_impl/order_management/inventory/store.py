@@ -13,6 +13,7 @@ from test_impl.order_management.order_entry.line_store import default_db_path
 STATUS_INHOUSE = "inhouse"
 STATUS_OUTSOURCE = "outsource"
 STATUS_FINISHED = "finished"
+STATUS_REPAIR = "repair"
 PROCESS_FINISHED = "FIN"
 
 _SCHEMA = """

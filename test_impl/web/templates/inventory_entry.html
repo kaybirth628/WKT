@@ -35,9 +35,10 @@
 
           <div id="invStationHost" class="inv-board inv-station-board" hidden></div>
 
-          <div id="invActionPanel" class="inv-action-panel" hidden>
+            <div id="invActionPanel" class="inv-action-panel" hidden>
             <h4 class="inv-section-title">登记动作</h4>
             <div id="invActionBtns" class="inv-action-btns"></div>
+            <p id="invActionHint" class="inv-action-hint" hidden></p>
             <form id="invSubmitForm" class="inv-submit-row">
               <input type="hidden" name="action_type" id="invActionType" />
               <input type="hidden" name="process_code" id="invProcessCode" />
@@ -64,6 +65,7 @@
                 <select id="invAdjustScope" name="adjust_scope">
                   <option value="inhouse">场内</option>
                   <option value="outsource">在途</option>
+                  <option value="repair">返修在途</option>
                 </select>
               </label>
               <label class="field inv-inline-field" id="invQtyField">
@@ -113,11 +115,11 @@
       </main>
       <footer class="page-footer">
         <h2 class="page-title">库存 · 工序出入库</h2>
-        <p class="page-desc">入库 / 出库登记；场内↔在途按 BOM 工艺顺序扣增</p>
+        <p class="page-desc">入库 / 出库 / 跳序 / 返修；支持校正场内、在途、返修在途与成品</p>
       </footer>
     </div>
   </div>
   <script src="/static/inventory_bom_lookup.js?v=20260725-inv-autocomplete"></script>
-  <script src="/static/inventory_entry.js?v=20260725-inv-station-sync"></script>
+  <script src="/static/inventory_entry.js?v=20260728-repair-inv"></script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from decimal import Decimal
 from unittest.mock import patch
 
 from test_impl.order_management.cost_analysis import CostRecordService
@@ -51,8 +52,18 @@ class TestPlanningCompare(unittest.TestCase):
         self.assertEqual(float(items["PLAN-A"]["semifinished_qty"]), 300)
         self.assertEqual(float(items["PLAN-A"]["gap_ship"]), 800)
         self.assertEqual(float(items["PLAN-A"]["gap_cover"]), 500)
+        self.assertEqual(items["PLAN-A"]["stock_warn_level"], "short_ship")
         self.assertEqual(float(items["PLAN-B"]["gap_cover"]), 400)
+        self.assertEqual(items["PLAN-B"]["stock_warn_level"], "short_ship")
         self.assertEqual(float(items["PLAN-C"]["gap_cover"]), 300)
+        self.assertEqual(items["PLAN-C"]["stock_warn_level"], "short_ship")
+
+    def test_stock_warn_level_rules(self) -> None:
+        svc = PlanningService
+        self.assertEqual(svc.stock_warn_level("", Decimal("1"), Decimal("0")), svc.STOCK_WARN_NO_PART)
+        self.assertEqual(svc.stock_warn_level("P1", Decimal("0"), Decimal("0")), svc.STOCK_WARN_OK)
+        self.assertEqual(svc.stock_warn_level("P1", Decimal("5"), Decimal("3")), svc.STOCK_WARN_SHORT_SHIP)
+        self.assertEqual(svc.stock_warn_level("P1", Decimal("0"), Decimal("2")), svc.STOCK_WARN_SHORT_COVER)
 
 
 if __name__ == "__main__":

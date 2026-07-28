@@ -235,8 +235,8 @@ class CostStore:
         sql = "SELECT * FROM cost_records WHERE 1=1"
         params: list = []
         if customer:
-            sql += " AND customer_name = ?"
-            params.append(customer.strip())
+            sql += " AND customer_name LIKE ?"
+            params.append(f"%{customer.strip()}%")
         if product_part_no:
             sql += " AND product_part_no LIKE ?"
             params.append(f"%{product_part_no.strip()}%")
@@ -248,7 +248,7 @@ class CostStore:
                 OR LOWER(material) LIKE ?
             )"""
             params.extend([kw, kw, kw, kw, kw])
-        sql += " ORDER BY datetime(created_at) DESC, id DESC"
+        sql += " ORDER BY updated_at DESC, id DESC"
         rows = self._conn.execute(sql, params).fetchall()
         return [_row_to_record(r) for r in rows]
 
@@ -270,7 +270,7 @@ class CostStore:
         if customer:
             sql += " AND customer_name = ?"
             params.append(customer)
-        sql += " ORDER BY datetime(updated_at) DESC, id DESC LIMIT 1"
+        sql += " ORDER BY updated_at DESC, id DESC LIMIT 1"
         row = self._conn.execute(sql, params).fetchone()
         if row:
             return _row_to_record(row)
@@ -278,7 +278,7 @@ class CostStore:
         for raw in self._conn.execute(
             """
             SELECT * FROM cost_records
-            ORDER BY datetime(updated_at) DESC, id DESC
+            ORDER BY updated_at DESC, id DESC
             """
         ).fetchall():
             if normalize_part_no(str(raw["product_part_no"] or "")).casefold() == want:
@@ -293,7 +293,7 @@ class CostStore:
             """
             SELECT * FROM cost_records
             WHERE LOWER(TRIM(product_name)) = LOWER(?)
-            ORDER BY datetime(updated_at) DESC, id DESC
+            ORDER BY updated_at DESC, id DESC
             LIMIT 1
             """,
             (name,),
@@ -320,7 +320,7 @@ class CostStore:
             """
             kw = f"%{q}%"
             params.extend([kw, kw, kw])
-        sql += " ORDER BY datetime(updated_at) DESC, id DESC LIMIT ?"
+        sql += " ORDER BY updated_at DESC, id DESC LIMIT ?"
         params.append(limit * 4)
 
         rows = self._conn.execute(sql, params).fetchall()
@@ -429,7 +429,7 @@ class CostStore:
             SELECT product_part_no, product_name, customer_name, updated_at
             FROM cost_records
             WHERE TRIM(product_part_no) <> ''
-            ORDER BY datetime(updated_at) DESC, id DESC
+            ORDER BY updated_at DESC, id DESC
             """
         ).fetchall()
         out: List[dict] = []
@@ -487,6 +487,21 @@ class CostStore:
         )
         self._conn.commit()
         return self.get(record_id)
+
+    def list_ids_by_part_no(self, product_part_no: str) -> List[int]:
+        """同料号所有 BOM 记录 id（最新 updated 在前）。"""
+        part_no = normalize_part_no(product_part_no)
+        if not part_no:
+            return []
+        rows = self._conn.execute(
+            """
+            SELECT id FROM cost_records
+            WHERE LOWER(TRIM(product_part_no)) = LOWER(?)
+            ORDER BY updated_at DESC, id DESC
+            """,
+            (part_no,),
+        ).fetchall()
+        return [int(r["id"]) for r in rows]
 
     def delete(self, record_id: int) -> None:
         cur = self._conn.execute("DELETE FROM cost_records WHERE id = ?", (record_id,))

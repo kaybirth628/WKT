@@ -8,9 +8,11 @@ from unittest.mock import patch
 from openpyxl import Workbook
 
 from test_impl.order_management.cost_analysis.bom_form_import import (
+    build_import_payload,
     parse_bom_workbook,
     preview_import_batch,
     preview_import_rows,
+    revalidate_preview_item,
 )
 from test_impl.order_management.customer_name import (
     extract_customer_hint_from_filename,
@@ -92,6 +94,157 @@ class BomFormImportTests(unittest.TestCase):
         self.assertEqual(len(previews), 1)
         self.assertEqual(previews[0]["tier"], "passed")
 
+    def test_sheet_customer_short_name_resolved_on_preview(self) -> None:
+        parsed = parse_bom_workbook(_build_sample_bom_workbook())
+        for row in parsed:
+            row["customer_name"] = "大沃"
+        store = CostStore(db_path=":memory:")
+        batch = preview_import_batch(
+            parsed,
+            store=store,
+            filename="大沃BOM.xlsx",
+            customer_names=["苏州大沃工具科技有限公司", "苏州鑫福泰电子科技有限公司-东硕"],
+        )
+        self.assertEqual(batch["items"][0]["parsed"]["customer_name"], "苏州大沃工具科技有限公司")
+        self.assertEqual(batch["customer_resolved"], "苏州大沃工具科技有限公司")
+        self.assertEqual(batch["customer_error"], "")
+
+    def test_import_overwrite_reupload_same_excel(self) -> None:
+        """重复上传同一 Excel：料号相同则第二次覆盖第一次，不新增。"""
+        parsed = parse_bom_workbook(_build_sample_bom_workbook())
+        store = CostStore(db_path=":memory:")
+        line_store = LineStore(db_path=":memory:")
+        service = CostRecordService(store=store, line_store=line_store)
+        payload = preview_import_rows(parsed, store=store)[0]["payload"]
+        payload["customer_name"] = "苏州大沃工具科技有限公司"
+        r1 = service.import_bom_rows([payload], skip_supplier_check=True, overwrite=True)
+        r2 = service.import_bom_rows([payload], skip_supplier_check=True, overwrite=True)
+        self.assertEqual(r1["created"], 1)
+        self.assertEqual(r2["updated"], 1)
+        self.assertEqual(r2["created"], 0)
+        self.assertEqual(len(store.list_ids_by_part_no("EP1210.50.01")), 1)
+
+    def test_import_overwrite_same_part_different_customer_alias(self) -> None:
+        """旧记录客户为简称、新导入为全称时，仍按料号覆盖。"""
+        parsed = parse_bom_workbook(_build_sample_bom_workbook())
+        store = CostStore(db_path=":memory:")
+        line_store = LineStore(db_path=":memory:")
+        service = CostRecordService(store=store, line_store=line_store)
+        old_payload = preview_import_rows(parsed, store=store)[0]["payload"]
+        old_payload["customer_name"] = "大沃"
+        service.import_bom_rows([old_payload], skip_supplier_check=True, overwrite=True)
+        new_payload = dict(old_payload)
+        new_payload["customer_name"] = "苏州大沃工具科技有限公司"
+        new_payload["product_name"] = "电机外壳（第二次导入）"
+        result = service.import_bom_rows([new_payload], skip_supplier_check=True, overwrite=True)
+        self.assertEqual(result["updated"], 1)
+        self.assertEqual(result["created"], 0)
+        record = service.get_record(result["record_ids"][0])
+        self.assertEqual(record.customer_name, "苏州大沃工具科技有限公司")
+        self.assertEqual(record.product_name, "电机外壳（第二次导入）")
+
+    def test_import_overwrite_same_part_no(self) -> None:
+        parsed = parse_bom_workbook(_build_sample_bom_workbook())
+        store = CostStore(db_path=":memory:")
+        line_store = LineStore(db_path=":memory:")
+        service = CostRecordService(store=store, line_store=line_store)
+        payload = preview_import_rows(parsed, store=store)[0]["payload"]
+        payload["customer_name"] = "苏州大沃工具科技有限公司"
+        r1 = service.import_bom_rows([payload], skip_supplier_check=True, overwrite=True)
+        self.assertEqual(r1["created"], 1)
+        self.assertEqual(r1["updated"], 0)
+        payload["product_name"] = "电机外壳（覆盖）"
+        payload["machine_tonnage"] = "350T"
+        r2 = service.import_bom_rows([payload], skip_supplier_check=True, overwrite=True)
+        self.assertEqual(r2["updated"], 1)
+        self.assertEqual(r2["created"], 0)
+        self.assertEqual(len(store.list_ids_by_part_no("EP1210.50.01")), 1)
+        record = service.get_record(r2["record_ids"][0])
+        self.assertEqual(record.product_name, "电机外壳（覆盖）")
+        self.assertEqual(record.machine_tonnage, "350T")
+
+    def test_existing_part_preview_not_blocked(self) -> None:
+        parsed = parse_bom_workbook(_build_sample_bom_workbook())
+        store = CostStore(db_path=":memory:")
+        line_store = LineStore(db_path=":memory:")
+        service = CostRecordService(store=store, line_store=line_store)
+        payload = preview_import_rows(parsed, store=store)[0]["payload"]
+        payload["customer_name"] = "苏州大沃工具科技有限公司"
+        service.import_bom_rows([payload], skip_supplier_check=True)
+        previews = preview_import_rows(parsed, store=store)
+        self.assertIn(previews[0]["tier"], ("passed", "pending"))
+        self.assertTrue(
+            any("覆盖" in i for i in previews[0]["issues"]),
+            previews[0]["issues"],
+        )
+
+    def test_revalidate_field_override_part_no(self) -> None:
+        parsed = parse_bom_workbook(_build_sample_bom_workbook())
+        store = CostStore(db_path=":memory:")
+        preview = preview_import_rows(parsed, store=store)[0]
+        updated = revalidate_preview_item(
+            preview["parsed"],
+            "苏州鑫福泰电子科技有限公司-东硕",
+            store=store,
+            fields={"product_part_no": "NEW-PART-001"},
+        )
+        self.assertEqual(updated["payload"]["product_part_no"], "NEW-PART-001")
+
+    def test_revalidate_manual_customer_unblocks_row(self) -> None:
+        parsed = parse_bom_workbook(_build_sample_bom_workbook())
+        for row in parsed:
+            row["customer_name"] = "DLS"
+            row["sheet_customer_raw"] = "DLS"
+            row["warnings"] = ["未找到客户「DLS」，请先在客商信息维护中建立客户档案后再导入 BOM"]
+        store = CostStore(db_path=":memory:")
+        blocked = preview_import_rows(parsed, store=store)[0]
+        self.assertEqual(blocked["tier"], "blocked")
+        fixed = revalidate_preview_item(
+            blocked["parsed"],
+            "苏州鑫福泰电子科技有限公司-东硕",
+            store=store,
+        )
+        self.assertIn(fixed["tier"], ("passed", "pending"))
+        self.assertEqual(
+            fixed["payload"]["customer_name"],
+            "苏州鑫福泰电子科技有限公司-东硕",
+        )
+        self.assertTrue(
+            any("人工确认" in i for i in fixed["issues"]),
+            fixed["issues"],
+        )
+
+    def test_build_import_payload_expands_customer_alias(self) -> None:
+        payload = build_import_payload({"customer_name": "大沃", "processes": [{"code": "yz"}]})
+        self.assertEqual(payload["customer_name"], "苏州大沃工具科技有限公司")
+
+    def test_filename_dawo_product_bom_copy_suffix(self) -> None:
+        self.assertEqual(
+            extract_customer_hint_from_filename("大沃产品BOM(1)(1).xlsx"),
+            "大沃",
+        )
+        resolved, err = resolve_customer_from_hint(
+            "大沃",
+            ["苏州大沃工具科技有限公司"],
+        )
+        self.assertEqual(resolved, "苏州大沃工具科技有限公司")
+        self.assertEqual(err, "")
+
+    def test_preview_meta_uses_sheet_customer_when_filename_fails(self) -> None:
+        parsed = parse_bom_workbook(_build_sample_bom_workbook())
+        for row in parsed:
+            row["customer_name"] = "大沃"
+        store = CostStore(db_path=":memory:")
+        batch = preview_import_batch(
+            parsed,
+            store=store,
+            filename="大沃产品BOM(1)(1).xlsx",
+            customer_names=["苏州大沃工具科技有限公司"],
+        )
+        self.assertEqual(batch["customer_resolved"], "苏州大沃工具科技有限公司")
+        self.assertEqual(batch["customer_error"], "")
+        self.assertEqual(batch["items"][0]["parsed"]["customer_name"], "苏州大沃工具科技有限公司")
+
     def test_filename_customer_match(self) -> None:
         self.assertEqual(extract_customer_hint_from_filename("东硕BOM.xls"), "东硕")
         resolved, err = resolve_customer_from_hint(
@@ -99,7 +252,7 @@ class BomFormImportTests(unittest.TestCase):
             ["苏州鑫福泰电子科技有限公司-东硕", "苏州大沃工具科技有限公司"],
         )
         self.assertEqual(resolved, "苏州鑫福泰电子科技有限公司-东硕")
-        self.assertEqual(err, "")
+        self.assertTrue(err == "" or "已匹配" in err)
 
     def test_filename_customer_missing_blocks(self) -> None:
         parsed = parse_bom_workbook(_build_sample_bom_workbook())

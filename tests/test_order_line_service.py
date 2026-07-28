@@ -293,6 +293,26 @@ class TestOrderLineService(unittest.TestCase):
         self.assertEqual(lines[0]["payment_terms"], "T/T Monthly settlement 90 days")
         self.assertEqual(lines[0]["customer_part_no"], "B601000137C")
 
+    def test_enrich_recognized_bom_customer_mismatch_flag(self) -> None:
+        self._seed_bom(
+            customer_name="苏州大沃工具科技有限公司",
+            product_name="演示件",
+            product_part_no="DW-001",
+        )
+        lines = self.svc.enrich_recognized_lines(
+            [
+                {
+                    "customer": "大沃",
+                    "customer_part_no": "DW-001",
+                    "product_spec": "演示件",
+                    "po_qty": "10",
+                }
+            ]
+        )
+        self.assertTrue(lines[0].get("_customer_bom_mismatch"))
+        self.assertEqual(lines[0]["_bom_customer_name"], "苏州大沃工具科技有限公司")
+        self.assertEqual(lines[0]["customer"], "大沃")
+
     def test_auto_fill_customer_part(self) -> None:
         self._seed_bom(
             customer_name="浙江红黑科技有限公司",
