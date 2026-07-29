@@ -5,19 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT · 用户管理</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260723-auth" />
-  <link rel="stylesheet" href="/static/auth.css?v=20260725-users-edit" />
+  <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260729-ui-full-align" />
 </head>
 <body>
   <div class="app-layout">
     {% set active = 'users_admin' %}
     {% include '_order_sidebar.html' %}
     <div class="app-main">
-      <main class="content-stack">
+      <main class="content-stack cost-stack">
         <h3 class="section-h3 submodule-page-title">用户管理</h3>
-        <section class="card">
-          <h4 class="section-h4">新建员工账号</h4>
-          <form id="createUserForm" class="audit-toolbar">
+        <section class="card list-card">
+          <form id="createUserForm" class="audit-toolbar filter-bar filter-bar-compact">
             <label>用户名 <input type="text" id="newUsername" required /></label>
             <label>姓名 <input type="text" id="newDisplayName" required /></label>
             <label>密码 <input type="password" id="newPassword" required minlength="6" /></label>
@@ -30,16 +29,16 @@
             <button type="submit" class="btn btn-primary btn-sm">创建</button>
           </form>
           <p id="usersMsg" class="msg"></p>
-          <div class="table-wrap">
-            <table class="data-table">
+          <div class="table-wrap list-table-wrap">
+            <table class="data-table list-table">
               <thead>
-                <tr>
-                  <th>用户名</th>
-                  <th>姓名</th>
-                  <th>角色</th>
-                  <th>状态</th>
-                  <th>上次登录</th>
-                  <th>操作</th>
+                <tr class="list-header-row">
+                  <th scope="col">用户名</th>
+                  <th scope="col">姓名</th>
+                  <th scope="col">角色</th>
+                  <th scope="col">状态</th>
+                  <th scope="col">上次登录</th>
+                  <th scope="col" class="list-th-action action-cell">操作</th>
                 </tr>
               </thead>
               <tbody id="usersBody"></tbody>
@@ -47,10 +46,15 @@
           </div>
         </section>
       </main>
+      <footer class="page-footer">
+        <h2 class="page-title">系统 · 用户管理</h2>
+        <p class="page-desc">创建员工账号、分配角色与启用状态</p>
+      </footer>
     </div>
   </div>
   {% include '_auth_user_bar.html' %}
-  <script src="/static/auth.js?v=20260723-auth"></script>
-  <script src="/static/users_admin.js?v=20260725-users-edit"></script>
+  <script src="/static/hover_tip.js?v=20260729-ui-full-align"></script>
+  <script src="/static/auth.js?v=20260729-ui-full-align"></script>
+  <script src="/static/users_admin.js?v=20260729-ui-full-align"></script>
 </body>
 </html>

@@ -147,6 +147,15 @@ select:focus {
   min-width: 0;
 }
 
+.cost-filter-field .inv-bom-combo {
+  width: 100%;
+  min-width: 0;
+}
+
+.cost-header-table .field .inv-bom-combo {
+  width: 100%;
+}
+
 .cost-header-table .field input,
 .cost-header-table .field select {
   width: 100%;
@@ -290,6 +299,111 @@ select:focus {
 }
 
 .process-pick-item .process-price:disabled {
+  opacity: 0.45;
+}
+
+.process-suppliers-panel {
+  width: 100%;
+  margin-top: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.process-supplier-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.process-supplier-tag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--text, #1e293b);
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--primary, #2563eb) 22%, var(--border, #cfd6de));
+  border-radius: 6px;
+}
+
+.process-pick-item:has(.process-pick:checked) .process-supplier-tag {
+  background: color-mix(in srgb, var(--primary-soft, #eff6ff) 70%, #fff);
+}
+
+.process-supplier-tag-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.process-supplier-tag-remove {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.process-supplier-tag-remove:hover:not(:disabled) {
+  color: var(--danger, #dc2626);
+  background: color-mix(in srgb, var(--danger, #dc2626) 8%, transparent);
+}
+
+.process-supplier-tag-remove:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.process-supplier-add-wrap {
+  width: 100%;
+}
+
+.process-suppliers-panel .inv-bom-combo {
+  width: 100%;
+}
+
+.process-suppliers-panel .inv-bom-combo input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.42rem 2rem 0.42rem 0.55rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  border: 1px solid var(--border, #cfd6de);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.process-suppliers-panel .inv-bom-combo--select input {
+  cursor: pointer;
+}
+
+.process-suppliers-panel .inv-bom-suggest {
+  z-index: 50;
+}
+
+.process-suppliers-panel .inv-bom-suggest-customer .inv-bom-suggest-primary {
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.process-suppliers-panel .process-supplier-add-input:disabled {
   opacity: 0.45;
 }
 

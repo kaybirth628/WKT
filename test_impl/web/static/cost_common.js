@@ -88,19 +88,134 @@ window.CostCommon = (function () {
       </div>`;
   }
 
-  function filterSupplierChoices(query) {
+  function normalizeSupplierList(entry) {
+    if (!entry) return [];
+    if (Array.isArray(entry.suppliers) && entry.suppliers.length) {
+      return entry.suppliers.map((s) => String(s || "").trim()).filter(Boolean);
+    }
+    const one = String(entry.supplier || "").trim();
+    return one ? [one] : [];
+  }
+
+  function supplierTagHtml(name, disabled) {
+    return `
+      <li class="process-supplier-tag" data-value="${escapeHtml(name)}">
+        <span class="process-supplier-tag-label">${escapeHtml(name)}</span>
+        <button type="button" class="process-supplier-tag-remove" aria-label="移除"${disabled ? " disabled" : ""}>×</button>
+      </li>`;
+  }
+
+  function buildProcessSuppliersHtml(code, suppliers, disabled) {
+    if (!isOutsourceProcess(code)) {
+      return '<span class="process-inhouse-tag">场内自制</span>';
+    }
+    const list = Array.isArray(suppliers) ? suppliers.filter(Boolean) : [];
+    const tags = list.map((name) => supplierTagHtml(name, disabled)).join("");
+    const dis = disabled ? " disabled" : "";
+    return `
+      <div class="process-suppliers-panel" data-process-code="${escapeHtml(code)}"${disabled ? " data-disabled=1" : ""}>
+        <ul class="process-supplier-tags">${tags}</ul>
+        <div class="process-supplier-add-wrap">
+          <input type="text" class="process-supplier-add-input" data-process-code="${escapeHtml(code)}"
+            placeholder="搜索或选择供应商" autocomplete="off" spellcheck="false"${dis} />
+        </div>
+      </div>`;
+  }
+
+  function getProcessSuppliersFromPanel(panel) {
+    if (!panel) return [];
+    const names = [];
+    panel.querySelectorAll(".process-supplier-tag").forEach((tag) => {
+      const value = (tag.dataset.value || "").trim();
+      if (value && !names.includes(value)) names.push(value);
+    });
+    return names;
+  }
+
+  function setProcessSuppliersPanel(panel, suppliers) {
+    if (!panel) return;
+    const tags = panel.querySelector(".process-supplier-tags");
+    if (!tags) return;
+    const disabled = panel.dataset.disabled === "1";
+    tags.innerHTML = (suppliers || []).filter(Boolean).map((name) => supplierTagHtml(name, disabled)).join("");
+  }
+
+  function addSupplierToPanel(panel, name) {
+    const value = String(name || "").trim();
+    if (!panel || !value) return false;
+    const current = getProcessSuppliersFromPanel(panel);
+    if (current.some((s) => s.toLowerCase() === value.toLowerCase())) return false;
+    setProcessSuppliersPanel(panel, current.concat(value));
+    return true;
+  }
+
+  function clearProcessSuppliersPanel(panel) {
+    setProcessSuppliersPanel(panel, []);
+    const input = panel?.querySelector(".process-supplier-add-input");
+    if (input) input.value = "";
+  }
+
+  function setProcessSuppliersDisabled(panel, disabled) {
+    if (!panel) return;
+    panel.dataset.disabled = disabled ? "1" : "0";
+    const input = panel.querySelector(".process-supplier-add-input");
+    if (input) input.disabled = disabled;
+    panel.querySelectorAll(".process-supplier-tag-remove").forEach((btn) => {
+      btn.disabled = disabled;
+    });
+  }
+
+  function bindProcessSupplierAddCombos(root) {
+    if (!window.InventoryBomLookup) return;
+    const scope = root || document;
+    const comboOpts = window.InventoryBomLookup.STANDARD_COMBO_OPTS || {
+      openOnFocus: true,
+      minChars: 0,
+      showToggle: true,
+    };
+    scope.querySelectorAll(".process-supplier-add-input").forEach((input) => {
+      if (input.dataset.bound === "1") return;
+      input.dataset.bound = "1";
+      const panel = input.closest(".process-suppliers-panel");
+      window.InventoryBomLookup.bindCustomer({
+        customerInput: input,
+        fetchSuggestions: (q) => {
+          const exclude = getProcessSuppliersFromPanel(panel);
+          const excludeSet = new Set(exclude.map((n) => n.toLowerCase()));
+          const query = (q || "").trim().toLowerCase();
+          return Promise.resolve(
+            supplierChoices()
+              .filter((n) => !excludeSet.has(n.toLowerCase()))
+              .filter((n) => !query || n.toLowerCase().includes(query))
+              .slice(0, 50)
+          );
+        },
+        openOnFocus: comboOpts.openOnFocus,
+        minChars: comboOpts.minChars,
+        showToggle: comboOpts.showToggle,
+        onSelect: (name) => {
+          if (panel && addSupplierToPanel(panel, name)) {
+            input.value = "";
+          }
+        },
+      });
+    });
+  }
+
+  function filterSupplierChoices(query, excludeNames) {
     const q = String(query || "").trim().toLowerCase();
-    const all = supplierChoices();
+    const exclude = new Set((excludeNames || []).map((n) => String(n || "").trim().toLowerCase()));
+    const all = supplierChoices().filter((name) => !exclude.has(name.toLowerCase()));
     if (!q) return all;
     return all.filter((name) => name.toLowerCase().includes(q));
   }
 
-  function renderSupplierList(combo, query) {
+  function renderSupplierList(combo, query, excludeNames) {
     const list = combo.querySelector(".process-supplier-list");
     if (!list) return;
-    const hidden = combo.querySelector(".process-supplier");
+    const hidden = combo.querySelector(".process-supplier, .process-supplier-add-hidden");
     const current = hidden ? hidden.value : "";
-    const items = filterSupplierChoices(query);
+    const items = filterSupplierChoices(query, excludeNames);
     if (!items.length) {
       list.innerHTML = '<li class="process-supplier-empty">无匹配供应商</li>';
       list.hidden = false;
@@ -138,22 +253,27 @@ window.CostCommon = (function () {
       const search = combo.querySelector(".process-supplier-search");
       const list = combo.querySelector(".process-supplier-list");
       if (!search || !list) return;
+      if (combo.classList.contains("is-add-supplier")) return;
+
+      function excludedNames() {
+        return [];
+      }
 
       search.addEventListener("focus", () => {
         if (search.disabled) return;
-        renderSupplierList(combo, "");
+        renderSupplierList(combo, "", excludedNames());
       });
       search.addEventListener("click", (ev) => {
         ev.stopPropagation();
         if (search.disabled) return;
-        renderSupplierList(combo, search.value);
+        renderSupplierList(combo, search.value, excludedNames());
       });
       search.addEventListener("mousedown", (ev) => ev.stopPropagation());
       search.addEventListener("input", () => {
         if (search.disabled) return;
         const hidden = combo.querySelector(".process-supplier");
         if (hidden) hidden.value = "";
-        renderSupplierList(combo, search.value);
+        renderSupplierList(combo, search.value, excludedNames());
       });
       search.addEventListener("keydown", (ev) => {
         if (ev.key === "Escape") {
@@ -180,6 +300,17 @@ window.CostCommon = (function () {
       combo.addEventListener("click", (ev) => ev.stopPropagation());
     });
 
+    scope.querySelectorAll(".process-suppliers-panel").forEach((panel) => {
+      if (panel.dataset.tagsBound === "1") return;
+      panel.dataset.tagsBound = "1";
+      panel.addEventListener("click", (ev) => {
+        const btn = ev.target.closest(".process-supplier-tag-remove");
+        if (!btn || btn.disabled) return;
+        const tag = btn.closest(".process-supplier-tag");
+        if (tag) tag.remove();
+      });
+    });
+
     if (!document.documentElement.dataset.supplierComboDocBound) {
       document.documentElement.dataset.supplierComboDocBound = "1";
       document.addEventListener("click", (ev) => {
@@ -200,19 +331,24 @@ window.CostCommon = (function () {
   function bindProcessPickerGrid(grid, onSelectionChange) {
     if (!grid) return;
     bindSupplierCombos(grid);
+    bindProcessSupplierAddCombos(grid);
+    if (window.HoverTip) {
+      grid.querySelectorAll(".process-name").forEach((el) => window.HoverTip.bind(el));
+    }
     grid.querySelectorAll(".process-pick").forEach((cb) => {
       cb.addEventListener("change", () => {
         const code = cb.dataset.processCode;
         const priceInput = grid.querySelector(`input.process-price[data-process-code="${code}"]`);
+        const panel = grid.querySelector(`.process-suppliers-panel[data-process-code="${code}"]`);
         const combo = grid.querySelector(
-          `.process-supplier-combo:has(.process-supplier[data-process-code="${code}"])`
+          `.process-supplier-combo:not(.is-add-supplier):has(.process-supplier[data-process-code="${code}"])`
         );
         const supplierInput = grid.querySelector(
           `input.process-supplier[data-process-code="${code}"]`
         );
-        const searchInput = grid.querySelector(
-          `input.process-supplier-search[data-process-code="${code}"]`
-        );
+        const searchInput = panel
+          ? panel.querySelector(".process-supplier-search")
+          : grid.querySelector(`input.process-supplier-search[data-process-code="${code}"]`);
         if (priceInput) {
           priceInput.disabled = !cb.checked;
           if (!cb.checked) {
@@ -220,14 +356,17 @@ window.CostCommon = (function () {
             priceInput.classList.remove("filled");
           }
         }
-        if (supplierInput) {
+        if (panel) {
+          setProcessSuppliersDisabled(panel, !cb.checked);
+          if (!cb.checked) clearProcessSuppliersPanel(panel);
+        } else if (supplierInput) {
           supplierInput.disabled = !cb.checked;
           if (!cb.checked) {
             if (combo) setSupplierValue(combo, "");
             else supplierInput.value = "";
           }
         }
-        if (searchInput) searchInput.disabled = !cb.checked;
+        if (searchInput && !panel) searchInput.disabled = !cb.checked;
         if (typeof onSelectionChange === "function") onSelectionChange();
       });
     });
@@ -340,8 +479,8 @@ window.CostCommon = (function () {
         <span class="process-order-code">${escapeHtml(code)}</span>
         <span class="process-order-name">${escapeHtml(opt.name)}</span>
         <span class="process-order-actions">
-          <button type="button" class="btn-icon process-order-up" title="上移" aria-label="上移"${idx === 0 ? " disabled" : ""}>↑</button>
-          <button type="button" class="btn-icon process-order-down" title="下移" aria-label="下移"${idx === ordered.length - 1 ? " disabled" : ""}>↓</button>
+          <button type="button" class="btn-icon process-order-up" aria-label="上移"${idx === 0 ? " disabled" : ""}>↑</button>
+          <button type="button" class="btn-icon process-order-down" aria-label="下移"${idx === ordered.length - 1 ? " disabled" : ""}>↓</button>
         </span>
       </li>`;
       })
@@ -368,13 +507,23 @@ window.CostCommon = (function () {
       const priceInput = document.querySelector(
         `${containerSelector} input.process-price[data-process-code="${code}"]`
       );
-      const supplierInput = document.querySelector(
-        `${containerSelector} input.process-supplier[data-process-code="${code}"], ${containerSelector} select.process-supplier[data-process-code="${code}"]`
+      const panel = document.querySelector(
+        `${containerSelector} .process-suppliers-panel[data-process-code="${code}"]`
       );
       const price = priceInput && priceInput.value !== "" ? priceInput.value : "0";
-      const supplier =
-        isOutsourceProcess(code) && supplierInput ? supplierInput.value.trim() : "";
-      byCode[code] = { price, supplier };
+      let suppliers = [];
+      if (panel) {
+        suppliers = getProcessSuppliersFromPanel(panel);
+      } else {
+        const supplierInput = document.querySelector(
+          `${containerSelector} input.process-supplier[data-process-code="${code}"], ${containerSelector} select.process-supplier[data-process-code="${code}"]`
+        );
+        const one =
+          isOutsourceProcess(code) && supplierInput ? supplierInput.value.trim() : "";
+        suppliers = one ? [one] : [];
+      }
+      const supplier = suppliers[0] || "";
+      byCode[code] = { price, supplier, suppliers };
       byName[name] = price;
     });
     const gridId = containerSelector.replace(/^#/, "");
@@ -388,10 +537,17 @@ window.CostCommon = (function () {
     document.querySelectorAll(`${containerSelector} .process-pick:checked`).forEach((cb) => {
       const code = cb.dataset.processCode;
       if (!isOutsourceProcess(code)) return;
-      const supplierInput = document.querySelector(
-        `${containerSelector} input.process-supplier[data-process-code="${code}"], ${containerSelector} select.process-supplier[data-process-code="${code}"]`
+      const panel = document.querySelector(
+        `${containerSelector} .process-suppliers-panel[data-process-code="${code}"]`
       );
-      if (!supplierInput || !supplierInput.value.trim()) {
+      let suppliers = panel ? getProcessSuppliersFromPanel(panel) : [];
+      if (!suppliers.length) {
+        const supplierInput = document.querySelector(
+          `${containerSelector} input.process-supplier[data-process-code="${code}"], ${containerSelector} select.process-supplier[data-process-code="${code}"]`
+        );
+        if (supplierInput && supplierInput.value.trim()) suppliers = [supplierInput.value.trim()];
+      }
+      if (!suppliers.length) {
         missing.push(cb.dataset.process);
       }
     });
@@ -411,16 +567,17 @@ window.CostCommon = (function () {
               : "";
         const supplier =
           entry && typeof entry === "object" && entry.supplier != null ? entry.supplier : "";
+        const suppliers = normalizeSupplierList(entry);
         const priceVal = price !== "0" && price !== 0 ? price : "";
         return `
     <label class="process-pick-item">
       <span class="process-pick-head">
         <input type="checkbox" class="process-pick" data-process-code="${p.code}" data-process="${p.name}"${checked ? " checked" : ""} />
         <span class="process-code">${p.code}</span>
-        <span class="process-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
+        <span class="process-name" data-hover-text="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
       </span>
       <input class="process-price" data-process-code="${p.code}" data-process-price="${escapeHtml(p.name)}" type="number" step="0.0001" min="0" placeholder="单价（可选）"${checked ? "" : " disabled"} value="${priceVal}" />
-      ${buildSupplierSelectHtml(p.code, supplier, !checked)}
+      ${buildProcessSuppliersHtml(p.code, suppliers, !checked)}
     </label>`;
       })
       .join("");
@@ -476,6 +633,7 @@ window.CostCommon = (function () {
         byCode[item.code] = {
           price: item.price,
           supplier: item.supplier || "",
+          suppliers: item.suppliers || (item.supplier ? [item.supplier] : []),
         };
       });
       return byCode;
@@ -486,6 +644,7 @@ window.CostCommon = (function () {
           byCode[code] = {
             price: val.price != null ? val.price : "0",
             supplier: val.supplier || "",
+            suppliers: normalizeSupplierList(val),
           };
         } else {
           byCode[code] = { price: val, supplier: "" };
@@ -503,12 +662,16 @@ window.CostCommon = (function () {
     getSupplierNames,
     isOutsourceProcess,
     buildSupplierSelectHtml,
+    buildProcessSuppliersHtml,
+    setProcessSuppliersPanel,
+    getProcessSuppliersFromPanel,
     bindProcessPickerGrid,
     bindProcessOrder,
     setProcessOrder,
     clearProcessOrder,
     getProcessOrder,
     refreshProcessOrder,
+    bindProcessSupplierAddCombos,
     bindSupplierCombos,
     collectProcessEntries,
     validateProcessSuppliers,

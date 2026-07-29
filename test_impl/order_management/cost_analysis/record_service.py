@@ -15,6 +15,7 @@ from .models import (
     INHOUSE_SUPPLIER_LABEL,
     is_inhouse_process,
     is_inhouse_supplier,
+    normalize_process_suppliers,
     process_entry_price,
     process_prices_to_names,
     resolve_process_key,
@@ -237,6 +238,11 @@ class CostRecordService:
             "process_suppliers": {
                 s["code"]: s["supplier"] for s in selections if s.get("supplier")
             },
+            "process_supplier_lists": {
+                s["code"]: s.get("suppliers") or []
+                for s in selections
+                if s.get("suppliers")
+            },
             "process_selections": selections,
             "process_order": [s["code"] for s in selections],
             "selected_processes": [s["name"] for s in selections],
@@ -270,12 +276,14 @@ class CostRecordService:
             entry = entries[code]
             name = PROCESS_BY_CODE[code]
             supplier = entry.get("supplier", "")
+            suppliers = entry.get("suppliers") or ([supplier] if supplier else [])
             selections.append(
                 {
                     "code": code,
                     "name": name,
                     "price": entry["price"],
                     "supplier": supplier,
+                    "suppliers": suppliers,
                     "inhouse": is_inhouse_process(code) or is_inhouse_supplier(supplier),
                 }
             )
@@ -349,14 +357,10 @@ class CostRecordService:
                 f"料号「{part_no}」已绑定客户「{binding['customer_name']}」，与所选客户不一致"
             )
 
-    def _parse_process_value(self, value, supplier_override: str = "") -> tuple[str, str]:
-        if isinstance(value, dict):
-            price = process_entry_price(value)
-            supplier = str(value.get("supplier", supplier_override) or "").strip()
-        else:
-            price = process_entry_price(value)
-            supplier = str(supplier_override or "").strip()
-        return price, supplier
+    def _parse_process_value(self, value, supplier_override: str = "") -> tuple[str, str, List[str]]:
+        price = process_entry_price(value)
+        supplier, suppliers = normalize_process_suppliers(value, supplier_override)
+        return price, supplier, suppliers
 
     def _normalize_process_entries(self, raw: dict, suppliers: Optional[dict] = None) -> dict:
         supplier_map = suppliers or {}
@@ -377,10 +381,11 @@ class CostRecordService:
                 or supplier_map.get(key)
                 or ""
             ).strip()
-            price, supplier = self._parse_process_value(value, supplier_override)
+            price, supplier, suppliers = self._parse_process_value(value, supplier_override)
             if is_inhouse_process(code):
                 supplier = ""
-            out[code] = {"price": price, "supplier": supplier}
+                suppliers = []
+            out[code] = {"price": price, "supplier": supplier, "suppliers": suppliers}
         return out
 
     def _validate_process_suppliers(self, entries: dict) -> None:
@@ -389,12 +394,17 @@ class CostRecordService:
         for code, entry in entries.items():
             if is_inhouse_process(code):
                 continue
-            supplier = str(entry.get("supplier", "") or "").strip()
             proc_name = PROCESS_BY_CODE.get(code, code)
-            if not supplier:
-                raise ValueError(f"外发工序「{proc_name}」请选择供应商")
-            if supplier.casefold() not in known:
-                raise ValueError(f"供应商「{supplier}」不在供应商列表中")
+            suppliers = entry.get("suppliers") or []
+            if not suppliers:
+                supplier = str(entry.get("supplier", "") or "").strip()
+                suppliers = [supplier] if supplier else []
+            if not suppliers:
+                raise ValueError(f"外发工序「{proc_name}」请至少选择一个供应商")
+            for supplier in suppliers:
+                name = str(supplier or "").strip()
+                if name.casefold() not in known:
+                    raise ValueError(f"供应商「{name}」不在供应商列表中")
 
     def _price_map(self, entries: dict) -> dict:
         return {
@@ -411,6 +421,9 @@ class CostRecordService:
             code: {
                 "price": entry["price"],
                 "supplier": "" if is_inhouse_process(code) else entry.get("supplier", ""),
+                "suppliers": []
+                if is_inhouse_process(code)
+                else list(entry.get("suppliers") or []),
             }
             for code, entry in entries.items()
             if str(code).strip() != PROCESS_ORDER_KEY

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT · 送货单模板</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260623-noto-font" />
+  <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
   <style>
     .dn-page { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 2rem; }
     .dn-page h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
@@ -22,7 +22,8 @@
     .dn-help code { background: var(--bg-soft); padding: 0.1em 0.35em; border-radius: 4px; }
     .dn-form { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: flex-end; }
     .dn-form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8125rem; }
-    .dn-form input, .dn-form select { min-width: 160px; padding: 0.45rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; }
+    .dn-form input, .dn-form select { min-width: 160px; padding: 0.45rem 0.5rem; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
+    .dn-form .inv-bom-combo { min-width: 200px; width: 100%; }
     .dn-mapping { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     .dn-mapping th, .dn-mapping td { border-bottom: 1px solid var(--border); padding: 0.5rem; text-align: left; }
     .dn-msg { font-size: 0.875rem; margin-top: 0.5rem; }
@@ -57,8 +58,7 @@
       <h3>客户 → 模板</h3>
       <form class="dn-form" id="mapForm">
         <label>客户
-          <input type="text" name="customer" id="mapCustomer" list="customerList" required placeholder="与订单中客户名一致" />
-          <datalist id="customerList"></datalist>
+          <input type="text" name="customer" id="mapCustomer" required placeholder="与订单中客户名一致" autocomplete="off" />
         </label>
         <label>模板
           <select name="template" id="mapTemplate">
@@ -74,7 +74,19 @@
       </table>
     </div>
   </div>
+  <script src="/static/inventory_bom_lookup.js?v=20260729-ui-full-align"></script>
   <script>
+    function initMapCustomerCombo() {
+      const el = document.getElementById("mapCustomer");
+      const IBL = window.InventoryBomLookup;
+      if (!el || !IBL || el.dataset.comboBound) return;
+      el.dataset.comboBound = "1";
+      IBL.bindCustomer({
+        customerInput: el,
+        fetchSuggestions: IBL.fetchMasterCustomerSuggestions,
+        ...IBL.STANDARD_COMBO_OPTS,
+      });
+    }
     async function loadConfig() {
       const res = await fetch("/api/delivery-templates");
       const data = await res.json();
@@ -112,12 +124,7 @@
           loadConfig();
         });
       });
-      const mres = await fetch("/api/master");
-      const master = await mres.json();
-      const dl = document.getElementById("customerList");
-      dl.innerHTML = (master.customers || [])
-        .map((c) => `<option value="${c.name || c}"></option>`)
-        .join("");
+      initMapCustomerCombo();
     }
     document.getElementById("uploadForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -144,6 +151,7 @@
       msg.textContent = res.ok ? "✓ 已保存" : data.error || "保存失败";
       if (res.ok) loadConfig();
     });
+    initMapCustomerCombo();
     loadConfig();
   </script>
 </body>

@@ -336,7 +336,7 @@ WktDeliveryDocument
 | `product_part_no` | **客户料号**（BOM 权威键） |
 | `product_name` | 品名 |
 | `mold_no` / `cavity` / `unit_weight_g` / `material` / `machine_tonnage` | 模具与物性 |
-| `material_unit_price` / `process_prices_json` | 原材与工序单价；JSON 内可含 **`__order__`** 数组保存自定义工艺顺序（CL-0137） |
+| `material_unit_price` / `process_prices_json` | 原材与工序单价；JSON 每道工序 `{ price, supplier, suppliers[] }`（`supplier` 为主供应商/兼容旧数据；`suppliers` 为可选外发供应商列表，CL-0238）；可含 **`__order__`** 数组保存自定义工艺顺序（CL-0137） |
 | `material_cost` / `process_total` / `unit_cost` / `quote_price` | 计算结果 |
 | `is_demo` | 1=测试数据（列表显示 **测**）；0=正式（CL-0133） |
 | `created_at` / `updated_at` | 时间戳 |

@@ -118,6 +118,71 @@ def list_profile_suppliers() -> List[str]:
     return [name for name, _, _ in items]
 
 
+def resolve_supplier_name(raw: str) -> tuple[str, str | None]:
+    """BOM 表常见简称 → supplier_profiles 全称。返回 (解析后名称, 可选提示)。"""
+    s = (raw or "").strip()
+    if not s:
+        return "", None
+
+    profiles = load_all_profiles()
+    if not profiles:
+        return s, None
+
+    folded = s.casefold()
+    for key in profiles:
+        if key.casefold() == folded:
+            return key, None
+
+    if len(s) >= 2:
+        contains = [k for k in profiles if folded in k.casefold()]
+        if len(contains) == 1:
+            canonical = contains[0]
+            if canonical != s:
+                return canonical, f"供应商「{s}」已匹配为「{canonical}」"
+            return canonical, None
+        if len(contains) > 1:
+            best = _pick_supplier_substring_match(s, contains)
+            if best:
+                return best, f"供应商「{s}」已匹配为「{best}」"
+            return s, f"供应商「{s}」对应多家({len(contains)}个)，请改全称"
+
+    if len(s) >= 4:
+        contained_in = [k for k in profiles if k.casefold() in folded]
+        if len(contained_in) == 1:
+            canonical = contained_in[0]
+            return canonical, f"供应商「{s}」已匹配为「{canonical}」"
+
+    notes_hits = [
+        k
+        for k, row in profiles.items()
+        if folded in str(row.get("notes") or "").casefold()
+    ]
+    if len(notes_hits) == 1:
+        canonical = notes_hits[0]
+        return canonical, f"供应商「{s}」按备注匹配为「{canonical}」"
+
+    return s, f"供应商「{s}」未在供应商列表中找到，请维护全称或补充档案"
+
+
+def _pick_supplier_substring_match(needle: str, candidates: List[str]) -> str | None:
+    """多家含同一简称时：优先更短全称，再比简称出现位置靠后（常见公司名字尾）。"""
+    if not candidates:
+        return None
+    if len(candidates) == 1:
+        return candidates[0]
+    folded = needle.casefold()
+
+    def rank(name: str) -> tuple:
+        pos = name.casefold().rfind(folded)
+        return (len(name), -pos)
+
+    ranked = sorted(candidates, key=rank)
+    best = ranked[0]
+    if len(ranked) > 1 and rank(best) == rank(ranked[1]):
+        return None
+    return best
+
+
 def _resolve_profile_key(all_cfg: Dict[str, dict], name: str) -> str | None:
     target = (name or "").strip().casefold()
     if not target:

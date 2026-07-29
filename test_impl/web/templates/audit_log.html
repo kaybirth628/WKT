@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT · 操作记录</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260723-auth" />
-  <link rel="stylesheet" href="/static/auth.css?v=20260723-auth" />
+  <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
+  <link rel="stylesheet" href="/static/auth.css?v=20260729-ui-full-align" />
 </head>
 <body>
   <div class="app-layout">
     {% set active = 'audit' %}
     {% include '_order_sidebar.html' %}
     <div class="app-main">
-      <main class="content-stack">
+      <main class="content-stack cost-stack">
         <h3 class="section-h3 submodule-page-title">操作记录</h3>
-        <section class="card">
-          <div class="audit-toolbar">
+        <section class="card list-card">
+          <div class="audit-toolbar filter-bar filter-bar-compact">
             <label>模块
               <select id="auditModule">
                 <option value="">全部</option>
@@ -42,17 +42,17 @@
             </label>
             <button type="button" class="btn btn-primary btn-sm" id="auditSearchBtn">查询</button>
           </div>
-          <p id="auditSummary" class="dash-updated"></p>
-          <div class="table-wrap">
-            <table class="data-table" id="auditTable">
+          <p id="auditSummary" class="dash-updated list-summary"></p>
+          <div class="table-wrap list-table-wrap">
+            <table class="data-table list-table" id="auditTable">
               <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>操作人</th>
-                  <th>模块</th>
-                  <th>动作</th>
-                  <th>摘要</th>
-                  <th>IP</th>
+                <tr class="list-header-row">
+                  <th scope="col">时间</th>
+                  <th scope="col">操作人</th>
+                  <th scope="col">模块</th>
+                  <th scope="col">动作</th>
+                  <th scope="col" class="list-th-text">摘要</th>
+                  <th scope="col">IP</th>
                 </tr>
               </thead>
               <tbody id="auditBody"></tbody>
@@ -60,10 +60,15 @@
           </div>
         </section>
       </main>
+      <footer class="page-footer">
+        <h2 class="page-title">系统 · 操作记录</h2>
+        <p class="page-desc">按模块与时间筛选审计日志</p>
+      </footer>
     </div>
   </div>
   {% include '_auth_user_bar.html' %}
-  <script src="/static/auth.js?v=20260723-auth"></script>
-  <script src="/static/audit_log.js?v=20260723-auth"></script>
+  <script src="/static/hover_tip.js?v=20260729-ui-full-align"></script>
+  <script src="/static/auth.js?v=20260729-ui-full-align"></script>
+  <script src="/static/audit_log.js?v=20260729-ui-full-align"></script>
 </body>
 </html>

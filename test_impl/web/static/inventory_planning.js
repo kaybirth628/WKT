@@ -112,11 +112,17 @@ document.getElementById("planFilterForm")?.addEventListener("submit", (e) => {
 (function initPlanLookup() {
   const form = document.getElementById("planFilterForm");
   if (!form || !window.InventoryBomLookup) return;
+  const comboOpts = window.InventoryBomLookup?.STANDARD_COMBO_OPTS || {
+    openOnFocus: true,
+    minChars: 0,
+    showToggle: true,
+    simpleList: true,
+  };
   if (form.customer) {
-    window.InventoryBomLookup.bindCustomer({ customerInput: form.customer });
+    window.InventoryBomLookup.bindCustomer({ customerInput: form.customer, ...comboOpts });
   }
   if (form.q) {
-    window.InventoryBomLookup.bindKeyword({ keywordInput: form.q });
+    window.InventoryBomLookup.bindKeyword({ keywordInput: form.q, ...comboOpts });
   }
 })();
 

@@ -1,0 +1,12 @@
+# WKT · 项目 Agent 入口（与 .cursor/rules 同步）
+
+本仓库 Cursor **Project Rules** 在 `.cursor/rules/`（alwaysApply 自动加载）。
+
+**改代码前必须先 Read：**
+
+1. `.cursor/rules/wkt-read-before-edit.mdc`
+2. `AGENTS.md` + `docs/change/AGENT-COMPLIANCE.md` + `CHANGELOG` 顶部 5 条
+3. UI 任务 → `docs/design/ui-layout-rules.md` V3 全文
+4. 维护规则 → 运行 `scripts/sync-cursor-rules.ps1`
+
+勿凭会话记忆跳过上述阅读。

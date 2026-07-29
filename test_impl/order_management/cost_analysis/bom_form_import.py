@@ -26,6 +26,7 @@ from test_impl.order_management.cost_analysis.models import (
     PROCESS_CODE_BY_NAME,
     is_inhouse_process,
 )
+from test_impl.order_management.supplier_profile.store import resolve_supplier_name
 
 try:
     from openpyxl import load_workbook
@@ -376,13 +377,21 @@ def _resolve_process_name(name: str) -> Tuple[Optional[str], Optional[str], List
     return None, None, [f"无法识别工序：{raw}"]
 
 
-def _normalize_supplier(name: str, *, process_code: str) -> str:
+def _normalize_supplier(
+    name: str,
+    *,
+    process_code: str,
+    warnings: Optional[List[str]] = None,
+) -> str:
     s = _norm_text(name)
     if is_inhouse_process(process_code):
         return ""
     if not s or s in _INHOUSE_SUPPLIER_WORDS:
         return INHOUSE_SUPPLIER_LABEL if not is_inhouse_process(process_code) else ""
-    return s
+    resolved, note = resolve_supplier_name(s)
+    if note and warnings is not None:
+        warnings.append(note)
+    return resolved
 
 
 def _find_process_header_row(ws) -> Optional[int]:
@@ -424,7 +433,7 @@ def _append_process(
     if raw in _IMPORT_PROCESS_MULTI:
         for code in _IMPORT_PROCESS_MULTI[raw]:
             display = PROCESS_BY_CODE[code]
-            supplier = _normalize_supplier(supplier_raw, process_code=code)
+            supplier = _normalize_supplier(supplier_raw, process_code=code, warnings=warnings)
             if not is_inhouse_process(code) and not supplier:
                 warnings.append(f"外发工序「{display}」缺少供应商")
             processes.append(
@@ -441,7 +450,7 @@ def _append_process(
     warnings.extend(w)
     if not code:
         return
-    supplier = _normalize_supplier(supplier_raw, process_code=code)
+    supplier = _normalize_supplier(supplier_raw, process_code=code, warnings=warnings)
     if not is_inhouse_process(code) and not supplier:
         warnings.append(f"外发工序「{display}」缺少供应商")
     processes.append(

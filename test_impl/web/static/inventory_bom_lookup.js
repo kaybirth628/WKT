@@ -1,7 +1,5 @@
 /** 库存模块：料号 / 品名 / 客户 BOM 联想与互填 */
 window.InventoryBomLookup = (function () {
-  let suggestTimer = null;
-
   function esc(t) {
     return String(t ?? "")
       .replace(/&/g, "&amp;")
@@ -11,9 +9,10 @@ window.InventoryBomLookup = (function () {
   }
 
   function debounce(fn, ms) {
+    let timer = null;
     return function (...args) {
-      clearTimeout(suggestTimer);
-      suggestTimer = setTimeout(() => fn.apply(this, args), ms);
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(this, args), ms);
     };
   }
 
@@ -30,37 +29,152 @@ window.InventoryBomLookup = (function () {
     el.className = "field-hint inv-bom-hint" + (kind ? ` ${kind}` : "");
   }
 
-  async function fetchSuggestions(q) {
-    const query = (q || "").trim();
-    if (query.length < 1) return [];
+  async function fetchSuggestions(q, limit) {
+    const lim = limit || 15;
     const res = await fetch(
-      `/api/cost/part-numbers?q=${encodeURIComponent(query)}&limit=15`
+      `/api/cost/part-numbers?q=${encodeURIComponent((q || "").trim())}&limit=${lim}`
     );
     const data = await res.json();
     return data.items || [];
   }
 
-  async function fetchCustomerSuggestions(q) {
-    const query = (q || "").trim();
-    if (query.length < 1) return [];
+  async function fetchCustomerSuggestions(q, limit) {
+    const lim = limit || 15;
     const res = await fetch(
-      `/api/cost/customers?q=${encodeURIComponent(query)}&limit=15`
+      `/api/cost/customers?q=${encodeURIComponent((q || "").trim())}&limit=${lim}`
     );
     const data = await res.json();
     return data.items || [];
   }
 
-  function ensureCombo(input) {
-    if (!input || input.closest(".inv-bom-combo")) return input?.closest(".inv-bom-combo");
-    const wrap = document.createElement("div");
-    wrap.className = "inv-bom-combo";
-    input.parentNode.insertBefore(wrap, input);
-    wrap.appendChild(input);
-    const list = document.createElement("ul");
-    list.className = "inv-bom-suggest";
-    list.hidden = true;
-    wrap.appendChild(list);
-    return wrap;
+  async function fetchMasterCustomerSuggestions(q, limit) {
+    const lim = limit || 30;
+    const res = await fetch(
+      `/api/master/customers?q=${encodeURIComponent(q || "")}&limit=${lim}`
+    );
+    const data = await res.json();
+    return data.items || [];
+  }
+
+  const STANDARD_COMBO_OPTS = {
+    openOnFocus: true,
+    minChars: 0,
+    showToggle: true,
+    simpleList: true,
+  };
+
+  function comboOptsFrom(raw) {
+    if (typeof raw === "function") return { fetchFn: raw };
+    return raw || {};
+  }
+
+  function useDropdownSearch(opts) {
+    return !!(opts.showToggle || opts.openOnFocus);
+  }
+
+  function ensureCombo(input, opts = {}) {
+    if (!input) return null;
+    let combo = input.closest(".inv-bom-combo");
+    if (!combo) {
+      combo = document.createElement("div");
+      combo.className = "inv-bom-combo";
+      input.parentNode.insertBefore(combo, input);
+      combo.appendChild(input);
+      const list = document.createElement("ul");
+      list.className = "inv-bom-suggest";
+      list.hidden = true;
+      combo.appendChild(list);
+    }
+    if (opts.showToggle) {
+      combo.classList.add("inv-bom-combo--select");
+      if (!combo.querySelector(".inv-bom-combo-toggle")) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "inv-bom-combo-toggle";
+        btn.setAttribute("aria-label", "展开选项");
+        btn.tabIndex = -1;
+        const list = combo.querySelector(".inv-bom-suggest");
+        combo.insertBefore(btn, list);
+      }
+    }
+    return combo;
+  }
+
+  function ensureSuggestSearch(combo) {
+    const list = combo?.querySelector(".inv-bom-suggest");
+    if (!list) return null;
+    let row = list.querySelector(".inv-bom-suggest-search-row");
+    if (!row) {
+      row = document.createElement("li");
+      row.className = "inv-bom-suggest-search-row";
+      row.innerHTML =
+        '<input type="text" class="inv-bom-suggest-search" placeholder="输入关键字筛选…" autocomplete="off" spellcheck="false" />';
+      list.insertBefore(row, list.firstChild);
+    }
+    return row.querySelector(".inv-bom-suggest-search");
+  }
+
+  function clearSuggestItems(list) {
+    list.querySelectorAll(".inv-bom-suggest-item, .inv-bom-suggest-empty").forEach((el) => el.remove());
+  }
+
+  function getComboQuery(combo, externalInput) {
+    const search = combo?.querySelector(".inv-bom-suggest-search");
+    if (search) return (search.value || "").trim();
+    return (externalInput?.value || "").trim();
+  }
+
+  function syncSearchFromExternal(combo, externalInput) {
+    const search = combo?.querySelector(".inv-bom-suggest-search");
+    if (search && externalInput) search.value = externalInput.value;
+  }
+
+  function focusSuggestSearch(combo) {
+    window.setTimeout(() => {
+      const list = combo?.querySelector(".inv-bom-suggest");
+      const search = combo?.querySelector(".inv-bom-suggest-search");
+      if (search && list && !list.hidden) {
+        search.focus();
+      }
+    }, 0);
+  }
+
+  function wireSuggestSearch(combo, externalInput, loadSuggestions, itemSelector) {
+    const search = ensureSuggestSearch(combo);
+    if (!search || search.dataset.bound) return;
+    search.dataset.bound = "1";
+    search.addEventListener("input", () => {
+      if (externalInput) externalInput.value = search.value;
+      loadSuggestions(false);
+    });
+    search.addEventListener("keydown", (ev) => {
+      ev.stopPropagation();
+      if (ev.key === "Escape") {
+        hideAllLists();
+      } else if (ev.key === "Enter") {
+        ev.preventDefault();
+        const first = combo.querySelector(itemSelector);
+        if (first) first.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      }
+    });
+    search.addEventListener("mousedown", (ev) => ev.stopPropagation());
+    search.addEventListener("click", (ev) => ev.stopPropagation());
+  }
+
+  function wireComboToggle(combo, input, loadSuggestions) {
+    const toggle = combo?.querySelector(".inv-bom-combo-toggle");
+    if (!toggle || toggle.dataset.bound) return;
+    toggle.dataset.bound = "1";
+    toggle.addEventListener("mousedown", (ev) => {
+      ev.preventDefault();
+      const list = combo.querySelector(".inv-bom-suggest");
+      if (list && !list.hidden) {
+        list.hidden = true;
+        return;
+      }
+      syncSearchFromExternal(combo, input);
+      loadSuggestions(true);
+    });
   }
 
   function hideAllLists(except) {
@@ -70,83 +184,109 @@ window.InventoryBomLookup = (function () {
     });
   }
 
-  function renderList(combo, items, mode) {
+  function renderList(combo, items, mode, withSearch, simpleList) {
     const list = combo.querySelector(".inv-bom-suggest");
     if (!list) return;
+    if (withSearch) ensureSuggestSearch(combo);
+    clearSuggestItems(list);
     if (!items.length) {
-      list.innerHTML = '<li class="inv-bom-suggest-empty">BOM 中无匹配</li>';
-      list.hidden = false;
-      return;
-    }
-    list.innerHTML = items
-      .map((item) => {
+      const empty = document.createElement("li");
+      empty.className = "inv-bom-suggest-empty";
+      empty.textContent = "BOM 中无匹配";
+      list.appendChild(empty);
+    } else {
+      items.forEach((item) => {
         const part = item.product_part_no || "";
         const name = item.product_name || "";
         const cust = item.customer_name || "";
-        const meta = [cust, item.unit_weight_g ? `${item.unit_weight_g}g` : ""]
-          .filter(Boolean)
-          .join(" · ");
-        const primary = mode === "name" ? name || part : part || name;
-        const secondary = mode === "name" ? part : name;
-        const primaryCls =
-          mode === "name" ? "inv-bom-suggest-secondary" : "inv-bom-suggest-primary";
-        const secondaryCls =
-          mode === "name" ? "inv-bom-suggest-primary" : "inv-bom-suggest-secondary";
-        return `<li class="inv-bom-suggest-item" tabindex="-1"
-          data-part="${esc(part)}" data-name="${esc(name)}" data-customer="${esc(cust)}">
-          <span class="${primaryCls}">${esc(primary)}</span>
-          ${secondary ? `<span class="${secondaryCls}">${esc(secondary)}</span>` : ""}
-          ${meta ? `<span class="inv-bom-suggest-meta">${esc(meta)}</span>` : ""}
-        </li>`;
-      })
-      .join("");
+        const li = document.createElement("li");
+        li.className = "inv-bom-suggest-item";
+        li.tabIndex = -1;
+        li.dataset.part = part;
+        li.dataset.name = name;
+        li.dataset.customer = cust;
+        if (simpleList) {
+          if (mode === "name") {
+            li.innerHTML = `<span class="inv-bom-suggest-name-only">${esc(name || part)}</span>`;
+          } else {
+            li.innerHTML = `<span class="inv-bom-suggest-part-only">${esc(part || name)}</span>`;
+          }
+        } else {
+          const meta = [cust, item.unit_weight_g ? `${item.unit_weight_g}g` : ""]
+            .filter(Boolean)
+            .join(" · ");
+          const primary = mode === "name" ? name || part : part || name;
+          const secondary = mode === "name" ? part : name;
+          const primaryCls =
+            mode === "name" ? "inv-bom-suggest-secondary" : "inv-bom-suggest-primary";
+          const secondaryCls =
+            mode === "name" ? "inv-bom-suggest-primary" : "inv-bom-suggest-secondary";
+          li.innerHTML = `<span class="${primaryCls}">${esc(primary)}</span>${
+            secondary ? `<span class="${secondaryCls}">${esc(secondary)}</span>` : ""
+          }${meta ? `<span class="inv-bom-suggest-meta">${esc(meta)}</span>` : ""}`;
+        }
+        list.appendChild(li);
+      });
+    }
     list.hidden = false;
   }
 
-  function renderCustomerList(combo, items) {
+  function renderCustomerList(combo, items, withSearch) {
     const list = combo.querySelector(".inv-bom-suggest");
     if (!list) return;
+    if (withSearch) ensureSuggestSearch(combo);
+    clearSuggestItems(list);
     if (!items.length) {
-      list.innerHTML = '<li class="inv-bom-suggest-empty">无匹配客户</li>';
-      list.hidden = false;
-      return;
+      const empty = document.createElement("li");
+      empty.className = "inv-bom-suggest-empty";
+      empty.textContent = "无匹配客户";
+      list.appendChild(empty);
+    } else {
+      items.forEach((name) => {
+        const li = document.createElement("li");
+        li.className = "inv-bom-suggest-item inv-bom-suggest-customer";
+        li.tabIndex = -1;
+        li.dataset.customer = name;
+        li.innerHTML = `<span class="inv-bom-suggest-primary">${esc(name)}</span>`;
+        list.appendChild(li);
+      });
     }
-    list.innerHTML = items
-      .map(
-        (name) =>
-          `<li class="inv-bom-suggest-item inv-bom-suggest-customer" tabindex="-1" data-customer="${esc(name)}">
-            <span class="inv-bom-suggest-primary">${esc(name)}</span>
-          </li>`
-      )
-      .join("");
     list.hidden = false;
   }
 
-  function renderKeywordList(combo, items) {
+  function renderKeywordList(combo, items, withSearch) {
     const list = combo.querySelector(".inv-bom-suggest");
     if (!list) return;
+    if (withSearch) ensureSuggestSearch(combo);
+    clearSuggestItems(list);
     if (!items.length) {
-      list.innerHTML = '<li class="inv-bom-suggest-empty">BOM 中无匹配</li>';
-      list.hidden = false;
-      return;
-    }
-    list.innerHTML = items
-      .map((item) => {
+      const empty = document.createElement("li");
+      empty.className = "inv-bom-suggest-empty";
+      empty.textContent = "BOM 中无匹配";
+      list.appendChild(empty);
+    } else {
+      items.forEach((item) => {
         const part = item.product_part_no || "";
         const name = item.product_name || "";
         const cust = item.customer_name || "";
         const fill = part || name;
-        return `<li class="inv-bom-suggest-item" tabindex="-1" data-fill="${esc(fill)}">
-          <span class="inv-bom-suggest-primary">${esc(part)}</span>
-          ${name ? `<span class="inv-bom-suggest-secondary">${esc(name)}</span>` : ""}
-          ${cust ? `<span class="inv-bom-suggest-meta">${esc(cust)}</span>` : ""}
-        </li>`;
-      })
-      .join("");
+        const li = document.createElement("li");
+        li.className = "inv-bom-suggest-item";
+        li.tabIndex = -1;
+        li.dataset.fill = fill;
+        li.dataset.part = part;
+        li.dataset.name = name;
+        li.dataset.customer = cust;
+        li.innerHTML = `<span class="inv-bom-suggest-primary">${esc(part || name)}</span>${
+          name && part ? `<span class="inv-bom-suggest-secondary">${esc(name)}</span>` : ""
+        }${cust ? `<span class="inv-bom-suggest-meta">${esc(cust)}</span>` : ""}`;
+        list.appendChild(li);
+      });
+    }
     list.hidden = false;
   }
 
-  function applyItem(partInput, nameInput, customerInput, part, name, customer, hintEl) {
+  function applyItem(partInput, nameInput, customerInput, part, name, customer, hintEl, onSelect) {
     if (partInput) partInput.value = part || "";
     if (nameInput) nameInput.value = name || "";
     if (customerInput && customer) customerInput.value = customer;
@@ -157,32 +297,60 @@ window.InventoryBomLookup = (function () {
     } else {
       setHint(hintEl, "", "");
     }
+    if (onSelect) onSelect({ part: part || "", name: name || "", customer: customer || "" });
   }
 
-  function bindCombo(combo, partInput, nameInput, customerInput, hintEl, mode) {
+  function bindCombo(combo, partInput, nameInput, customerInput, hintEl, mode, onSelect, comboOpts) {
     const input = mode === "name" ? nameInput : partInput;
     if (!input || !combo) return;
+    const opts = comboOptsFrom(comboOpts);
+    const minChars = opts.minChars != null ? opts.minChars : 1;
+    const openOnFocus = !!opts.openOnFocus;
+    const withSearch = useDropdownSearch(opts);
+    const simpleList = !!opts.simpleList;
 
-    const runSuggest = debounce(async () => {
-      const q = input.value.trim();
-      if (q.length < 1) {
+    async function loadSuggestions(focusSearch) {
+      const q = getComboQuery(combo, input);
+      if (minChars > 0 && q.length < minChars) {
         hideAllLists();
         return;
       }
-      const items = await fetchSuggestions(q);
-      renderList(combo, items, mode);
-    }, 220);
+      const items = await fetchSuggestions(q, minChars === 0 ? 30 : 15);
+      renderList(combo, items, mode, withSearch, simpleList);
+      if (focusSearch && withSearch) focusSuggestSearch(combo);
+    }
+
+    const runSuggest = debounce(() => loadSuggestions(false), 180);
+
+    if (withSearch) {
+      wireSuggestSearch(combo, input, loadSuggestions, ".inv-bom-suggest-item[data-part]");
+    }
 
     input.addEventListener("focus", () => {
-      if (input.value.trim()) runSuggest();
+      if (openOnFocus || input.value.trim()) {
+        syncSearchFromExternal(combo, input);
+        loadSuggestions(withSearch);
+      }
     });
     input.addEventListener("input", () => {
       if (mode === "part" && nameInput) nameInput.dataset.userEdited = "";
       if (mode === "name" && partInput) partInput.dataset.userEdited = "";
+      syncSearchFromExternal(combo, input);
       runSuggest();
+      if (withSearch) {
+        const list = combo.querySelector(".inv-bom-suggest");
+        if (list?.hidden) loadSuggestions(false);
+      }
     });
+    wireComboToggle(combo, input, loadSuggestions);
     input.addEventListener("keydown", (ev) => {
       const list = combo.querySelector(".inv-bom-suggest");
+      if (ev.key === "ArrowDown" && (!list || list.hidden)) {
+        ev.preventDefault();
+        syncSearchFromExternal(combo, input);
+        loadSuggestions(withSearch);
+        return;
+      }
       if (!list || list.hidden) return;
       if (ev.key === "Escape") {
         list.hidden = true;
@@ -197,7 +365,8 @@ window.InventoryBomLookup = (function () {
             first.dataset.part,
             first.dataset.name,
             first.dataset.customer,
-            hintEl
+            hintEl,
+            onSelect
           );
         }
       }
@@ -205,6 +374,7 @@ window.InventoryBomLookup = (function () {
 
     const list = combo.querySelector(".inv-bom-suggest");
     list?.addEventListener("mousedown", (ev) => {
+      if (ev.target.closest(".inv-bom-suggest-search-row")) return;
       const row = ev.target.closest(".inv-bom-suggest-item[data-part]");
       if (!row) return;
       ev.preventDefault();
@@ -215,32 +385,73 @@ window.InventoryBomLookup = (function () {
         row.dataset.part,
         row.dataset.name,
         row.dataset.customer,
-        hintEl
+        hintEl,
+        onSelect
       );
     });
 
     combo.addEventListener("click", (ev) => ev.stopPropagation());
   }
 
-  function bindCustomerCombo(combo, customerInput) {
+  function bindCustomerCombo(combo, customerInput, rawOpts) {
     if (!customerInput || !combo) return;
+    const opts = comboOptsFrom(rawOpts);
+    const suggest = opts.fetchFn || opts.fetchSuggestions || fetchCustomerSuggestions;
+    const minChars = opts.minChars != null ? opts.minChars : 1;
+    const openOnFocus = !!opts.openOnFocus;
+    const withSearch = useDropdownSearch(opts);
 
-    const runSuggest = debounce(async () => {
-      const q = customerInput.value.trim();
-      if (q.length < 1) {
+    function applyPick(value) {
+      const picked = value || "";
+      if (typeof opts.onSelect === "function") {
+        opts.onSelect(picked);
+        customerInput.value = "";
+      } else {
+        customerInput.value = picked;
+      }
+      hideAllLists();
+    }
+
+    async function loadSuggestions(focusSearch) {
+      const q = getComboQuery(combo, customerInput);
+      if (minChars > 0 && q.length < minChars) {
         hideAllLists();
         return;
       }
-      const items = await fetchCustomerSuggestions(q);
-      renderCustomerList(combo, items);
-    }, 220);
+      const items = await suggest(q);
+      renderCustomerList(combo, items, withSearch);
+      if (focusSearch && withSearch) focusSuggestSearch(combo);
+    }
+
+    const runSuggest = debounce(() => loadSuggestions(false), 180);
+
+    if (withSearch) {
+      wireSuggestSearch(combo, customerInput, loadSuggestions, ".inv-bom-suggest-item[data-customer]");
+    }
 
     customerInput.addEventListener("focus", () => {
-      if (customerInput.value.trim()) runSuggest();
+      if (openOnFocus || customerInput.value.trim()) {
+        syncSearchFromExternal(combo, customerInput);
+        loadSuggestions(withSearch);
+      }
     });
-    customerInput.addEventListener("input", runSuggest);
+    customerInput.addEventListener("input", () => {
+      syncSearchFromExternal(combo, customerInput);
+      runSuggest();
+      if (withSearch) {
+        const list = combo.querySelector(".inv-bom-suggest");
+        if (list?.hidden) loadSuggestions(false);
+      }
+    });
+    wireComboToggle(combo, customerInput, loadSuggestions);
     customerInput.addEventListener("keydown", (ev) => {
       const list = combo.querySelector(".inv-bom-suggest");
+      if (ev.key === "ArrowDown" && (!list || list.hidden)) {
+        ev.preventDefault();
+        syncSearchFromExternal(combo, customerInput);
+        loadSuggestions(withSearch);
+        return;
+      }
       if (!list || list.hidden) return;
       if (ev.key === "Escape") {
         list.hidden = true;
@@ -248,43 +459,70 @@ window.InventoryBomLookup = (function () {
         const first = list.querySelector(".inv-bom-suggest-item[data-customer]");
         if (first) {
           ev.preventDefault();
-          customerInput.value = first.dataset.customer || "";
-          hideAllLists();
+          applyPick(first.dataset.customer || "");
         }
       }
     });
 
     const list = combo.querySelector(".inv-bom-suggest");
     list?.addEventListener("mousedown", (ev) => {
+      if (ev.target.closest(".inv-bom-suggest-search-row")) return;
       const row = ev.target.closest(".inv-bom-suggest-item[data-customer]");
       if (!row) return;
       ev.preventDefault();
-      customerInput.value = row.dataset.customer || "";
-      hideAllLists();
+      applyPick(row.dataset.customer || "");
     });
 
     combo.addEventListener("click", (ev) => ev.stopPropagation());
   }
 
-  function bindKeywordCombo(combo, keywordInput) {
+  function bindKeywordCombo(combo, keywordInput, rawOpts) {
     if (!keywordInput || !combo) return;
+    const opts = comboOptsFrom(rawOpts);
+    const minChars = opts.minChars != null ? opts.minChars : 1;
+    const openOnFocus = !!opts.openOnFocus;
+    const withSearch = useDropdownSearch(opts);
 
-    const runSuggest = debounce(async () => {
-      const q = keywordInput.value.trim();
-      if (q.length < 1) {
+    async function loadSuggestions(focusSearch) {
+      const q = getComboQuery(combo, keywordInput);
+      if (minChars > 0 && q.length < minChars) {
         hideAllLists();
         return;
       }
-      const items = await fetchSuggestions(q);
-      renderKeywordList(combo, items);
-    }, 220);
+      const items = await fetchSuggestions(q, minChars === 0 ? 30 : 15);
+      renderKeywordList(combo, items, withSearch);
+      if (focusSearch && withSearch) focusSuggestSearch(combo);
+    }
+
+    const runSuggest = debounce(() => loadSuggestions(false), 220);
+
+    if (withSearch) {
+      wireSuggestSearch(combo, keywordInput, loadSuggestions, ".inv-bom-suggest-item[data-fill]");
+    }
 
     keywordInput.addEventListener("focus", () => {
-      if (keywordInput.value.trim()) runSuggest();
+      if (openOnFocus || keywordInput.value.trim()) {
+        syncSearchFromExternal(combo, keywordInput);
+        loadSuggestions(withSearch);
+      }
     });
-    keywordInput.addEventListener("input", runSuggest);
+    keywordInput.addEventListener("input", () => {
+      syncSearchFromExternal(combo, keywordInput);
+      runSuggest();
+      if (withSearch) {
+        const list = combo.querySelector(".inv-bom-suggest");
+        if (list?.hidden) loadSuggestions(false);
+      }
+    });
+    wireComboToggle(combo, keywordInput, loadSuggestions);
     keywordInput.addEventListener("keydown", (ev) => {
       const list = combo.querySelector(".inv-bom-suggest");
+      if (ev.key === "ArrowDown" && (!list || list.hidden)) {
+        ev.preventDefault();
+        syncSearchFromExternal(combo, keywordInput);
+        loadSuggestions(withSearch);
+        return;
+      }
       if (!list || list.hidden) return;
       if (ev.key === "Escape") {
         list.hidden = true;
@@ -300,6 +538,7 @@ window.InventoryBomLookup = (function () {
 
     const list = combo.querySelector(".inv-bom-suggest");
     list?.addEventListener("mousedown", (ev) => {
+      if (ev.target.closest(".inv-bom-suggest-search-row")) return;
       const row = ev.target.closest(".inv-bom-suggest-item[data-fill]");
       if (!row) return;
       ev.preventDefault();
@@ -359,19 +598,26 @@ window.InventoryBomLookup = (function () {
   }
 
   /**
-   * @param {{ partInput: HTMLInputElement, nameInput: HTMLInputElement, customerInput?: HTMLInputElement, hintEl?: HTMLElement }} opts
+   * @param {{ partInput: HTMLInputElement, nameInput: HTMLInputElement, customerInput?: HTMLInputElement, hintEl?: HTMLElement, onSelect?: Function, openOnFocus?: boolean, minChars?: number, showToggle?: boolean }} opts
    */
   function bindPair(opts) {
     const partInput = opts.partInput;
     const nameInput = opts.nameInput;
     const customerInput = opts.customerInput || null;
     const hintEl = opts.hintEl || null;
+    const onSelect = opts.onSelect || null;
     if (!partInput || !nameInput) return;
 
-    const partCombo = ensureCombo(partInput);
-    const nameCombo = ensureCombo(nameInput);
-    bindCombo(partCombo, partInput, nameInput, customerInput, hintEl, "part");
-    bindCombo(nameCombo, partInput, nameInput, customerInput, hintEl, "name");
+    const comboOpts = {
+      minChars: opts.minChars != null ? opts.minChars : 1,
+      openOnFocus: !!opts.openOnFocus,
+      showToggle: !!opts.showToggle,
+      simpleList: !!opts.simpleList,
+    };
+    const partCombo = ensureCombo(partInput, comboOpts);
+    const nameCombo = ensureCombo(nameInput, comboOpts);
+    bindCombo(partCombo, partInput, nameInput, customerInput, hintEl, "part", onSelect, comboOpts);
+    bindCombo(nameCombo, partInput, nameInput, customerInput, hintEl, "name", onSelect, comboOpts);
 
     partInput.addEventListener("blur", () => {
       window.setTimeout(() => {
@@ -389,22 +635,77 @@ window.InventoryBomLookup = (function () {
     ensureDocClickHide();
   }
 
-  /** @param {{ customerInput: HTMLInputElement }} opts */
+  /** @param {{ customerInput: HTMLInputElement, fetchSuggestions?: Function, openOnFocus?: boolean, minChars?: number, showToggle?: boolean }} opts */
   function bindCustomer(opts) {
     const customerInput = opts.customerInput;
     if (!customerInput) return;
-    const combo = ensureCombo(customerInput);
-    bindCustomerCombo(combo, customerInput);
+    const comboOpts = {
+      minChars: opts.minChars != null ? opts.minChars : 1,
+      openOnFocus: !!opts.openOnFocus,
+      showToggle: !!opts.showToggle,
+      fetchFn: opts.fetchSuggestions,
+      fetchSuggestions: opts.fetchSuggestions,
+      onSelect: opts.onSelect,
+    };
+    const combo = ensureCombo(customerInput, comboOpts);
+    bindCustomerCombo(combo, customerInput, comboOpts);
     ensureDocClickHide();
   }
 
-  /** @param {{ keywordInput: HTMLInputElement }} opts */
+  /** @param {{ keywordInput: HTMLInputElement, openOnFocus?: boolean, minChars?: number, showToggle?: boolean }} opts */
   function bindKeyword(opts) {
     const keywordInput = opts.keywordInput;
     if (!keywordInput) return;
-    const combo = ensureCombo(keywordInput);
-    bindKeywordCombo(combo, keywordInput);
+    const comboOpts = {
+      minChars: opts.minChars != null ? opts.minChars : 1,
+      openOnFocus: !!opts.openOnFocus,
+      showToggle: !!opts.showToggle,
+    };
+    const combo = ensureCombo(keywordInput, comboOpts);
+    bindKeywordCombo(combo, keywordInput, comboOpts);
     ensureDocClickHide();
+  }
+
+  /** 仅料号字段（筛选栏等无品名框场景） */
+  function bindPartOnly(opts) {
+    const partInput = opts.partInput;
+    if (!partInput) return;
+    const comboOpts = {
+      minChars: opts.minChars != null ? opts.minChars : 1,
+      openOnFocus: !!opts.openOnFocus,
+      showToggle: !!opts.showToggle,
+      simpleList: opts.simpleList != null ? !!opts.simpleList : true,
+    };
+    const combo = ensureCombo(partInput, comboOpts);
+    bindCombo(
+      combo,
+      partInput,
+      opts.nameInput || null,
+      opts.customerInput || null,
+      opts.hintEl || null,
+      "part",
+      opts.onSelect || null,
+      comboOpts
+    );
+    ensureDocClickHide();
+  }
+
+  function bindMaterialList(input, materials, rawOpts) {
+    if (!input) return;
+    const list = materials || [];
+    const comboOpts = Object.assign({}, STANDARD_COMBO_OPTS, rawOpts || {});
+    bindCustomer({
+      customerInput: input,
+      fetchSuggestions: (q) => {
+        const query = (q || "").trim().toLowerCase();
+        return Promise.resolve(
+          list.filter((m) => !query || String(m).toLowerCase().includes(query)).slice(0, 30)
+        );
+      },
+      openOnFocus: comboOpts.openOnFocus,
+      minChars: comboOpts.minChars,
+      showToggle: comboOpts.showToggle,
+    });
   }
 
   /** 提交前解析出 BOM 料号（优先料号框，否则按品名反查） */
@@ -438,9 +739,13 @@ window.InventoryBomLookup = (function () {
   }
 
   return {
+    STANDARD_COMBO_OPTS,
+    fetchMasterCustomerSuggestions,
     bindPair,
     bindCustomer,
     bindKeyword,
+    bindPartOnly,
+    bindMaterialList,
     resolvePartNo,
     lookupByPartNo,
     lookupByProductName,

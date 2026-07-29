@@ -302,13 +302,49 @@
   }
 
   function bindEllipsisTips(root) {
+    if (!window.HoverTip) return;
     var scope = root || body;
     if (!scope) return;
     scope.querySelectorAll(".bom-import-issues, .bom-import-process-readonly").forEach(function (el) {
       var text = (el.getAttribute("data-full-text") || el.textContent || "").trim();
       if (!text || text === "—") return;
-      el.title = text;
-      el.classList.add("has-ellipsis-tip");
+      el.dataset.hoverText = text;
+      el.removeAttribute("title");
+      window.HoverTip.bind(el);
+    });
+  }
+
+  function bindPreviewCombos(root) {
+    var IBL = window.InventoryBomLookup;
+    if (!IBL || !root) return;
+    var opts = IBL.STANDARD_COMBO_OPTS;
+    root.querySelectorAll("tr[data-index]").forEach(function (tr) {
+      var cust = tr.querySelector('[data-field="customer_name"]');
+      var part = tr.querySelector('[data-field="product_part_no"]');
+      var name = tr.querySelector('[data-field="product_name"]');
+      if (cust && !cust.dataset.comboBound) {
+        cust.dataset.comboBound = "1";
+        IBL.bindCustomer({
+          customerInput: cust,
+          fetchSuggestions: IBL.fetchMasterCustomerSuggestions,
+          openOnFocus: opts.openOnFocus,
+          minChars: opts.minChars,
+          showToggle: opts.showToggle,
+        });
+      }
+      if (part && name && !part.dataset.comboBound) {
+        part.dataset.comboBound = "1";
+        name.dataset.comboBound = "1";
+        IBL.bindPair({
+          partInput: part,
+          nameInput: name,
+          customerInput: cust,
+          openOnFocus: opts.openOnFocus,
+          minChars: opts.minChars,
+          showToggle: opts.showToggle,
+          simpleList: opts.simpleList,
+        });
+      }
     });
   }
 
@@ -416,6 +452,7 @@
       })
       .join("");
     bindEllipsisTips(body);
+    bindPreviewCombos(body);
   }
 
   function renderPreview(data) {
@@ -486,6 +523,7 @@
       updatePreviewRowDom(idx);
     });
     bindEllipsisTips(body);
+    bindPreviewCombos(body);
     refreshStatsFromItems();
   }
 
@@ -494,6 +532,8 @@
     var tr = body.querySelector('tr[data-index="' + idx + '"]');
     if (!tr) return;
     tr.outerHTML = renderPreviewRow(previewItems[idx], idx);
+    var newTr = body.querySelector('tr[data-index="' + idx + '"]');
+    if (newTr) bindPreviewCombos(newTr);
   }
 
   async function revalidateItems(indexes, options) {
@@ -523,6 +563,7 @@
     });
     await syncDuplicateHints();
     bindEllipsisTips(body);
+    bindPreviewCombos(body);
     refreshStatsFromItems();
     updateToolbar();
     return data;

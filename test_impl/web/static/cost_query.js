@@ -1,8 +1,11 @@
 let records = [];
 let allRecords = [];
 let processOptions = [];
+let materialOptions = [];
 let editingRecordId = null;
 let detailRecordId = null;
+let queryCombosReady = false;
+let editCombosReady = false;
 
 const QUERY_COLS = [
   { field: "customer_name", label: "客户" },
@@ -104,18 +107,62 @@ function escHtml(text) {
 }
 
 function bindRowCellTips(tbody) {
-  if (!tbody) return;
+  if (!tbody || !window.HoverTip) return;
   tbody.querySelectorAll("td.list-td-text, td.list-td-mono").forEach((td) => {
     const text = (td.textContent || "").trim();
     if (!text) return;
-    if (td.scrollWidth > td.clientWidth + 1) {
+    if (window.HoverTip.needsTip(td)) {
       td.classList.add("has-ellipsis-tip");
-      td.title = text;
+      td.dataset.hoverText = text;
+      window.HoverTip.bind(td);
     } else {
       td.classList.remove("has-ellipsis-tip");
-      td.removeAttribute("title");
+      td.removeAttribute("data-hover-text");
     }
   });
+}
+
+function initQueryFilterCombos() {
+  if (queryCombosReady) return;
+  const form = document.getElementById("costQueryForm");
+  const IBL = window.InventoryBomLookup;
+  if (!form || !IBL) return;
+  queryCombosReady = true;
+  const opts = IBL.STANDARD_COMBO_OPTS;
+  IBL.bindKeyword({ keywordInput: form.q, ...opts });
+  IBL.bindCustomer({
+    customerInput: form.customer,
+    fetchSuggestions: IBL.fetchMasterCustomerSuggestions,
+    ...opts,
+  });
+  IBL.bindPartOnly({
+    partInput: form.product_part_no,
+    customerInput: form.customer,
+    ...opts,
+  });
+}
+
+function initEditModalCombos() {
+  if (editCombosReady) return;
+  const form = document.getElementById("costEditForm");
+  const IBL = window.InventoryBomLookup;
+  if (!form || !IBL) return;
+  editCombosReady = true;
+  const opts = IBL.STANDARD_COMBO_OPTS;
+  IBL.bindCustomer({
+    customerInput: form.customer_name,
+    fetchSuggestions: IBL.fetchMasterCustomerSuggestions,
+    ...opts,
+  });
+  IBL.bindPair({
+    partInput: form.product_part_no,
+    nameInput: form.product_name,
+    customerInput: form.customer_name,
+    ...opts,
+  });
+  if (materialOptions.length) {
+    IBL.bindMaterialList(form.material, materialOptions);
+  }
 }
 
 function renderTable(items, opts) {
@@ -304,8 +351,9 @@ function isEditModalOpen() {
 
 function isEditSupplierDropdownOpen() {
   if (!isEditModalOpen()) return false;
-  return !!document.querySelector(
-    "#costEditModal .process-supplier-list:not([hidden])"
+  return !!(
+    document.querySelector("#costEditModal .process-supplier-list:not([hidden])") ||
+    document.querySelector("#costEditModal .inv-bom-suggest:not([hidden])")
   );
 }
 
@@ -322,7 +370,7 @@ async function saveEdit(e) {
   }
   const missing = CostCommon.validateProcessSuppliers("#editProcessGrid");
   if (missing.length) {
-    msg.textContent = `外发工序请选择供应商：${missing.join("、")}`;
+    msg.textContent = `外发工序请至少添加一个供应商：${missing.join("、")}`;
     msg.className = "msg error";
     return;
   }
@@ -435,7 +483,7 @@ document.getElementById("costEditForm").addEventListener("keydown", (e) => {
   const tag = (e.target && e.target.tagName) || "";
   if (tag === "TEXTAREA") return;
   if (e.target && e.target.type === "submit") return;
-  if (e.target && e.target.closest(".process-supplier-combo")) return;
+  if (e.target && e.target.closest(".process-supplier-combo, .inv-bom-combo")) return;
   e.preventDefault();
 });
 
@@ -453,10 +501,8 @@ document.addEventListener("keydown", (e) => {
 CostCommon.loadOptions()
   .then(({ processOptions: opts, materials }) => {
     processOptions = opts || [];
-    const list = document.getElementById("editMaterialOptions");
-    if (list) {
-      list.innerHTML = (materials || []).map((m) => `<option value="${m}"></option>`).join("");
-    }
+    materialOptions = materials || [];
+    initEditModalCombos();
     CostCommon.bindProcessOrder(
       "editProcessGrid",
       "editProcessOrderList",
@@ -466,6 +512,7 @@ CostCommon.loadOptions()
     return CostCommon.loadSuppliers().catch(() => []);
   })
   .then(() => {
+    initQueryFilterCombos();
     queryColFilter.bindHeader();
     applyQueryFromUrl();
     return loadRecords();

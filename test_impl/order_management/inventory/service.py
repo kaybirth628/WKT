@@ -154,6 +154,7 @@ class InventoryService:
         for item in selections:
             code = str(item.get("code") or "").strip()
             supplier = str(item.get("supplier") or "").strip()
+            suppliers = item.get("suppliers") or ([supplier] if supplier else [])
             inhouse = (
                 bool(item.get("inhouse"))
                 or is_inhouse_process(code)
@@ -164,6 +165,7 @@ class InventoryService:
                     "code": code,
                     "name": str(item.get("name") or PROCESS_BY_CODE.get(code, code)),
                     "supplier": supplier,
+                    "suppliers": [str(s).strip() for s in suppliers if str(s).strip()],
                     "inhouse": inhouse,
                     "is_outsource": not inhouse,
                 }
@@ -632,14 +634,31 @@ class InventoryService:
         if row is None:
             return
         data = self._records.record_to_dict(row)
-        current = next(
-            (str(s.get("supplier") or "").strip() for s in data.get("process_selections") or [] if s.get("code") == code),
-            "",
+        selection = next(
+            (s for s in data.get("process_selections") or [] if s.get("code") == code),
+            None,
         )
-        if current == supplier:
+        if not selection:
             return
-        suppliers = dict(data.get("process_suppliers") or {})
-        suppliers[code] = supplier
+        current_suppliers = list(
+            selection.get("suppliers")
+            or ([selection.get("supplier")] if selection.get("supplier") else [])
+        )
+        if any(str(s).strip().casefold() == supplier.casefold() for s in current_suppliers):
+            return
+        updated_suppliers = current_suppliers + [supplier]
+        process_prices = {}
+        for s in data.get("process_selections") or []:
+            c = str(s.get("code") or "").strip()
+            if not c:
+                continue
+            sups = list(s.get("suppliers") or ([s.get("supplier")] if s.get("supplier") else []))
+            primary = str(s.get("supplier") or (sups[0] if sups else "")).strip()
+            if c == code:
+                sups = updated_suppliers
+                primary = supplier
+            price = data.get("process_prices", {}).get(c, "0")
+            process_prices[c] = {"price": price, "supplier": primary, "suppliers": sups}
         payload = {
             "customer_name": data["customer_name"],
             "product_name": data["product_name"],
@@ -650,8 +669,7 @@ class InventoryService:
             "material": data["material"],
             "machine_tonnage": data["machine_tonnage"],
             "material_unit_price": data["material_unit_price"],
-            "process_prices": data["process_prices"],
-            "process_suppliers": suppliers,
+            "process_prices": process_prices,
             "process_order": data["process_order"],
         }
         self._records.update_record(row.id, payload, skip_customer_check=True)

@@ -559,6 +559,26 @@ class TestOrderLineService(unittest.TestCase):
         )
         self.assertEqual(again.id, line.id + 1)
 
+    def test_suggest_customers_filters_master_and_line_names(self) -> None:
+        self.svc.add_customer("上海商米科技集团股份有限公司")
+        self.svc.add_customer("浙江金棒运动器材有限公司")
+        self.svc.create_line(
+            {
+                "customer": "历史订单客户有限公司",
+                "order_date": "2026-07-01",
+                "order_no": "PO-HIST",
+                "product_spec": "测试件",
+                "po_qty": "1",
+                "shipped_qty": "0",
+                "tax_rate": "0.13",
+                "rmb_tax_incl_price": "1",
+            }
+        )
+        hits = self.svc.suggest_customers(q="商米", limit=10)
+        self.assertEqual(hits, ["上海商米科技集团股份有限公司"])
+        hist = self.svc.suggest_customers(q="历史", limit=10)
+        self.assertIn("历史订单客户有限公司", hist)
+
 
 class TestIntakeToLines(unittest.TestCase):
     def test_multi_items_flatten_attachment2_fields(self) -> None:

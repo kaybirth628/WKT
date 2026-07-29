@@ -85,6 +85,14 @@ class OrderLineService:
             "parts": self._bom.list_parts_for_master(),
         }
 
+    def suggest_customers(self, q: str = "", limit: int = 20) -> List[str]:
+        limit = max(1, min(int(limit), 50))
+        names = self._all_customer_names()
+        kw = (q or "").strip().lower()
+        if kw:
+            names = [n for n in names if kw in n.lower()]
+        return names[:limit]
+
     def _ensure_customer(self, name: str) -> None:
         n = (name or "").strip()
         if n:

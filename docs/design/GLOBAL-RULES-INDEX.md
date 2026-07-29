@@ -1,7 +1,22 @@
 # WKT · 全局规则索引
 
-> Agent 改 **UI / 排版 / 布局** 时：**先读 [`ui-layout-rules.md`](ui-layout-rules.md)（V3 全文）**，再读 [`UI-CHANGELOG.md`](UI-CHANGELOG.md) 最新条目。  
-> 本文档列出仓库内 **所有** 与界面相关的规则来源，避免只跟最近对话、遗漏历史基线。
+> **Agent 改任何代码前**：先 Read [`.cursor/rules/wkt-read-before-edit.mdc`](../../.cursor/rules/wkt-read-before-edit.mdc)（alwaysApply），再按任务类型读下表。  
+> **改 UI**：必读 [`ui-layout-rules.md`](ui-layout-rules.md) **V3 全文** + [`UI-CHANGELOG.md`](UI-CHANGELOG.md) 最新 5 条。
+
+---
+
+## 0. 每次改代码必读（总入口）
+
+| 顺序 | 文件 | 说明 |
+|------|------|------|
+| 0 | [`.cursor/rules/wkt-read-before-edit.mdc`](../../.cursor/rules/wkt-read-before-edit.mdc) | **强制清单**（alwaysApply） |
+| 1 | [`AGENTS.md`](../../AGENTS.md) | 系统框架与合规 |
+| 2 | [`change/AGENT-COMPLIANCE.md`](../change/AGENT-COMPLIANCE.md) | 动手前 + 结束后 Checklist |
+| 3 | [`change/CHANGELOG.md`](../change/CHANGELOG.md) | 顶部 5 条 |
+| +UI | [`ui-layout-rules.md`](ui-layout-rules.md) | V3 全文 |
+| +Bug | [`change/BUG-FIX-LOG.md`](../change/BUG-FIX-LOG.md) | 查已有 BF |
+| +数据 | [`architecture/data-model.md`](../architecture/data-model.md) | ER / 字段 |
+| +生产 | [`change/PRODUCTION-SAFETY.md`](../change/PRODUCTION-SAFETY.md) | 云端 data 安全 |
 
 ---
 

@@ -120,6 +120,45 @@ def process_entry_price(value) -> str:
     return str(raw)
 
 
+def normalize_process_suppliers(value, supplier_override: str = "") -> tuple[str, List[str]]:
+    """解析工序主供应商与可选供应商列表（向后兼容仅 supplier 字段的旧数据）。"""
+    primary = ""
+    suppliers: List[str] = []
+    if isinstance(value, dict):
+        raw_list = value.get("suppliers")
+        if isinstance(raw_list, list):
+            suppliers = [str(s).strip() for s in raw_list if str(s).strip()]
+        primary = str(value.get("supplier", "") or "").strip()
+    override = str(supplier_override or "").strip()
+    if override:
+        if not any(s.casefold() == override.casefold() for s in suppliers):
+            suppliers.insert(0, override)
+        primary = override
+    elif primary and not any(s.casefold() == primary.casefold() for s in suppliers):
+        suppliers.insert(0, primary)
+    elif not primary and suppliers:
+        primary = suppliers[0]
+    elif primary and not suppliers:
+        suppliers = [primary]
+
+    deduped: List[str] = []
+    seen: set[str] = set()
+    for name in suppliers:
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(name)
+    suppliers = deduped
+    if suppliers:
+        primary = next((s for s in suppliers if s.casefold() == primary.casefold()), suppliers[0])
+        if suppliers[0].casefold() != primary.casefold():
+            suppliers = [primary] + [s for s in suppliers if s.casefold() != primary.casefold()]
+    elif primary:
+        suppliers = [primary]
+    return primary, suppliers
+
+
 def process_prices_to_names(prices: Dict[str, str]) -> Dict[str, str]:
     """编号键 -> 名称键（报价计算用）。"""
     out: Dict[str, str] = {}

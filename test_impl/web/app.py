@@ -299,7 +299,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260729-bom-edit-modal-fix",
+            "build": "20260729-bom-supplier-combo",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -345,6 +345,17 @@ def design_catalog_api():
 @app.route("/api/master", methods=["GET"])
 def list_master():
     return jsonify(line_service.list_master())
+
+
+@app.route("/api/master/customers", methods=["GET"])
+def master_customers_suggest():
+    q = request.args.get("q", "")
+    try:
+        limit = int(request.args.get("limit", "20"))
+    except ValueError:
+        limit = 20
+    items = line_service.suggest_customers(q=q, limit=limit)
+    return jsonify({"items": items, "total": len(items)})
 
 
 @app.route("/api/master/customer", methods=["POST"])

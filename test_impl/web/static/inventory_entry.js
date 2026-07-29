@@ -97,12 +97,23 @@ function supplierChoices() {
   return [INHOUSE_SUPPLIER_LABEL].concat(names);
 }
 
-function renderSupplierComboHtml(fieldId, selectedValue) {
+function supplierChoicesForCode(code) {
+  const step = routeStep(code);
+  const bomSuppliers = (step?.suppliers || []).filter(Boolean);
+  if (bomSuppliers.length) {
+    const names = bomSuppliers.filter((n) => n !== INHOUSE_SUPPLIER_LABEL);
+    return [INHOUSE_SUPPLIER_LABEL].concat(names);
+  }
+  return supplierChoices();
+}
+
+function renderSupplierComboHtml(fieldId, selectedValue, processCode) {
   const val = (selectedValue || "").trim();
   const display = val || "请选择供应商";
   const placeholderCls = val ? "" : " is-placeholder";
+  const codeAttr = processCode ? ` data-process-code="${esc(processCode)}"` : "";
   return `
-    <div class="process-supplier-combo inv-supplier-combo" data-field-id="${esc(fieldId)}">
+    <div class="process-supplier-combo inv-supplier-combo" data-field-id="${esc(fieldId)}"${codeAttr}>
       <input type="hidden" class="inv-supplier-hidden" name="${esc(fieldId)}" value="${esc(val)}" />
       <button type="button" class="inv-supplier-trigger" aria-expanded="false">
         <span class="inv-supplier-trigger-text${placeholderCls}">${esc(display)}</span>
@@ -151,7 +162,8 @@ function bindSupplierCombos(root) {
     function renderList(query) {
       const q = String(query || "").trim().toLowerCase();
       const current = hidden.value || "";
-      let items = supplierChoices();
+      const processCode = combo.dataset.processCode || "";
+      let items = processCode ? supplierChoicesForCode(processCode) : supplierChoices();
       if (q) items = items.filter((n) => n.toLowerCase().includes(q));
       if (!items.length) {
         list.innerHTML = '<li class="process-supplier-empty">无匹配供应商</li>';
@@ -289,7 +301,7 @@ function renderSingleStageEditPanel(code) {
     <form id="invSingleEditForm" class="inv-submit-row">
       <label class="field inv-inline-field inv-supplier-field">
         <span>供应商</span>
-        ${renderSupplierComboHtml("supplier_name", defaultSupplier)}
+        ${renderSupplierComboHtml("supplier_name", defaultSupplier, code)}
       </label>
       <label class="field inv-inline-field">
         <span>场内库存 (PCS)</span>
@@ -357,7 +369,7 @@ function renderDualFlowEditPanel() {
     <form id="invDualEditForm" class="inv-submit-row">
       <label class="field inv-inline-field inv-supplier-field">
         <span>① 流出供应商</span>
-        ${renderSupplierComboHtml("from_supplier_name", fromSupplier)}
+        ${renderSupplierComboHtml("from_supplier_name", fromSupplier, fromCode)}
       </label>
       <label class="field inv-inline-field">
         <span>① 流出状态</span>
@@ -365,7 +377,7 @@ function renderDualFlowEditPanel() {
       </label>
       <label class="field inv-inline-field inv-supplier-field">
         <span>② 流入供应商</span>
-        ${renderSupplierComboHtml("to_supplier_name", toSupplier)}
+        ${renderSupplierComboHtml("to_supplier_name", toSupplier, toCode)}
       </label>
       <label class="field inv-inline-field">
         <span>② 流入状态</span>
@@ -815,14 +827,21 @@ document.getElementById("invLoadForm")?.addEventListener("submit", (e) => {
 (function initInvEntryBomLookup() {
   const form = document.getElementById("invLoadForm");
   if (!form || !window.InventoryBomLookup) return;
+  const comboOpts = window.InventoryBomLookup?.STANDARD_COMBO_OPTS || {
+    openOnFocus: true,
+    minChars: 0,
+    showToggle: true,
+    simpleList: true,
+  };
   window.InventoryBomLookup.bindPair({
     partInput: form.product_part_no,
     nameInput: form.product_name,
     customerInput: form.customer_name,
     hintEl: null,
+    ...comboOpts,
   });
   if (form.customer_name) {
-    window.InventoryBomLookup.bindCustomer({ customerInput: form.customer_name });
+    window.InventoryBomLookup.bindCustomer({ customerInput: form.customer_name, ...comboOpts });
   }
 })();
 

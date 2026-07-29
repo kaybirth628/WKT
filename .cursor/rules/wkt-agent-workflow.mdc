@@ -7,6 +7,7 @@ alwaysApply: true
 
 本仓库 Agent **必须**在 `AGENTS.md` 合规清单之上，遵循以下优先级：
 
+0. **动手前必读**（[`.cursor/rules/wkt-read-before-edit.mdc`](wkt-read-before-edit.mdc) · **alwaysApply** · 用 Read 打开规则文件，不可跳过）
 1. **用户明确指令**（最高）
 2. **Superpowers 技能**（`.cursor/skills/`，见 `using-superpowers`）
 3. **Karpathy 准则**（`.cursor/rules/karpathy-guidelines.mdc`）
@@ -24,6 +25,7 @@ alwaysApply: true
   - 写功能代码 → `test-driven-development`（与项目现有 `tests/` 一致）
   - 完成前 → `verification-before-completion`
 - 更新技能：`scripts/sync-superpowers-skills.ps1`
+- **校验 Cursor Rules**：`scripts/sync-cursor-rules.ps1`（改 `.cursor/rules` 后必跑）
 
 ## 数据库 / 数据结构图同步（强制）
 
@@ -47,4 +49,4 @@ alwaysApply: true
 
 ## 会话入口
 
-新会话先读：`AGENTS.md` → CHANGELOG 顶部 → **`PRODUCTION-SAFETY.md`** →（修 Bug）`BUG-FIX-LOG.md` →（涉及数据）`data-model.md` →（涉及 UI）`ui-layout-rules.md` V3。
+新会话先读：**[`wkt-read-before-edit.mdc`](../.cursor/rules/wkt-read-before-edit.mdc)** 清单 → 再按任务类型 Read 对应文件（**禁止**凭记忆改代码）。

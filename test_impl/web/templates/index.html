@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · 订单管理</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260728-open-stock-warn" />
+  <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
   <link rel="stylesheet" href="/static/dashboard.css?v=20260623-order-dashboard" />
 </head>
 <body>
@@ -97,9 +97,9 @@
                   <select id="ocrSourceSelect" class="ocr-source-select is-hidden" aria-label="切换原件"></select>
                   <select id="ocrSourcePageSelect" class="ocr-source-select is-hidden" aria-label="切换页码"></select>
                   <div class="ocr-source-tools">
-                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomOut" title="缩小">−</button>
-                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomReset" title="适合宽度">适合宽度</button>
-                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomIn" title="放大">+</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomOut" aria-label="缩小">−</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomReset" aria-label="适合宽度">适合宽度</button>
+                    <button type="button" class="btn btn-outline btn-sm" id="ocrZoomIn" aria-label="放大">+</button>
                     <button type="button" class="btn btn-outline btn-sm" id="ocrOpenNew">新窗口打开</button>
                     <button type="button" class="btn btn-ghost btn-sm" id="ocrSourceToggle">收起原件</button>
                   </div>
@@ -195,33 +195,26 @@
             <form id="entryForm" class="entry-form">
             <input type="hidden" id="editId" value="" />
             <div class="entry-form-body">
-              <div class="entry-grid">
+              <div class="entry-grid entry-grid-compact entry-grid-cols-5">
                 <label class="field"><span>客户</span>
-                  <div class="field-with-btn"><select id="customerSelect" name="customer" required></select>
-                  <button type="button" class="btn btn-add" id="addCustomerBtn" title="新增客户">+</button></div></label>
-                <label class="field"><span>接单日期</span><input type="date" id="orderDate" name="order_date" required /></label>
+                  <input type="text" id="customerInput" name="customer" required autocomplete="off" placeholder="搜索客户" /></label>
+                <label class="field"><span>客户料号</span>
+                  <input type="text" id="customerPartNo" name="customer_part_no" autocomplete="off" placeholder="搜索料号" /></label>
+                <label class="field"><span>品名规格</span>
+                  <input type="text" id="productSpecInput" name="product_spec" required autocomplete="off" placeholder="搜索品名" /></label>
+                <label class="field"><span>单重（不含损耗）g</span><input name="unit_weight_g" placeholder="120" value="0" /></label>
+                <label class="field"><span>材质</span><input name="material" placeholder="ADC12" /></label>
                 <label class="field"><span>客户交期</span><input type="date" name="delivery_date" /></label>
                 <label class="field"><span>订单号</span><input name="order_no" placeholder="PO号" required /></label>
-                <label class="field field-span-2"><span>账期</span>
-                  <input name="payment_terms" placeholder="按实际填写，如：开票当月不算、月结60天等" /></label>
-              </div>
-              <div class="entry-divider" aria-hidden="true"></div>
-              <div class="entry-grid">
-                <label class="field"><span>品名规格</span>
-                  <div class="field-with-btn"><select id="partSelect" name="product_spec" required></select>
-                  <button type="button" class="btn btn-add" id="addPartBtn" title="新增品名">+</button></div></label>
-                <label class="field"><span>客户料号</span><input id="customerPartNo" name="customer_part_no" placeholder="自动填入" /></label>
-                <label class="field"><span>单重（不含损耗）g</span><input name="unit_weight_g" placeholder="数字或备注，如 120、外购件" value="0" /></label>
-                <label class="field"><span>材质</span><input name="material" placeholder="ADC12" /></label>
                 <label class="field"><span>PO数量</span><input name="po_qty" inputmode="decimal" required /></label>
-              </div>
-              <div class="entry-divider" aria-hidden="true"></div>
-              <div class="entry-grid entry-grid-last">
-                <label class="field"><span>已出货</span><input name="shipped_qty" inputmode="decimal" value="0" /></label>
-                <label class="field"><span>单位</span><input name="unit" placeholder="PCS" /></label>
                 <label class="field"><span>税率(%)</span><input name="tax_rate_pct" inputmode="decimal" value="13" /></label>
-                <label class="field field-span-2"><span>人民币单价（含税）</span><input name="rmb_tax_incl_price" inputmode="decimal" value="0" /></label>
+                <label class="field"><span>人民币单价（含税）</span><input name="rmb_tax_incl_price" inputmode="decimal" value="0" /></label>
               </div>
+              <input type="hidden" id="orderDate" name="order_date" value="" />
+              <input type="hidden" name="shipped_qty" id="entryShippedQty" value="0" />
+              <input type="hidden" name="payment_terms" id="entryPaymentTerms" value="" />
+              <input type="hidden" name="unit" id="entryUnit" value="PCS" />
+              <p id="orderBomHint" class="field-hint inv-bom-hint" hidden></p>
             </div>
             <div class="entry-form-actions">
               <button type="submit" class="btn btn-primary" id="submitBtn">提交录入</button>
@@ -277,7 +270,7 @@
               <span id="payableAmountSummary" class="reconcile-amount-summary"></span>
             </div>
             <button type="button" class="btn btn-outline btn-sm" id="clearListFiltersBtn">清空筛选</button>
-            <button type="button" class="btn btn-primary btn-sm is-hidden" id="openBatchShipBtn" title="同一客户多条料号合并为一张送货单">合并出货</button>
+            <button type="button" class="btn btn-primary btn-sm is-hidden" id="openBatchShipBtn" aria-label="同一客户多条料号合并为一张送货单">合并出货</button>
             <span id="openBatchShipHint" class="open-batch-hint is-hidden"></span>
           </div>
           <div id="listColFilterPanel" class="list-col-filter-panel is-hidden" role="dialog" aria-modal="true" aria-labelledby="listColFilterPanelTitle">
@@ -380,7 +373,7 @@
                   <thead id="dnMaintHead">
                     <tr class="list-header-row">
                       <th scope="col" class="list-th-seq">序号</th>
-                      <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">客户</span><button type="button" class="list-filter-btn" data-col="customer" aria-label="筛选客户" title="筛选客户"><span aria-hidden="true">▾</span></button></span></th>
+                      <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">客户</span><button type="button" class="list-filter-btn" data-col="customer" aria-label="筛选客户"><span aria-hidden="true">▾</span></button></span></th>
                       <th scope="col" class="list-th-text">送货单</th>
                       <th scope="col" class="list-th-text">地址</th>
                       <th scope="col" class="list-th-text">联系人</th>
@@ -469,7 +462,7 @@
                   <thead id="spMaintHead">
                     <tr class="list-header-row">
                       <th scope="col" class="list-th-seq">序号</th>
-                      <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">供应商</span><button type="button" class="list-filter-btn" data-col="supplier" aria-label="筛选供应商" title="筛选供应商"><span aria-hidden="true">▾</span></button></span></th>
+                      <th scope="col" class="list-th-filterable list-th-text"><span class="list-th-inner"><span class="list-th-label">供应商</span><button type="button" class="list-filter-btn" data-col="supplier" aria-label="筛选供应商"><span aria-hidden="true">▾</span></button></span></th>
                       <th scope="col" class="list-th-text">地址</th>
                       <th scope="col" class="list-th-text">联系人</th>
                       <th scope="col" class="list-th-text">电话</th>
@@ -555,6 +548,8 @@
   <script src="/static/delivery-note-admin.js?v=20260725-partner-sort-desc"></script>
   <script src="/static/supplier-admin.js?v=20260725-partner-sort-desc"></script>
   <script src="/static/ai-assistant.js?v=20260530-ai-sidebar"></script>
-  <script src="/static/app.js?v=20260729-bom-info"></script>
+  <script src="/static/hover_tip.js?v=20260729-ui-full-align"></script>
+  <script src="/static/inventory_bom_lookup.js?v=20260729-ui-full-align"></script>
+  <script src="/static/app.js?v=20260729-ui-full-align"></script>
 </body>
 </html>

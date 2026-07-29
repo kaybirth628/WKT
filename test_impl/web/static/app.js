@@ -379,7 +379,7 @@ function paymentTermsControlsHtml(value, options) {
     dynamicOpt +
     `<option value="${PAYMENT_TERM_CUSTOM}"${selectValue === PAYMENT_TERM_CUSTOM ? " selected" : ""}>自定义…</option>` +
     `</select>` +
-    `<input class="${customClass}${showCustomInput ? "" : " is-hidden"}" data-role="custom-days" type="number" min="1" step="1" placeholder="天" value="${esc(parsed.customDays)}" title="自定义天数" />` +
+    `<input class="${customClass}${showCustomInput ? "" : " is-hidden"}" data-role="custom-days" type="number" min="1" step="1" placeholder="天" value="${esc(parsed.customDays)}" aria-label="自定义天数" />` +
     `<input type="hidden" data-f="payment_terms" class="pv ${hiddenClass}" value="${esc(term)}" />`
   );
 }
@@ -547,95 +547,13 @@ function fmtWeightDisplay(v) {
   return fmtSmart(n, 2);
 }
 
-/* ========== 悬停完整显示（核对 OCR 用） ========== */
-let _hoverTipEl = null;
-
-function ensureHoverTip() {
-  if (!_hoverTipEl) {
-    _hoverTipEl = document.createElement("div");
-    _hoverTipEl.id = "hoverTip";
-    _hoverTipEl.className = "hover-tip";
-    document.body.appendChild(_hoverTipEl);
-  }
-  return _hoverTipEl;
-}
-
-function getHoverText(el) {
-  if (el.dataset.hoverText) return el.dataset.hoverText;
-  if (el.tagName === "SELECT") {
-    const opt = el.options[el.selectedIndex];
-    return opt ? opt.text : el.value;
-  }
-  return el.value != null ? String(el.value) : el.textContent || "";
-}
-
-function cellNeedsHoverTip(el) {
-  if (!el) return false;
-  if (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA") return true;
-  if (el.dataset.hoverText) return true;
-  return el.scrollWidth > el.clientWidth + 1;
-}
-
-function positionHoverTipNearEl(el) {
-  if (!_hoverTipEl || _hoverTipEl.style.display === "none") return;
-  const pad = 6;
-  const cellRect = el.getBoundingClientRect();
-  const tipRect = _hoverTipEl.getBoundingClientRect();
-  let x = cellRect.left;
-  let y = cellRect.bottom + pad;
-  if (x + tipRect.width > window.innerWidth - 8) {
-    x = Math.max(8, window.innerWidth - tipRect.width - 8);
-  }
-  if (y + tipRect.height > window.innerHeight - 8) {
-    y = cellRect.top - tipRect.height - pad;
-  }
-  _hoverTipEl.style.left = x + "px";
-  _hoverTipEl.style.top = y + "px";
-}
-
-function positionHoverTip(e) {
-  if (!_hoverTipEl || _hoverTipEl.style.display === "none") return;
-  const pad = 12;
-  let x = e.clientX + pad;
-  let y = e.clientY + pad;
-  const rect = _hoverTipEl.getBoundingClientRect();
-  if (x + rect.width > window.innerWidth - 8) x = e.clientX - rect.width - pad;
-  if (y + rect.height > window.innerHeight - 8) y = e.clientY - rect.height - pad;
-  _hoverTipEl.style.left = x + "px";
-  _hoverTipEl.style.top = y + "px";
-}
-
+/* ========== 悬停完整显示 · hover_tip.js（§7.6 禁止 title） ========== */
 function bindHoverTip(el) {
-  if (!el || el.dataset.hoverBound) return;
-  el.dataset.hoverBound = "1";
-  el.removeAttribute("title");
-  const followCursor = el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA";
-  if (el.tagName === "TD") {
-    el.classList.toggle("has-ellipsis-tip", cellNeedsHoverTip(el));
-  }
-  el.addEventListener("mouseenter", (e) => {
-    const text = getHoverText(el).trim();
-    if (!text || !cellNeedsHoverTip(el)) return;
-    el.removeAttribute("title");
-    const tip = ensureHoverTip();
-    tip.textContent = text;
-    tip.style.display = "block";
-    if (followCursor) {
-      positionHoverTip(e);
-    } else {
-      requestAnimationFrame(() => positionHoverTipNearEl(el));
-    }
-  });
-  if (followCursor) {
-    el.addEventListener("mousemove", positionHoverTip);
-  }
-  el.addEventListener("mouseleave", () => {
-    if (_hoverTipEl) _hoverTipEl.style.display = "none";
-  });
+  window.HoverTip?.bind(el);
 }
 
 function bindHoverTipAll(root) {
-  (root || document).querySelectorAll(".pv, .entry-card input, .entry-card select, .data-table td:not(.action-cell)").forEach(bindHoverTip);
+  window.HoverTip?.bindAll(root);
 }
 
 function attachDecimalLimit(input, maxDp) {
@@ -810,10 +728,10 @@ function renderHead(elId, extraCols) {
         const text = isListHead ? listThText(c) : c.label;
         const title = isListHead && LIST_TH_LABEL[c.f] ? c.label : "";
         const filterBtn = isListHead
-          ? `<button type="button" class="list-filter-btn" data-col="${c.f}" aria-label="筛选${esc(text)}" title="筛选${esc(c.label)}"><span aria-hidden="true">▾</span></button>`
+          ? `<button type="button" class="list-filter-btn" data-col="${c.f}" aria-label="筛选${esc(text)}"><span aria-hidden="true">▾</span></button>`
           : "";
         const thCls = isListHead ? listThClass(c) : "";
-        return `<th scope="col" class="${thCls}"${title ? ` title="${esc(title)}"` : ""}><span class="list-th-inner"><span class="list-th-label">${text}</span>${filterBtn}</span></th>`;
+        return `<th scope="col" class="${thCls}"${title ? ` aria-label="${esc(title)}"` : ""}><span class="list-th-inner"><span class="list-th-label">${text}</span>${filterBtn}</span></th>`;
       })
       .join("") +
     (elId === "previewHead"
@@ -1891,15 +1809,15 @@ function renderExcelPreviewTable() {
       const cls = tier === "blocked" ? "row-error" : tier === "pending" ? "row-warn" : "";
       const status = excelStatusLabel(row);
       const dataCells = COLS.map((c) => `<td>${excelPreviewCellValue(d, c, row)}</td>`).join("");
-      const issueTitle = issues.replace(/"/g, "&quot;");
       return `<tr class="${cls}">
         <td>${row.row_no}</td>
         <td>${status}</td>
-        <td class="issue-cell" title="${issueTitle}">${esc(issues)}</td>
+        <td class="issue-cell" data-hover-text="${esc(issues)}">${esc(issues)}</td>
         ${dataCells}
       </tr>`;
     })
     .join("");
+  body.querySelectorAll(".issue-cell").forEach(bindHoverTip);
 }
 
 function updateExcelToolbarCounts(summary) {
@@ -2183,86 +2101,108 @@ document.getElementById("excelDownloadBlockedBtn")?.addEventListener("click", ()
 async function loadMaster() {
   const res = await fetch("/api/master");
   master = await res.json();
-  const customerNames = master.customers || [];
-  fillSelect("customerSelect", customerNames);
-  fillSelect("partSelect", master.parts.map((p) => p.product_spec));
 }
 
-function fillSelect(id, items, defaultVal, emptyLabel) {
-  const sel = document.getElementById(id);
-  if (!sel) return;
-  sel.innerHTML = items
-    .map((it, i) => {
-      if (i === 0 && emptyLabel && it === "") return `<option value="">${emptyLabel}</option>`;
-      return `<option value="${esc(it)}"${it === defaultVal ? " selected" : ""}>${esc(it)}</option>`;
-    })
-    .join("");
+async function fetchMasterCustomerSuggestions(q) {
+  const res = await fetch(
+    `/api/master/customers?q=${encodeURIComponent(q || "")}&limit=30`
+  );
+  const data = await res.json();
+  return data.items || [];
 }
 
-document.getElementById("partSelect").addEventListener("change", async () => {
-  const spec = document.getElementById("partSelect").value;
-  if (!spec) return;
-  const res = await fetch("/api/master/lookup?product_spec=" + encodeURIComponent(spec));
-  const data = await res.json();
-  if (data.customer_part_no) document.getElementById("customerPartNo").value = data.customer_part_no;
-  if (data.product_spec && !entryForm.product_spec.value) entryForm.product_spec.value = data.product_spec;
-  if (data.material && !entryForm.material.value) entryForm.material.value = data.material;
-  if (data.unit_weight_g && !entryForm.unit_weight_g.value) entryForm.unit_weight_g.value = data.unit_weight_g;
-});
-
-async function lookupOrderPartFromBom() {
-  const cpn = (document.getElementById("customerPartNo")?.value || "").trim();
-  if (cpn.length < 2) return;
-  const res = await fetch("/api/bom/lookup?" + new URLSearchParams({ customer_part_no: cpn }));
-  const data = await res.json();
-  if (!res.ok || !data.found) {
-    if (formMsg) formMsg.textContent = data.error || `料号「${cpn}」未在 BOM 中建档，请先在「BOM 录入」中维护`;
+async function fillOrderFieldsFromBom(opts = {}) {
+  const partEl = document.getElementById("customerPartNo");
+  const part = (partEl?.value || "").trim();
+  const spec = (entryForm.product_spec?.value || "").trim();
+  let data = null;
+  if (part || opts.preferPart) {
+    if (!part && opts.preferPart) return;
+    const res = await fetch("/api/bom/lookup?" + new URLSearchParams({ customer_part_no: part }));
+    data = await res.json();
+    if (!res.ok || !data.found) {
+      if (formMsg && !opts.silent) formMsg.textContent = data.error || `料号「${part}」未在 BOM 中建档，请先在「BOM 录入」中维护`;
+      return;
+    }
+  } else if (spec) {
+    const res = await fetch("/api/master/lookup?" + new URLSearchParams({ product_spec: spec }));
+    data = await res.json();
+    if (!data?.customer_part_no) return;
+  } else {
     return;
   }
   if (formMsg) formMsg.textContent = "";
+  if (data.customer_part_no && partEl) partEl.value = data.customer_part_no;
   if (data.product_spec && entryForm.product_spec) entryForm.product_spec.value = data.product_spec;
   if (data.material && entryForm.material) entryForm.material.value = data.material;
   if (data.unit_weight_g && entryForm.unit_weight_g) entryForm.unit_weight_g.value = data.unit_weight_g;
+  if (data.customer_name && entryForm.customer && !entryForm.customer.value.trim()) {
+    entryForm.customer.value = data.customer_name;
+  }
 }
 
-document.getElementById("customerPartNo")?.addEventListener("change", lookupOrderPartFromBom);
-document.getElementById("customerPartNo")?.addEventListener("blur", lookupOrderPartFromBom);
-
-document.getElementById("addCustomerBtn").addEventListener("click", async () => {
-  const name = prompt("请输入新客户名称：");
-  if (!name || !name.trim()) return;
-  const res = await fetch("/api/master/customer", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: name.trim() }),
+function initOrderEntryCombos() {
+  if (!window.InventoryBomLookup || !entryForm) return;
+  InventoryBomLookup.bindCustomer({
+    customerInput: entryForm.customer,
+    fetchSuggestions: fetchMasterCustomerSuggestions,
+    openOnFocus: true,
+    minChars: 0,
+    showToggle: true,
   });
-  if (res.ok) {
-    await loadMaster();
-    document.getElementById("customerSelect").value = name.trim();
-  } else { alert((await res.json()).error || "新增失败"); }
-});
-
-document.getElementById("addPartBtn").addEventListener("click", () => {
-  alert("料号主数据请在顶部菜单「BOM信息 → BOM录入」中维护。");
-});
+  InventoryBomLookup.bindPair({
+    partInput: document.getElementById("customerPartNo"),
+    nameInput: entryForm.product_spec,
+    customerInput: entryForm.customer,
+    hintEl: document.getElementById("orderBomHint"),
+    onSelect: ({ part }) => {
+      if (part) fillOrderFieldsFromBom({ silent: true, preferPart: true });
+      else fillOrderFieldsFromBom({ silent: true });
+    },
+    openOnFocus: true,
+    minChars: 0,
+    showToggle: true,
+    simpleList: true,
+  });
+}
 
 /* ========== 手动录入 ========== */
 const entryForm = document.getElementById("entryForm");
 const formMsg = document.getElementById("formMsg");
 
-["po_qty", "shipped_qty", "rmb_tax_incl_price"].forEach((name) => {
+initOrderEntryCombos();
+document.getElementById("customerPartNo")?.addEventListener("change", () => fillOrderFieldsFromBom());
+document.getElementById("customerPartNo")?.addEventListener("blur", () => fillOrderFieldsFromBom());
+entryForm.product_spec?.addEventListener("blur", () => {
+  if (!(document.getElementById("customerPartNo")?.value || "").trim()) {
+    fillOrderFieldsFromBom();
+  }
+});
+
+["po_qty", "rmb_tax_incl_price"].forEach((name) => {
   const el = entryForm[name];
   if (el) {
-    const dp = name === "rmb_tax_incl_price" ? 4 : name === "po_qty" || name === "shipped_qty" ? 1 : 4;
+    const dp = name === "rmb_tax_incl_price" ? 4 : 1;
     attachDecimalLimit(el, dp);
   }
 });
 attachDecimalLimit(entryForm.tax_rate_pct, 2);
 
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function setEntryOrderDate(value) {
+  const el = document.getElementById("orderDate");
+  if (el) el.value = value || todayIsoDate();
+}
+
 function collectFormBody() {
   const pct = parseFloat(entryForm.tax_rate_pct.value);
+  const editId = document.getElementById("editId").value;
   return {
     customer: entryForm.customer.value,
-    order_date: entryForm.order_date.value,
+    order_date: editId ? (document.getElementById("orderDate")?.value || todayIsoDate()) : todayIsoDate(),
     delivery_date: entryForm.delivery_date.value,
     order_no: entryForm.order_no.value.trim(),
     payment_terms: (entryForm.payment_terms?.value || "").trim(),
@@ -2316,29 +2256,35 @@ function clearForm() {
   entryForm.reset();
   document.getElementById("editId").value = "";
   document.getElementById("submitBtn").textContent = "提交录入";
-  const today = new Date().toISOString().slice(0, 10);
-  document.getElementById("orderDate").value = today;
+  setEntryOrderDate(todayIsoDate());
   entryForm.tax_rate_pct.value = "13";
-  entryForm.shipped_qty.value = "0";
+  document.getElementById("entryShippedQty").value = "0";
   entryForm.unit_weight_g.value = "0";
   entryForm.rmb_tax_incl_price.value = "0";
-  if (entryForm.payment_terms) entryForm.payment_terms.value = "";
+  document.getElementById("entryPaymentTerms").value = "";
+  document.getElementById("entryUnit").value = "PCS";
+  const bomHint = document.getElementById("orderBomHint");
+  if (bomHint) {
+    bomHint.hidden = true;
+    bomHint.textContent = "";
+    bomHint.className = "field-hint inv-bom-hint";
+  }
 }
 
 function loadToForm(ln) {
   document.getElementById("editId").value = ln.id;
   entryForm.customer.value = ln.customer;
-  entryForm.order_date.value = ln.order_date;
+  setEntryOrderDate(ln.order_date || todayIsoDate());
   entryForm.delivery_date.value = ln.delivery_date || "";
   entryForm.order_no.value = ln.order_no;
-  if (entryForm.payment_terms) entryForm.payment_terms.value = ln.payment_terms || "";
+  document.getElementById("entryPaymentTerms").value = ln.payment_terms || "";
   entryForm.product_spec.value = ln.product_spec;
   entryForm.customer_part_no.value = ln.customer_part_no || "";
   entryForm.unit_weight_g.value = ln.unit_weight_g;
   entryForm.material.value = ln.material || "";
   entryForm.po_qty.value = ln.po_qty;
-  entryForm.shipped_qty.value = ln.shipped_qty;
-  entryForm.unit.value = ln.unit || "";
+  document.getElementById("entryShippedQty").value = ln.shipped_qty;
+  document.getElementById("entryUnit").value = ln.unit || "PCS";
   entryForm.tax_rate_pct.value = Math.round(parseFloat(ln.tax_rate) * 100) || 0;
   entryForm.rmb_tax_incl_price.value = ln.rmb_tax_incl_price;
   document.getElementById("submitBtn").textContent = "保存修改";
@@ -2634,7 +2580,7 @@ function shipmentRowActions(ev) {
   const dn = shipmentDeliveryAction(ev);
   if (dn) parts.push(dn);
   parts.push(
-    `<button type="button" class="btn btn-sm btn-outline shipment-return-btn" data-event-id="${ev.id}" title="撤销本次出货，料号回到未结订单">一键返回</button>`
+    `<button type="button" class="btn btn-sm btn-outline shipment-return-btn" data-event-id="${ev.id}" data-hover-text="撤销本次出货，料号回到未结订单">一键返回</button>`
   );
   return parts.join(" ");
 }
@@ -3532,6 +3478,7 @@ function renderListFromCache() {
       })
       .join("");
     tbody.querySelectorAll("tr td:not(:first-child)").forEach(bindHoverTip);
+    tbody.querySelectorAll(".shipment-return-btn").forEach(bindHoverTip);
     return;
   }
   tbody.innerHTML = filtered
@@ -4159,7 +4106,7 @@ function renderPreview(lines, validation, ocrText, batchMeta) {
         ? `<span class="pv-hint">${esc(fv.message || "请核对")}</span>`
         : "";
       const sourceHtml = multiFile && ln._source_file && ci === 0
-        ? `<span class="pv-source" data-file="${esc(ln._source_file)}" title="点击查看对应原件">${esc(ln._source_file)}</span>`
+        ? `<span class="pv-source" data-file="${esc(ln._source_file)}" data-hover-text="点击查看对应原件">${esc(ln._source_file)}</span>`
         : "";
       return `<td class="${tdCls}" data-verify-row="${i + 1}" data-verify-field="${c.f}">` +
         sourceHtml +
@@ -4194,6 +4141,7 @@ function renderPreview(lines, validation, ocrText, batchMeta) {
   });
   tbody.querySelectorAll(".ro").forEach(bindHoverTip);
   tbody.querySelectorAll(".pv-source").forEach((span) => {
+    bindHoverTip(span);
     span.addEventListener("click", () => {
       focusOcrSourceByName(span.dataset.file || "");
     });
@@ -4399,8 +4347,7 @@ document.getElementById("excelPreviewArea")?.addEventListener("click", (e) => {
   bindOcrSourceTools();
   initListColFilterPanel();
   await loadMaster();
-  const today = new Date().toISOString().slice(0, 10);
-  document.getElementById("orderDate").value = today;
+  setEntryOrderDate(todayIsoDate());
   bindHoverTipAll(document.querySelector(".entry-card"));
   await switchSubmodule(parseSubmoduleFromHash());
 })();

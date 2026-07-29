@@ -5,10 +5,13 @@ async function loadOptions() {
   const data = await res.json();
   PROCESSES = data.processes;
 
-  const sel = document.getElementById("materialSelect");
-  sel.innerHTML = data.materials
-    .map((m) => `<option value="${m}">${m}</option>`)
-    .join("");
+  const materialInput = document.getElementById("materialInput");
+  if (materialInput && window.InventoryBomLookup) {
+    InventoryBomLookup.bindMaterialList(materialInput, data.materials || []);
+    if (data.materials && data.materials.length) {
+      materialInput.value = data.materials[0];
+    }
+  }
 
   const grid = document.getElementById("processGrid");
   grid.innerHTML = PROCESSES.map(

@@ -17,9 +17,27 @@
 
 索引：[`GLOBAL-RULES-INDEX.md`](../design/GLOBAL-RULES-INDEX.md)
 
+**Agent 强制入口**：[`.cursor/rules/wkt-read-before-edit.mdc`](../../.cursor/rules/wkt-read-before-edit.mdc)（alwaysApply · **改代码前先 Read**）
+
 ---
 
-## 2. 任务结束前 Checklist（逐项打勾）
+## 2. 动手前必读（Checklist · 先于写码）
+
+```
+[ ] AGENTS.md 已 Read
+[ ] CHANGELOG.md 顶部 5 条已 Read
+[ ] 本文件 AGENT-COMPLIANCE 已 Read
+[ ] 若 UI 任务 → ui-layout-rules.md V3 全文 + UI-CHANGELOG 最新 5 条 + wkt-ui-design SKILL 已 Read
+[ ] 若修 Bug → BUG-FIX-LOG 已查 + systematic-debugging SKILL 已 Read
+[ ] 若改库/API → data-model.md 已 Read
+[ ] 若部署/数据 → PRODUCTION-SAFETY.md 已 Read
+```
+
+**禁止**跳过上述 Read 直接改文件。新会话不得凭记忆代替。
+
+---
+
+## 3. 任务结束前 Checklist（逐项打勾）
 
 ```
 [ ] CL-XXXX 已写入 CHANGELOG.md 顶部（递增、不复用）

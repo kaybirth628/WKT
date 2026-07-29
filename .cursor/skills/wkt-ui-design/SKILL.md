@@ -29,6 +29,8 @@ description: WKT 网页 UI 全局设计规范。在新建/修改页面布局、C
 | 主题 | themes.css 变量，HP 蓝默认 |
 | 字体 | --type-* 层级；料号等宽 |
 | 组件 | btn-primary/outline/sm；hover-tip 非 title |
+| 下拉 | §7.8 可搜索 combo（InventoryBomLookup） |
+| 订单录入 | §9.5 两行五列；隐藏接单日期/已出货/账期 |
 
 ## 禁止
 

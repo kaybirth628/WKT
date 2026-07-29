@@ -184,11 +184,11 @@ Head 必须：`{% include '_theme_head.html' %}` + `/static/style.css?v=…` + �
 **当前实现**（`_font_links.html` + `style.css`）：
 
 ```css
---font: "Inter", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+--font: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "DM Sans", system-ui, sans-serif;
 body { font-size: 0.9375rem; line-height: 1.5; -webkit-font-smoothing: antialiased; }
 ```
 
-**TP/ERP 全局目标**（新页 / 字体大改时对齐）：
+**TP/ERP 全局目标**（与本仓库现网一致）：
 
 ```html
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=DM+Sans:wght@500;600;700&display=swap" />
@@ -309,7 +309,8 @@ Consolas, "Courier New", ui-monospace, monospace
 |----|------|
 | `.form` / `.form-stack` | 纵向表单容器 |
 | `.field` | 标签上置 + 输入 |
-| `.entry-card` + `.entry-grid` | 订单手动录入：5 列网格 |
+| `.entry-card` + `.entry-grid` | 订单手动录入：见 §9.5（5 列 × 2 行） |
+| `.inv-bom-combo` | 可搜索下拉（见 §7.8） |
 | `.entry-divider` | 组间 1px 分隔 |
 | `.customer-form` | 客商维护横向 field |
 
@@ -339,6 +340,22 @@ select 同表单风格（见 `cost.css` / 全局 `select`）。
 | `.is-hidden` | 面板/卡片切换（`display: none !important`） |
 | `[hidden]` | 勿与 flex 布局混用以控制主面板 |
 | `.submodule-panel.is-hidden` | 订单子模块切换 |
+
+### 7.8 可搜索下拉（Searchable Combo · **全局**）
+
+凡 **客户、料号、品名、BOM 主数据** 等选项较多字段，**禁止**仅用原生 `<select>`；统一用 `inventory_bom_lookup.js`（`InventoryBomLookup`）。
+
+| 规则 | 说明 |
+|------|------|
+| 组件 | `.inv-bom-combo` + 输入框 + 右侧 **▼** + `.inv-bom-suggest` 列表 |
+| 展开 | 点击输入框 / ▼ / ↓ 即展开；**无需先输入** |
+| 搜索 | 下拉 **顶部固定搜索框**（`.inv-bom-suggest-search`）；与主输入双向同步 |
+| 列表内容 | **单列**：客户仅公司名、料号仅料号、品名仅品名（勿堆料号+客户+单重于一行） |
+| 互填 | 选 **料号优先**：回填品名、单重、材质、客户；品名/料号 `bindPair` |
+| 样式 | 复用 `style.css` 中 `.inv-bom-*`；表单内 combo `width:100%` |
+| 初始化 | `openOnFocus:true` `minChars:0` `showToggle:true` `simpleList:true`（订单录入） |
+
+参考实现：`app.js` → `initOrderEntryCombos()`；库存/BOM 页同库。
 
 ---
 
@@ -456,11 +473,37 @@ OCR 布局（历史，功能复杂可保留）：`.ocr-review-layout` 原件在�
 - 成功：清空预览、恢复上传、简短 success banner；**勿**成功后 silent re-parse
 - 统一客户等工具条：紧凑单行，非大段说明
 
-### 9.5 手动录入表单
+### 9.5 手动录入表单（订单 · **标准模板**）
 
-- 订单：`entry-card` + `entry-grid`（5 列）
-- BOM/成本：`cost-form-card` + `.field` 网格（见 `cost_entry.html`）
-- 标签紧凑；placeholder 代替长说明
+**两行 × 五列等宽**（`.entry-grid.entry-grid-cols-5`），同一网格内顺序排列，**禁止**通栏大框、随意 `span-2/span-4` 导致框大小不一。
+
+| 行 | 字段（左→右） |
+|----|----------------|
+| 1 | 客户 · 客户料号 · 品名规格 · 单重 · 材质 |
+| 2 | 客户交期 · 订单号 · PO数量 · 税率 · 人民币单价 |
+
+**可见字段交互**
+
+- 客户 / 料号 / 品名：§7.8 可搜索下拉
+- 料号选后自动填品名、单重、材质（BOM 联动）
+- placeholder 短句（如「搜索客户」），勿长说明
+
+**隐藏字段（默认值 · 不在表单展示）**
+
+| 字段 | 新建默认 | 修改时 |
+|------|----------|--------|
+| 接单日期 `order_date` | **当天**（录入日期） | 保留原值 |
+| 已出货 | 0 | 保留原值 |
+| 账期 | 空 | 保留原值 |
+| 单位 | PCS | 保留原值 |
+
+**禁止**
+
+- 行内「+」快捷新增（改走顶栏客商维护 / BOM 录入）
+- 新建时手填接单日期
+- 已出货、账期占主表单位（除非用户明确要求）
+
+BOM/成本手动录入：`cost-form-card` + `.field` 网格（见 `cost_entry.html`）；主数据字段同样遵循 §7.8。
 
 ---
 
@@ -529,6 +572,9 @@ OCR 布局（历史，功能复杂可保留）：`.ocr-review-layout` 原件在�
 | 改 UI 不登记 | UI-CHANGELOG + CL |
 | 料号用正文字体 | `list-td-mono` |
 | 用 title 做 tooltip | `.hover-tip` |
+| 长列表用原生 select | §7.8 `InventoryBomLookup` |
+| 表单字段宽窄不一、随意通栏 | §9.5 等宽网格 |
+| 新建订单手填接单日期 | 隐藏字段默认当天 |
 
 ---
 

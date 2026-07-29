@@ -1,13 +1,45 @@
 let selectedCount = 0;
 let processLabelByName = {};
-let partSuggestTimer = null;
 let lastLookupPart = "";
 
-function debouncePartSuggest(fn, ms) {
-  return function (...args) {
-    clearTimeout(partSuggestTimer);
-    partSuggestTimer = setTimeout(() => fn.apply(this, args), ms);
-  };
+function initCostEntryCombos() {
+  const form = document.getElementById("costEntryForm");
+  const IBL = window.InventoryBomLookup;
+  if (!form || !IBL) return;
+  const opts = IBL.STANDARD_COMBO_OPTS;
+  IBL.bindCustomer({
+    customerInput: form.customer_name,
+    fetchSuggestions: IBL.fetchMasterCustomerSuggestions,
+    ...opts,
+  });
+  IBL.bindPair({
+    partInput: form.product_part_no,
+    nameInput: form.product_name,
+    customerInput: form.customer_name,
+    hintEl: document.getElementById("partLookupHint"),
+    onSelect: () => {
+      lastLookupPart = "";
+      lookupPartNo();
+    },
+    ...opts,
+  });
+}
+
+function initMaterialCombo(materials) {
+  const form = document.getElementById("costEntryForm");
+  if (!form?.material || !window.InventoryBomLookup) return;
+  window.InventoryBomLookup.bindMaterialList(form.material, materials);
+}
+
+function initBatchCustomerCombo() {
+  const el = document.getElementById("bomImportBatchCustomer");
+  const IBL = window.InventoryBomLookup;
+  if (!el || !IBL) return;
+  IBL.bindCustomer({
+    customerInput: el,
+    fetchSuggestions: IBL.fetchMasterCustomerSuggestions,
+    ...IBL.STANDARD_COMBO_OPTS,
+  });
 }
 
 function setPartLookupHint(text, kind) {
@@ -22,38 +54,6 @@ function setPartLookupHint(text, kind) {
   el.hidden = false;
   el.textContent = text;
   el.className = "field-hint" + (kind ? ` ${kind}` : "");
-}
-
-function fillCustomerOptions(customers) {
-  const list = document.getElementById("customerOptions");
-  if (!list) return;
-  const names = new Set((customers || []).map((c) => c.customer_name || c).filter(Boolean));
-  list.innerHTML = Array.from(names)
-    .sort((a, b) => a.localeCompare(b, "zh-CN"))
-    .map((name) => `<option value="${name}"></option>`)
-    .join("");
-}
-
-async function fetchPartSuggestions(q) {
-  const query = (q || "").trim();
-  if (query.length < 1) {
-    document.getElementById("partNoOptions").innerHTML = "";
-    return;
-  }
-  const res = await fetch(`/api/cost/part-numbers?q=${encodeURIComponent(query)}&limit=20`);
-  const data = await res.json();
-  const list = document.getElementById("partNoOptions");
-  if (!list) return;
-  list.innerHTML = (data.items || [])
-    .map((item) => {
-      const labelParts = [item.customer_name, item.product_name];
-      if (item.unit_weight_g && parseFloat(item.unit_weight_g) > 0) {
-        labelParts.push(`${item.unit_weight_g}g`);
-      }
-      const label = labelParts.filter(Boolean).join(" · ");
-      return `<option value="${item.product_part_no}"${label ? ` label="${label}"` : ""}></option>`;
-    })
-    .join("");
 }
 
 function markAutoFilledWeight(filled) {
@@ -74,6 +74,7 @@ function applyProcessPrices(processPrices, processSelections) {
       byCode[item.code] = {
         price: item.price,
         supplier: item.supplier || "",
+        suppliers: item.suppliers || (item.supplier ? [item.supplier] : []),
       };
     });
   } else if (processPrices && Object.keys(processPrices).length) {
@@ -82,9 +83,10 @@ function applyProcessPrices(processPrices, processSelections) {
         byCode[code] = {
           price: val.price != null ? val.price : "0",
           supplier: val.supplier || "",
+          suppliers: val.suppliers || (val.supplier ? [val.supplier] : []),
         };
       } else {
-        byCode[code] = { price: val, supplier: "" };
+        byCode[code] = { price: val, supplier: "", suppliers: [] };
       }
     });
   }
@@ -100,23 +102,32 @@ function applyProcessPrices(processPrices, processSelections) {
       inp.value = entry.price !== "0" ? entry.price : "";
       inp.classList.toggle("filled", parseFloat(entry.price) > 0);
     }
-    const combo = document.querySelector(
-      `.process-supplier-combo:has(.process-supplier[data-process-code="${code}"])`
+    const panel = document.querySelector(
+      `.process-suppliers-panel[data-process-code="${code}"]`
     );
-    if (combo && entry.supplier) {
-      const hidden = combo.querySelector(".process-supplier");
-      const search = combo.querySelector(".process-supplier-search");
-      if (hidden) hidden.value = entry.supplier;
-      if (search) {
-        search.value = entry.supplier;
-        search.disabled = false;
-      }
-      if (hidden) hidden.disabled = false;
+    const suppliers = entry.suppliers || (entry.supplier ? [entry.supplier] : []);
+    if (panel) {
+      CostCommon.setProcessSuppliersPanel(panel, suppliers);
+      CostCommon.setProcessSuppliersDisabled(panel, false);
     } else {
-      const sel = document.querySelector(
-        `input.process-supplier[data-process-code="${code}"], select.process-supplier[data-process-code="${code}"]`
+      const combo = document.querySelector(
+        `.process-supplier-combo:has(.process-supplier[data-process-code="${code}"])`
       );
-      if (sel && entry.supplier) sel.value = entry.supplier;
+      if (combo && entry.supplier) {
+        const hidden = combo.querySelector(".process-supplier");
+        const search = combo.querySelector(".process-supplier-search");
+        if (hidden) hidden.value = entry.supplier;
+        if (search) {
+          search.value = entry.supplier;
+          search.disabled = false;
+        }
+        if (hidden) hidden.disabled = false;
+      } else {
+        const sel = document.querySelector(
+          `input.process-supplier[data-process-code="${code}"], select.process-supplier[data-process-code="${code}"]`
+        );
+        if (sel && entry.supplier) sel.value = entry.supplier;
+      }
     }
   });
   selectedCount = document.querySelectorAll("#processGrid .process-pick:checked").length;
@@ -197,14 +208,6 @@ function setupPartLookup() {
   const form = document.getElementById("costEntryForm");
   if (!partInput || !form) return;
 
-  partInput.addEventListener(
-    "input",
-    debouncePartSuggest((e) => {
-      lastLookupPart = "";
-      fetchPartSuggestions(e.target.value);
-    }, 250)
-  );
-
   partInput.addEventListener("change", () => {
     lastLookupPart = "";
     lookupPartNo();
@@ -265,12 +268,6 @@ function renderProcessPicker(processOptions) {
   );
 }
 
-function fillMaterialDatalist(materials) {
-  const list = document.getElementById("materialOptions");
-  if (!list) return;
-  list.innerHTML = materials.map((m) => `<option value="${m}"></option>`).join("");
-}
-
 function collectBasicForm(form) {
   return {
     customer_name: form.customer_name.value.trim(),
@@ -293,7 +290,7 @@ function validateSuppliers(msgEl) {
   const missing = CostCommon.validateProcessSuppliers("#processGrid");
   if (!missing.length) return true;
   if (msgEl) {
-    msgEl.textContent = `外发工序请选择供应商：${missing.join("、")}`;
+    msgEl.textContent = `外发工序请至少添加一个供应商：${missing.join("、")}`;
     msgEl.className = "msg error";
   }
   return false;
@@ -412,7 +409,7 @@ document.addEventListener("keydown", (e) => {
 
 CostCommon.loadOptions()
   .then(({ processOptions, materials }) => {
-    fillMaterialDatalist(materials);
+    initMaterialCombo(materials);
     return CostCommon.loadSuppliers()
       .catch(() => [])
       .then(() => processOptions);
@@ -427,10 +424,8 @@ CostCommon.loadOptions()
           }))
     );
     setupPartLookup();
-    fetch("/api/master")
-      .then((res) => res.json())
-      .then((data) => fillCustomerOptions((data.customers || []).map((name) => ({ customer_name: name }))))
-      .catch(() => {});
+    initCostEntryCombos();
+    initBatchCustomerCombo();
   });
 
 function switchBomMode(mode) {

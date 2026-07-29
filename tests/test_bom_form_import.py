@@ -25,6 +25,7 @@ from test_impl.order_management.cost_analysis.record_service import CostRecordSe
 from test_impl.order_management.order_entry.line_store import LineStore
 
 _TEST_SUPPLIER = "锦拓"
+_TEST_SUPPLIER_CANONICAL = "吴中区甪直锦拓精密电子厂"
 
 
 def _build_sample_bom_workbook() -> bytes:
@@ -135,7 +136,11 @@ class BomFormImportTests(unittest.TestCase):
         codes = [p["code"] for p in row["processes"]]
         self.assertEqual(codes, ["01", "08", "12"])
         self.assertEqual(row["processes"][0]["supplier"], "")
-        self.assertEqual(row["processes"][1]["supplier"], _TEST_SUPPLIER)
+        self.assertEqual(row["processes"][1]["supplier"], _TEST_SUPPLIER_CANONICAL)
+        self.assertTrue(
+            any("已匹配" in w and _TEST_SUPPLIER in w for w in row.get("warnings") or []),
+            row.get("warnings"),
+        )
 
     def test_preview_tiers(self) -> None:
         parsed = parse_bom_workbook(_build_sample_bom_workbook())

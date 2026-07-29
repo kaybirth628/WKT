@@ -1,0 +1,45 @@
+---
+description: 每次改代码前强制阅读 AGENTS、UI 规则、变更合规、生产安全等；alwaysApply，不可凭记忆跳过。
+alwaysApply: true
+---
+
+# 动手前必读（强制）
+
+**禁止**在未用 **Read 工具**打开并阅读下列文件之前，编辑本仓库任何文件（HTML/CSS/JS/Python/SQL/文档）。
+
+不得凭「上次对话记得」或摘要代替阅读；**新会话 = 重新读**。
+
+## A. 每个会话 / 每个 coding 任务（第一步）
+
+| # | 文件 | 用途 |
+|---|------|------|
+| 1 | `AGENTS.md` | 项目框架、目录、合规清单、会话协议 |
+| 2 | `docs/change/CHANGELOG.md` | 顶部 **5 条**，避免重复造轮子 |
+| 3 | `docs/change/AGENT-COMPLIANCE.md` | 改动结束 Checklist |
+
+## B. 按任务类型追加（动手改代码前）
+
+| 任务类型 | 必读（Read 全文或 skill 指定章节） |
+|----------|-----------------------------------|
+| **UI / 布局 / CSS / 表单 / 下拉 / 录入页 / 列表样式** | `docs/design/ui-layout-rules.md` **V3 全文** · `docs/design/GLOBAL-RULES-INDEX.md` · `docs/design/UI-CHANGELOG.md` 最新 5 条 · `.cursor/skills/wkt-ui-design/SKILL.md` |
+| **Bug 修复** | `docs/change/BUG-FIX-LOG.md`（先查已有 BF）· `.cursor/skills/systematic-debugging/SKILL.md` |
+| **SQLite / API 字段 / 持久化 / 送货单快照** | `docs/architecture/data-model.md` |
+| **部署 / 云端 / 数据库文件 / bat 脚本** | `docs/change/PRODUCTION-SAFETY.md` · `.cursor/rules/wkt-production-safety.mdc` |
+| **任何功能代码** | 适用时读 Superpowers（`using-superpowers` → TDD / verification 等）· `.cursor/rules/karpathy-guidelines.mdc` |
+
+## C. UI 全局范式（改 UI 时必守，细则见 ui-layout-rules §7.8 §9.5）
+
+- 长列表主数据 → **可搜索下拉**（`InventoryBomLookup`：▼ + 框内搜索 + 单列展示）
+- 料号 / BOM → **选料号优先自动回填**品名、单重、材质
+- 表单 → **等宽网格**，勿随意通栏拉大某一框
+- 系统默认字段 → **隐藏 + 默认值**（如接单日期=录入当天）
+
+## D. 完成后
+
+对照 `AGENT-COMPLIANCE.md` Checklist；UI 改动登记 `UI-CHANGELOG.md`；功能改动登记 `CHANGELOG.md`（CL-XXXX）。
+
+## E. 不合规
+
+- 未 Read 上述文件就改 UI / 后端
+- 改 UI 不读 `ui-layout-rules.md` V3 全文
+- 改完不登记 CL / UI-CHANGELOG / BF（修复类）

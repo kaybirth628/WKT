@@ -59,6 +59,24 @@ class TestSupplierProfileStore(unittest.TestCase):
             svc.delete("待删供应商")
         self.assertEqual(store.get_profile("待删供应商"), store.EMPTY_PROFILE)
 
+    def test_resolve_supplier_name_exact(self) -> None:
+        store.save_profile("昆山欣宏威金属制品有限公司", {"notes": "烤漆"})
+        name, note = store.resolve_supplier_name("昆山欣宏威金属制品有限公司")
+        self.assertEqual(name, "昆山欣宏威金属制品有限公司")
+        self.assertIsNone(note)
+
+    def test_resolve_supplier_name_abbreviation(self) -> None:
+        store.save_profile("吴中区甪直锦拓精密电子厂", {"notes": "抛丸/喷砂"})
+        name, note = store.resolve_supplier_name("锦拓")
+        self.assertEqual(name, "吴中区甪直锦拓精密电子厂")
+        self.assertIn("已匹配", note or "")
+
+    def test_resolve_supplier_name_unmatched(self) -> None:
+        store.save_profile("苏州双佰精密科技有限公司", {})
+        name, note = store.resolve_supplier_name("不存在简称")
+        self.assertEqual(name, "不存在简称")
+        self.assertIn("未在供应商列表", note or "")
+
 
 if __name__ == "__main__":
     unittest.main()

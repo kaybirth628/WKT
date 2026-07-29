@@ -179,14 +179,21 @@ document.getElementById("invMovToday")?.addEventListener("click", () => {
 (function initBomLookup() {
   const form = document.getElementById("invMovForm");
   if (!form || !window.InventoryBomLookup) return;
+  const comboOpts = window.InventoryBomLookup?.STANDARD_COMBO_OPTS || {
+    openOnFocus: true,
+    minChars: 0,
+    showToggle: true,
+    simpleList: true,
+  };
   window.InventoryBomLookup.bindPair({
     partInput: form.product_part_no,
     nameInput: form.product_name,
     customerInput: form.customer_name,
     hintEl: document.getElementById("invMovBomHint"),
+    ...comboOpts,
   });
   if (form.customer_name) {
-    window.InventoryBomLookup.bindCustomer({ customerInput: form.customer_name });
+    window.InventoryBomLookup.bindCustomer({ customerInput: form.customer_name, ...comboOpts });
   }
 })();
 

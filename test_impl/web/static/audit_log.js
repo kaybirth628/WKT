@@ -55,6 +55,16 @@
         );
       })
       .join("");
+    if (window.HoverTip) {
+      body.querySelectorAll("td:nth-child(5)").forEach(function (td) {
+        var text = (td.textContent || "").trim();
+        if (text && window.HoverTip.needsTip(td)) {
+          td.dataset.hoverText = text;
+          td.classList.add("list-td-text");
+          window.HoverTip.bind(td);
+        }
+      });
+    }
   }
 
   document.getElementById("auditSearchBtn")?.addEventListener("click", loadAudit);

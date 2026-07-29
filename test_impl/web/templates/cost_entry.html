@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · BOM录入</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260711-title-gray-bg" />
-  <link rel="stylesheet" href="/static/cost.css?v=20260729-bom-dup-highlight" />
+  <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260729-bom-supplier-combo" />
 </head>
 <body>
   <div class="app-layout">
@@ -93,12 +93,11 @@
                 <div class="cost-header-row">
                   <label class="field">
                     <span>客户名称</span>
-                    <input name="customer_name" id="customerNameInput" list="customerOptions" required placeholder="如：凯泰" />
-                    <datalist id="customerOptions"></datalist>
+                    <input name="customer_name" id="customerNameInput" required placeholder="如：凯泰" autocomplete="off" />
                   </label>
                   <label class="field">
                     <span>产品名称</span>
-                    <input name="product_name" required placeholder="如：PL9-01050-00-0A-前挡板" />
+                    <input name="product_name" id="productNameInput" required placeholder="如：PL9-01050-00-0A-前挡板" autocomplete="off" />
                   </label>
                   <label class="field">
                     <span>模具编号</span>
@@ -109,12 +108,10 @@
                     <input
                       name="product_part_no"
                       id="productPartNoInput"
-                      list="partNoOptions"
                       required
                       placeholder="如：PL9-01050-00-0A"
                       autocomplete="off"
                     />
-                    <datalist id="partNoOptions"></datalist>
                     <p id="partLookupHint" class="field-hint" hidden></p>
                   </label>
                   <label class="field">
@@ -129,8 +126,7 @@
                   </label>
                   <label class="field">
                     <span>材质</span>
-                    <input name="material" list="materialOptions" required placeholder="如：ADC12" />
-                    <datalist id="materialOptions"></datalist>
+                    <input name="material" id="materialInput" required placeholder="如：ADC12" autocomplete="off" />
                   </label>
                   <label class="field">
                     <span>机台吨位</span>
@@ -183,8 +179,10 @@
     </div>
   </div>
 
-  <script src="/static/cost_common.js?v=20260729-bom-edit-modal-fix"></script>
-  <script src="/static/cost_bom_import.js?v=20260729-bom-dup-highlight"></script>
-  <script src="/static/cost_entry.js?v=20260728-bom-clean-entry"></script>
+  <script src="/static/inventory_bom_lookup.js?v=20260729-bom-supplier-combo"></script>
+  <script src="/static/hover_tip.js?v=20260729-ui-full-align"></script>
+  <script src="/static/cost_common.js?v=20260729-bom-supplier-combo"></script>
+  <script src="/static/cost_bom_import.js?v=20260729-ui-full-align"></script>
+  <script src="/static/cost_entry.js?v=20260729-bom-supplier-combo"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ from test_impl.order_management.cost_analysis.cost_store import CostStore
 from test_impl.order_management.order_entry.line_store import LineStore
 
 _TEST_SUPPLIER = "测试CNC厂"
+_TEST_SUPPLIER_2 = "测试喷砂厂"
 
 
 def _sample_payload(**overrides):
@@ -37,7 +38,7 @@ class TestCostRecordService(unittest.TestCase):
         self.service = CostRecordService(store=self._store, line_store=self.line_store)
         self.supplier_patcher = patch(
             "test_impl.order_management.cost_analysis.record_service.list_profile_suppliers",
-            return_value=[_TEST_SUPPLIER],
+            return_value=[_TEST_SUPPLIER, _TEST_SUPPLIER_2],
         )
         self.supplier_patcher.start()
 
@@ -124,7 +125,7 @@ class TestCostRecordService(unittest.TestCase):
 
     def test_reject_outsource_without_supplier(self) -> None:
         payload = _sample_payload(process_prices={"01": "1.5", "13": "3.2"})
-        with self.assertRaisesRegex(ValueError, "请选择供应商"):
+        with self.assertRaisesRegex(ValueError, "请至少选择一个供应商"):
             self.service.create_record(payload)
 
     def test_reject_unknown_supplier(self) -> None:
@@ -225,6 +226,50 @@ class TestCostRecordService(unittest.TestCase):
         )
         updated_data = self.service.record_to_dict(updated)
         self.assertEqual(updated_data["process_order"], ["01", "13"])
+
+    def test_multi_process_suppliers(self) -> None:
+        record = self.service.create_record(
+            _sample_payload(
+                process_prices={
+                    "01": "1.5",
+                    "06": {
+                        "price": "0.5",
+                        "supplier": _TEST_SUPPLIER,
+                        "suppliers": [_TEST_SUPPLIER, _TEST_SUPPLIER_2],
+                    },
+                },
+            )
+        )
+        data = self.service.record_to_dict(record)
+        sel = next(s for s in data["process_selections"] if s["code"] == "06")
+        self.assertEqual(sel["supplier"], _TEST_SUPPLIER)
+        self.assertEqual(sel["suppliers"], [_TEST_SUPPLIER, _TEST_SUPPLIER_2])
+        stored = record.process_prices["06"]
+        self.assertEqual(stored["suppliers"], [_TEST_SUPPLIER, _TEST_SUPPLIER_2])
+
+        updated = self.service.update_record(
+            record.id,
+            _sample_payload(
+                process_prices={
+                    "01": "1.5",
+                    "06": {
+                        "price": "0.5",
+                        "suppliers": [_TEST_SUPPLIER_2, _TEST_SUPPLIER],
+                    },
+                },
+            ),
+        )
+        updated_data = self.service.record_to_dict(updated)
+        sel2 = next(s for s in updated_data["process_selections"] if s["code"] == "06")
+        self.assertEqual(sel2["supplier"], _TEST_SUPPLIER_2)
+        self.assertEqual(sel2["suppliers"], [_TEST_SUPPLIER_2, _TEST_SUPPLIER])
+
+    def test_legacy_single_supplier_still_works(self) -> None:
+        record = self.service.create_record(_sample_payload())
+        data = self.service.record_to_dict(record)
+        sel = next(s for s in data["process_selections"] if s["code"] == "13")
+        self.assertEqual(sel["supplier"], _TEST_SUPPLIER)
+        self.assertEqual(sel["suppliers"], [_TEST_SUPPLIER])
 
 
 if __name__ == "__main__":

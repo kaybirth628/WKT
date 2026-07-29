@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · 成本分析</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260623-noto-font" />
-  <link rel="stylesheet" href="/static/cost.css?v=20260530-cost-full" />
+  <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260729-ui-full-align" />
 </head>
 <body>
   <div class="app-layout">
@@ -29,8 +29,8 @@
             <div class="form-stack">
               <div class="field-group">
                 <label class="field">
-                  <span>原材（下拉选择）</span>
-                  <select name="material_code" id="materialSelect" required></select>
+                  <span>原材</span>
+                  <input name="material_code" id="materialInput" required autocomplete="off" placeholder="选择或输入原材" />
                 </label>
                 <label class="field">
                   <span>原材单价</span>
@@ -79,6 +79,7 @@
     </div>
   </div>
 
-  <script src="/static/cost.js"></script>
+  <script src="/static/inventory_bom_lookup.js?v=20260729-ui-full-align"></script>
+  <script src="/static/cost.js?v=20260729-ui-full-align"></script>
 </body>
 </html>

@@ -39,6 +39,7 @@
 | **数据结构** | `docs/architecture/data-model.md` |
 | 代码地图（CodeGraph） | `.codegraph/` 索引；CLI `codegraph`；MCP 见 `.cursor/mcp.json` |
 | Agent Skills | `.cursor/skills/`（Superpowers + karpathy-guidelines） |
+| **动手前必读（强制）** | [`.cursor/rules/wkt-read-before-edit.mdc`](.cursor/rules/wkt-read-before-edit.mdc) | **alwaysApply** · 改代码前 Read |
 
 ## Agent 技能与工作流
 
@@ -56,6 +57,8 @@
 | **生产安全** | `.cursor/rules/wkt-production-safety.mdc` + `docs/change/PRODUCTION-SAFETY.md` | 云端=生产；禁止覆盖/清空云端业务数据 |
 
 更新 Superpowers：`scripts/sync-superpowers-skills.ps1` 后重启 Cursor。
+
+**Cursor Project Rules**：`.cursor/rules/*.mdc`（`alwaysApply: true`）在打开本仓库时 **自动加载**。改规则后运行 `scripts/sync-cursor-rules.ps1` 并 Reload Window。
 
 ## CodeGraph（代码地图）
 
@@ -118,16 +121,20 @@
 
 ## 会话连贯性协议
 
+**硬规则**：每个新会话、每次动手改代码前，必须先 Read [`.cursor/rules/wkt-read-before-edit.mdc`](.cursor/rules/wkt-read-before-edit.mdc) 并按任务类型读完对应文档（**不可**凭上轮对话记忆跳过）。
+
 新会话或模型切换时，Agent 应：
 
-1. 读 `AGENTS.md` + **`docs/change/CHANGELOG.md` 顶部 5 条** + **`docs/change/BUG-FIX-LOG.md`（若修 Bug）** + VERSION
-2. **涉及 UI/布局**：读 `docs/design/ui-layout-rules.md` V3 + `GLOBAL-RULES-INDEX.md`
-3. **动手改代码前**：读 `docs/change/AGENT-COMPLIANCE.md` Checklist
-4. 任务开始前检查 Superpowers / Karpathy / **wkt-change-governance** / **wkt-ui-design**
-5. 用户描述的功能若已在 CHANGELOG/SOP/BUG-FIX-LOG 出现，**在已有实现上扩展**，避免重复造轮子
-6. 完成工作后，在回复中简要列出：**CL**、**BF**（若有）、**SOP 是否同步**、测试数、是否需要重启
-7. 大功能拆分时，每条 CL 对应一个可验证的用户故事
-8. **UI 基线**：顶部导航 + 页脚说明 + 订单下拉（CL-0103）；细则见 `docs/design/ui-layout-rules.md`
+1. Read `AGENTS.md` + **`docs/change/CHANGELOG.md` 顶部 5 条** + **`docs/change/AGENT-COMPLIANCE.md`**
+2. **涉及 UI/布局**：Read `docs/design/ui-layout-rules.md` **V3 全文** + `GLOBAL-RULES-INDEX.md` + `UI-CHANGELOG` 最新 5 条 + `wkt-ui-design` SKILL
+3. **修 Bug**：Read `BUG-FIX-LOG.md` + `systematic-debugging` SKILL
+4. **涉及数据/库表**：Read `data-model.md`
+5. **涉及部署/云端/data**：Read `PRODUCTION-SAFETY.md`
+6. 任务开始前检查 Superpowers / Karpathy / **wkt-change-governance** / **wkt-ui-design**
+7. 用户描述的功能若已在 CHANGELOG/SOP/BUG-FIX-LOG 出现，**在已有实现上扩展**，避免重复造轮子
+8. 完成工作后，在回复中简要列出：**CL**、**BF**（若有）、**SOP 是否同步**、测试数、是否需要重启
+9. 大功能拆分时，每条 CL 对应一个可验证的用户故事
+10. **UI 基线**：顶部导航 + 页脚说明 + 订单下拉（CL-0103）；细则见 `docs/design/ui-layout-rules.md`
 
 ## 当前里程碑 v0.5.1 能力（CL-0103 + 此前）
 
