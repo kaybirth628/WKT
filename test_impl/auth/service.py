@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from .audit_labels import action_label, module_label
 from .store import AuditRow, AuthStore, UserRow
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -235,6 +236,8 @@ def user_to_public(user: UserRow) -> Dict[str, Any]:
 
 def audit_to_dict(row: AuditRow) -> Dict[str, Any]:
     payload = asdict(row)
+    payload["module_label"] = module_label(row.module)
+    payload["action_label"] = action_label(row.action)
     if row.detail_json:
         try:
             payload["detail"] = json.loads(row.detail_json)

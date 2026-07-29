@@ -10,17 +10,7 @@ from test_impl.order_management.inventory.service import ACTION_LABELS
 
 from .feishu import feishu_notifier, load_feishu_config
 
-MODULE_LABELS = {
-    "orders": "订单",
-    "partners": "客商",
-    "inventory": "库存",
-    "cost": "BOM",
-    "delivery": "送货单",
-    "master": "主数据",
-    "admin": "用户管理",
-    "system": "系统",
-    "ai": "AI助手",
-}
+from test_impl.auth.audit_labels import MODULE_LABELS
 
 SKIP_FEISHU_ACTIONS = frozenset({"feishu.test"})
 

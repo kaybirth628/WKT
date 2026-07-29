@@ -20,13 +20,14 @@
             <label>模块
               <select id="auditModule">
                 <option value="">全部</option>
-                <option value="orders">订单</option>
+                <option value="orders">订单管理</option>
                 <option value="inventory">库存</option>
-                <option value="cost">成本/BOM</option>
-                <option value="partners">客商</option>
+                <option value="cost">BOM信息</option>
+                <option value="partners">客商信息维护</option>
                 <option value="delivery">送货单</option>
                 <option value="admin">用户管理</option>
                 <option value="system">系统</option>
+                <option value="ai">AI数据助手</option>
               </select>
             </label>
             {% if current_user and current_user.role == 'admin' %}
@@ -69,6 +70,6 @@
   {% include '_auth_user_bar.html' %}
   <script src="/static/hover_tip.js?v=20260729-ui-full-align"></script>
   <script src="/static/auth.js?v=20260729-ui-full-align"></script>
-  <script src="/static/audit_log.js?v=20260729-ui-full-align"></script>
+  <script src="/static/audit_log.js?v=20260729-audit-labels"></script>
 </body>
 </html>

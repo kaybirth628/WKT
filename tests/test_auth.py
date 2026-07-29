@@ -47,9 +47,20 @@ class AuthTests(unittest.TestCase):
             module="orders",
             summary="测试录入",
         )
+        from test_impl.auth.audit_labels import ingest_audit_rules
+        from test_impl.auth.flask_integration import AUDIT_RULES
+
+        ingest_audit_rules(AUDIT_RULES)
         result = self.audit.query(username="zhangsan")
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["items"][0]["action"], "line.create")
+        from test_impl.auth.audit_labels import action_label, module_label
+
+        item = result["items"][0]
+        self.assertEqual(module_label(item["module"]), "订单管理")
+        self.assertEqual(action_label(item["action"]), "录入订单行")
+        self.assertEqual(item["module_label"], "订单管理")
+        self.assertEqual(item["action_label"], "录入订单行")
 
     def test_change_password(self) -> None:
         admin = self.auth.authenticate("admin", "WKT@2026")

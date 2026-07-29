@@ -47,8 +47,8 @@
           "<tr>" +
           "<td>" + esc(fmtTime(row.created_at)) + "</td>" +
           "<td>" + esc(row.display_name || row.username) + "</td>" +
-          "<td>" + esc(row.module) + "</td>" +
-          "<td><code>" + esc(row.action) + "</code></td>" +
+          "<td>" + esc(row.module_label || row.module) + "</td>" +
+          "<td>" + esc(row.action_label || row.action) + "</td>" +
           "<td>" + esc(row.summary) + "</td>" +
           "<td>" + esc(row.ip_address || "—") + "</td>" +
           "</tr>"

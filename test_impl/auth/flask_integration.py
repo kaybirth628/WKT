@@ -9,7 +9,9 @@ from flask import Flask, jsonify, redirect, render_template, request, session, u
 
 from test_impl.integrations.wkt_events import notify_audit_action
 
+from .audit_labels import action_label, ingest_audit_rules, module_label
 from .service import AuditService, AuthError, AuthService, load_or_create_secret_key, user_to_public
+
 SummaryFn = Callable[[], str]
 AuditRule = Tuple[str, str, SummaryFn]
 
@@ -98,6 +100,7 @@ def _register_audit_rules() -> None:
 
 
 _register_audit_rules()
+ingest_audit_rules(AUDIT_RULES)
 
 PUBLIC_PATHS = frozenset(
     {
