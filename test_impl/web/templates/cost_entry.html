@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · BOM录入</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
-  <link rel="stylesheet" href="/static/cost.css?v=20260729-bom-supplier-combo" />
+  <link rel="stylesheet" href="/static/style.css?v=20260729-form-input-unify" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260729-form-input-unify" />
 </head>
 <body>
   <div class="app-layout">
@@ -86,7 +86,7 @@
           </section>
         </div>
 
-        <div id="bomManualPanel" class="mode-panel is-hidden">
+        <div id="bomManualPanel" class="mode-panel cost-entry-layout is-hidden">
           <section class="card list-card cost-form-card">
             <form id="costEntryForm" class="form">
               <div class="cost-header-table">
@@ -142,14 +142,24 @@
               <div class="items-block">
                 <div class="items-head">
                   <h4>工序选择</h4>
+                  <p class="items-subhint">先勾选本料号适用的工序（仅打钩）</p>
                 </div>
-                <div id="processGrid" class="process-grid process-pick-grid"></div>
-                <div id="processOrderBlock" class="process-order-block" hidden>
-                  <div class="items-head">
-                    <h5>工艺顺序</h5>
-                  </div>
-                  <ol id="processOrderList" class="process-order-list"></ol>
+                <div id="processGrid" class="process-grid process-pick-grid process-pick-only-grid"></div>
+              </div>
+
+              <div id="processDetailBlock" class="items-block process-detail-block" hidden>
+                <div class="items-head">
+                  <h4>单价与供应商</h4>
+                  <p class="items-subhint">在下方为已选外发工序填写单价并添加供应商</p>
                 </div>
+                <div id="processDetailPanel" class="process-detail-panel"></div>
+              </div>
+
+              <div id="processOrderBlock" class="process-order-block items-block" hidden>
+                <div class="items-head">
+                  <h5>工艺顺序</h5>
+                </div>
+                <ol id="processOrderList" class="process-order-list"></ol>
               </div>
 
               <div class="form-actions cost-entry-actions">
@@ -180,9 +190,9 @@
   </div>
 
   <script src="/static/inventory_bom_lookup.js?v=20260729-bom-supplier-combo"></script>
-  <script src="/static/hover_tip.js?v=20260729-ui-full-align"></script>
-  <script src="/static/cost_common.js?v=20260729-bom-supplier-combo"></script>
+  <script src="/static/hover_tip.js?v=20260729-hover-tip-copy"></script>
+  <script src="/static/cost_common.js?v=20260729-bom-query-preview"></script>
   <script src="/static/cost_bom_import.js?v=20260729-ui-full-align"></script>
-  <script src="/static/cost_entry.js?v=20260729-bom-supplier-combo"></script>
+  <script src="/static/cost_entry.js?v=20260729-bom-staged-process"></script>
 </body>
 </html>

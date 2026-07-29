@@ -1,13 +1,30 @@
-/** 全局悬停全文 tooltip（§7.6：禁止 title 属性） */
+/** 全局悬停全文 tooltip（§7.6：禁止 title 属性；可移入框内拖选或双击复制） */
 window.HoverTip = (function () {
   let _el = null;
+  let _body = null;
+  let _hint = null;
+  let hideTimer = null;
 
   function ensure() {
     if (!_el) {
       _el = document.createElement("div");
       _el.id = "hoverTip";
       _el.className = "hover-tip";
+      _body = document.createElement("div");
+      _body.className = "hover-tip-body";
+      _hint = document.createElement("div");
+      _hint.className = "hover-tip-hint";
+      _hint.textContent = "拖选复制 · 双击复制全文";
+      _el.appendChild(_body);
+      _el.appendChild(_hint);
       document.body.appendChild(_el);
+      _el.addEventListener("mouseenter", cancelHide);
+      _el.addEventListener("mouseleave", scheduleHide);
+      _el.addEventListener("dblclick", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        copyTipText();
+      });
     }
     return _el;
   }
@@ -26,6 +43,53 @@ window.HoverTip = (function () {
     if (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA") return true;
     if (el.dataset.hoverText) return true;
     return el.scrollWidth > el.clientWidth + 1;
+  }
+
+  function scheduleHide() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (_el) {
+        _el.style.display = "none";
+        _el.classList.remove("is-copied");
+      }
+    }, 180);
+  }
+
+  function cancelHide() {
+    clearTimeout(hideTimer);
+  }
+
+  function copyTipText() {
+    const text = (_body && _body.textContent ? _body.textContent : "").trim();
+    if (!text) return;
+    function showCopied() {
+      if (_hint) _hint.textContent = "已复制到剪贴板";
+      if (_el) {
+        _el.classList.add("is-copied");
+        setTimeout(() => {
+          if (_el) _el.classList.remove("is-copied");
+          if (_hint) _hint.textContent = "拖选复制 · 双击复制全文";
+        }, 1400);
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showCopied).catch(fallbackSelect);
+    } else {
+      fallbackSelect();
+    }
+    function fallbackSelect() {
+      const range = document.createRange();
+      range.selectNodeContents(_body);
+      const sel = window.getSelection();
+      if (!sel) return;
+      sel.removeAllRanges();
+      sel.addRange(range);
+      try {
+        if (document.execCommand("copy")) showCopied();
+      } catch (_e) {
+        /* 用户可 Ctrl+C */
+      }
+    }
   }
 
   function positionNearEl(el) {
@@ -57,6 +121,23 @@ window.HoverTip = (function () {
     _el.style.top = y + "px";
   }
 
+  function showTip(el, e, followCursor) {
+    const text = getText(el).trim();
+    if (!text || !needsTip(el)) return;
+    el.removeAttribute("title");
+    const tip = ensure();
+    if (_body) _body.textContent = text;
+    if (_hint) _hint.textContent = "拖选复制 · 双击复制全文";
+    tip.classList.remove("is-copied");
+    tip.style.display = "block";
+    cancelHide();
+    if (followCursor) {
+      positionAtCursor(e);
+    } else {
+      requestAnimationFrame(() => positionNearEl(el));
+    }
+  }
+
   function bind(el) {
     if (!el || el.dataset.hoverBound) return;
     el.dataset.hoverBound = "1";
@@ -66,25 +147,11 @@ window.HoverTip = (function () {
     if (el.tagName === "TD") {
       el.classList.toggle("has-ellipsis-tip", needsTip(el));
     }
-    el.addEventListener("mouseenter", (e) => {
-      const text = getText(el).trim();
-      if (!text || !needsTip(el)) return;
-      el.removeAttribute("title");
-      const tip = ensure();
-      tip.textContent = text;
-      tip.style.display = "block";
-      if (followCursor) {
-        positionAtCursor(e);
-      } else {
-        requestAnimationFrame(() => positionNearEl(el));
-      }
-    });
+    el.addEventListener("mouseenter", (e) => showTip(el, e, followCursor));
     if (followCursor) {
       el.addEventListener("mousemove", positionAtCursor);
     }
-    el.addEventListener("mouseleave", () => {
-      if (_el) _el.style.display = "none";
-    });
+    el.addEventListener("mouseleave", scheduleHide);
   }
 
   function bindAll(root, selector) {

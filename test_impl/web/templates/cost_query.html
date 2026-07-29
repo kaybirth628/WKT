@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · BOM查询</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
-  <link rel="stylesheet" href="/static/cost.css?v=20260729-bom-supplier-combo" />
+  <link rel="stylesheet" href="/static/style.css?v=20260729-form-input-unify" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260729-bom-query-preview" />
 </head>
 <body>
   <div class="app-layout">
@@ -99,7 +99,7 @@
   </div>
 
   <div id="costDetailModal" class="cost-modal" hidden>
-    <div class="cost-modal-panel" role="dialog" aria-modal="true" aria-labelledby="costDetailTitle">
+    <div class="cost-modal-panel cost-edit-panel" role="dialog" aria-modal="true" aria-labelledby="costDetailTitle">
       <div class="cost-modal-head">
         <h3 id="costDetailTitle">成本详情</h3>
         <div class="cost-modal-actions">
@@ -118,7 +118,7 @@
         <h3 id="costEditTitle">修改成本记录</h3>
         <button type="button" id="costEditClose" class="btn btn-ghost btn-sm">关闭</button>
       </div>
-      <form id="costEditForm" class="form cost-modal-body">
+      <form id="costEditForm" class="form cost-modal-body cost-entry-layout">
         <div class="cost-header-table">
           <div class="cost-header-row">
             <label class="field">
@@ -164,15 +164,25 @@
           </div>
         </div>
         <div class="items-block">
-          <div class="items-head"><h4>工序选择</h4></div>
-          <div id="editProcessGrid" class="process-grid process-pick-grid"></div>
-          <div id="editProcessOrderBlock" class="process-order-block" hidden>
-            <div class="items-head">
-              <h5>工艺顺序</h5>
-              <p class="card-desc">已选工序的执行顺序，可用 ↑↓ 调整</p>
-            </div>
-            <ol id="editProcessOrderList" class="process-order-list"></ol>
+          <div class="items-head">
+            <h4>工序选择</h4>
+            <p class="items-subhint">先勾选本料号适用的工序（仅打钩）</p>
           </div>
+          <div id="editProcessGrid" class="process-grid process-pick-grid process-pick-only-grid"></div>
+        </div>
+        <div id="editProcessDetailBlock" class="items-block process-detail-block" hidden>
+          <div class="items-head">
+            <h4>单价与供应商</h4>
+            <p class="items-subhint">在下方为已选外发工序填写单价并添加供应商</p>
+          </div>
+          <div id="editProcessDetailPanel" class="process-detail-panel"></div>
+        </div>
+        <div id="editProcessOrderBlock" class="process-order-block items-block" hidden>
+          <div class="items-head">
+            <h5>工艺顺序</h5>
+            <p class="card-desc">已选工序的执行顺序，可用 ↑↓ 调整</p>
+          </div>
+          <ol id="editProcessOrderList" class="process-order-list"></ol>
         </div>
         <div class="cost-edit-form-actions">
           <button type="submit" class="btn btn-primary">保存修改</button>
@@ -183,10 +193,10 @@
     </div>
   </div>
 
-  <script src="/static/hover_tip.js?v=20260729-ui-full-align"></script>
+  <script src="/static/hover_tip.js?v=20260729-hover-tip-copy"></script>
   <script src="/static/inventory_bom_lookup.js?v=20260729-bom-supplier-combo"></script>
   <script src="/static/list-col-filter.js?v=20260725-bom-query-seq"></script>
-  <script src="/static/cost_common.js?v=20260729-bom-supplier-combo"></script>
-  <script src="/static/cost_query.js?v=20260729-bom-supplier-combo"></script>
+  <script src="/static/cost_common.js?v=20260729-bom-query-preview"></script>
+  <script src="/static/cost_query.js?v=20260729-bom-query-preview"></script>
 </body>
 </html>

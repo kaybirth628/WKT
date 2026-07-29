@@ -242,54 +242,12 @@ function openDetail(id) {
   if (!record) return;
   const modal = document.getElementById("costDetailModal");
   const body = document.getElementById("costDetailBody");
-  const chips = (record.process_selections || [])
-    .map((item) => {
-      const label = `${item.code} ${item.name}`;
-      const supplier =
-        item.supplier && !item.inhouse
-          ? `<span class="chip-supplier">${item.supplier}</span>`
-          : item.inhouse || item.code === CostCommon.INHOUSE_PROCESS_CODE
-            ? `<span class="chip-supplier inhouse">场内自制</span>`
-            : "";
-      return `<span class="chip">${label} <b>${CostCommon.money(item.price)}</b>${supplier}</span>`;
-    })
-    .join("");
-
-  body.innerHTML = `
-    <div class="cost-detail-grid">
-      <div><span class="detail-label">客户名称</span><span>${record.customer_name}</span></div>
-      <div><span class="detail-label">产品名称</span><span>${record.product_name}</span></div>
-      <div><span class="detail-label">模具编号</span><span>${record.mold_no}</span></div>
-      <div><span class="detail-label">产品料号</span><span>${record.product_part_no}</span></div>
-      <div><span class="detail-label">模穴</span><span>${record.cavity}</span></div>
-      <div><span class="detail-label">产品单重</span><span>${record.unit_weight_g} g</span></div>
-      <div><span class="detail-label">材质</span><span>${record.material}</span></div>
-      <div><span class="detail-label">机台吨位</span><span>${record.machine_tonnage}</span></div>
-    </div>
-    <div class="result-grid cost-detail-costs">
-      <div class="result-row">
-        <span class="r-label">原材成本</span>
-        <span class="r-value">${CostCommon.money(record.material_cost)}</span>
-      </div>
-      <div class="result-row">
-        <span class="r-label">工艺合计</span>
-        <span class="r-value">${CostCommon.money(record.process_total)}</span>
-      </div>
-      <div class="result-row grand">
-        <span class="r-label">单件成本</span>
-        <span class="r-value">${CostCommon.money(record.unit_cost)}</span>
-      </div>
-    </div>
-    <div class="result-processes">
-      <h5>已选工序（${(record.process_selections || record.selected_processes || []).length}）</h5>
-      <div class="chip-row">${chips || "—"}</div>
-    </div>
-    <p class="detail-meta">更新时间：${CostCommon.formatDate(record.updated_at || record.created_at)}${
-      record.created_at && record.updated_at && record.created_at !== record.updated_at
-        ? ` · 首次录入：${CostCommon.formatDate(record.created_at)}`
-        : ""
-    }</p>`;
-
+  body.innerHTML = CostCommon.renderCostRecordDetailHtml(record);
+  if (window.HoverTip) {
+    body.querySelectorAll(".process-name, .process-detail-name, [data-hover-text]").forEach((el) =>
+      window.HoverTip.bind(el)
+    );
+  }
   modal.hidden = false;
 }
 
@@ -298,11 +256,36 @@ function closeDetail() {
   detailRecordId = null;
 }
 
+function selectedByCodeToDetailState(selectedByCode) {
+  const state = {};
+  Object.entries(selectedByCode || {}).forEach(([code, entry]) => {
+    if (entry != null && typeof entry === "object") {
+      state[code] = {
+        price: entry.price != null ? entry.price : "",
+        suppliers:
+          entry.suppliers || (entry.supplier ? [entry.supplier] : []),
+      };
+    } else if (entry != null) {
+      state[code] = { price: entry, suppliers: [] };
+    }
+  });
+  return state;
+}
+
 function renderEditProcessGrid(selectedByCode, processOrder) {
   const grid = document.getElementById("editProcessGrid");
   if (!grid) return;
-  grid.innerHTML = CostCommon.renderProcessGridHtml(processOptions, selectedByCode);
-  CostCommon.bindProcessPickerGrid(grid, () => CostCommon.refreshProcessOrder("editProcessGrid"));
+  grid.innerHTML = CostCommon.renderProcessPickOnlyGridHtml(processOptions, selectedByCode);
+  CostCommon.bindStagedProcessPicker(
+    grid,
+    "editProcessDetailPanel",
+    processOptions,
+    () => CostCommon.refreshProcessOrder("editProcessGrid"),
+    {
+      blockId: "editProcessDetailBlock",
+      initialState: selectedByCodeToDetailState(selectedByCode),
+    }
+  );
   const order =
     Array.isArray(processOrder) && processOrder.length
       ? processOrder
@@ -311,7 +294,7 @@ function renderEditProcessGrid(selectedByCode, processOrder) {
 }
 
 function collectEditProcessPrices() {
-  return CostCommon.collectProcessEntries("#editProcessGrid");
+  return CostCommon.collectProcessEntries("#costEditForm");
 }
 
 function openEdit(id) {
@@ -368,7 +351,7 @@ async function saveEdit(e) {
     msg.className = "msg error";
     return;
   }
-  const missing = CostCommon.validateProcessSuppliers("#editProcessGrid");
+  const missing = CostCommon.validateProcessSuppliers("#costEditForm");
   if (missing.length) {
     msg.textContent = `外发工序请至少添加一个供应商：${missing.join("、")}`;
     msg.className = "msg error";
@@ -483,7 +466,7 @@ document.getElementById("costEditForm").addEventListener("keydown", (e) => {
   const tag = (e.target && e.target.tagName) || "";
   if (tag === "TEXTAREA") return;
   if (e.target && e.target.type === "submit") return;
-  if (e.target && e.target.closest(".process-supplier-combo, .inv-bom-combo")) return;
+  if (e.target && e.target.closest(".process-supplier-combo, .inv-bom-combo, .process-detail-row")) return;
   e.preventDefault();
 });
 

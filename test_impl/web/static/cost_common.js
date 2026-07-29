@@ -583,6 +583,131 @@ window.CostCommon = (function () {
       .join("");
   }
 
+  /** BOM 录入：工序区仅勾选，单价/供应商在下方明细区填写 */
+  function renderProcessPickOnlyGridHtml(processOptions, selectedByCode) {
+    return processOptions
+      .map((p) => {
+        const entry = selectedByCode && selectedByCode[p.code];
+        const checked = entry != null;
+        return `
+    <label class="process-pick-item process-pick-item--pick-only">
+      <span class="process-pick-head">
+        <input type="checkbox" class="process-pick" data-process-code="${p.code}" data-process="${escapeHtml(p.name)}"${checked ? " checked" : ""} />
+        <span class="process-code">${p.code}</span>
+        <span class="process-name" data-hover-text="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
+      </span>
+    </label>`;
+      })
+      .join("");
+  }
+
+  function captureProcessDetailState(detailPanel) {
+    const state = {};
+    if (!detailPanel) return state;
+    detailPanel.querySelectorAll(".process-detail-row").forEach((row) => {
+      const code = row.dataset.processCode;
+      const priceInp = row.querySelector("input.process-price");
+      const panel = row.querySelector(".process-suppliers-panel");
+      state[code] = {
+        price: priceInp ? priceInp.value : "",
+        suppliers: panel ? getProcessSuppliersFromPanel(panel) : [],
+      };
+    });
+    return state;
+  }
+
+  function refreshProcessDetailPanel(
+    detailPanelId,
+    gridSelector,
+    processOptions,
+    externalState,
+    detailBlockId
+  ) {
+    const detailPanel = document.getElementById(detailPanelId);
+    const block = document.getElementById(detailBlockId || "processDetailBlock");
+    if (!detailPanel) return;
+    const mergedState = Object.assign(
+      {},
+      captureProcessDetailState(detailPanel),
+      externalState || {}
+    );
+    const checked = [];
+    document.querySelectorAll(`${gridSelector} .process-pick:checked`).forEach((cb) => {
+      checked.push({ code: cb.dataset.processCode, name: cb.dataset.process });
+    });
+    if (!checked.length) {
+      if (block) block.hidden = true;
+      detailPanel.innerHTML = "";
+      return;
+    }
+    if (block) block.hidden = false;
+
+    detailPanel.innerHTML = checked
+      .map(({ code, name }) => {
+        const saved = mergedState[code] || {};
+        const suppliers = saved.suppliers || [];
+        const priceRaw = saved.price;
+        const priceVal =
+          priceRaw !== "" && priceRaw != null && priceRaw !== "0" && priceRaw !== 0
+            ? priceRaw
+            : "";
+        const inhouse = !isOutsourceProcess(code);
+        return `
+    <div class="process-detail-row" data-process-code="${escapeHtml(code)}">
+      <div class="process-detail-head">
+        <span class="process-detail-code">${escapeHtml(code)}</span>
+        <span class="process-detail-name">${escapeHtml(name)}</span>
+      </div>
+      <div class="process-detail-fields">
+        <div class="field process-detail-supplier-field">
+          <span class="field-label">${inhouse ? "类型" : "供应商"}</span>
+          <div class="field-control">${inhouse ? '<span class="process-inhouse-tag">场内自制</span>' : buildProcessSuppliersHtml(code, suppliers, false)}</div>
+        </div>
+        <div class="field process-detail-price-field">
+          <span class="field-label">单价（可选）</span>
+          <input class="process-price" data-process-code="${escapeHtml(code)}" type="number" step="0.0001" min="0" placeholder="0" value="${escapeHtml(String(priceVal))}" />
+        </div>
+      </div>
+    </div>`;
+      })
+      .join("");
+
+    bindSupplierCombos(detailPanel);
+    bindProcessSupplierAddCombos(detailPanel);
+    detailPanel.querySelectorAll("input.process-price").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        inp.classList.toggle("filled", inp.value !== "" && parseFloat(inp.value) > 0);
+      });
+    });
+    if (window.HoverTip) {
+      detailPanel.querySelectorAll(".process-detail-name").forEach((el) => window.HoverTip.bind(el));
+    }
+  }
+
+  function bindStagedProcessPicker(grid, detailPanelId, processOptions, onSelectionChange, opts) {
+    if (!grid) return;
+    const options = opts && typeof opts === "object" ? opts : {};
+    const blockId = options.blockId || "processDetailBlock";
+    const gridSelector = grid.id ? `#${grid.id}` : "#processGrid";
+    if (window.HoverTip) {
+      grid.querySelectorAll(".process-name").forEach((el) => window.HoverTip.bind(el));
+    }
+    function onPickChange() {
+      refreshProcessDetailPanel(detailPanelId, gridSelector, processOptions, null, blockId);
+      if (typeof onSelectionChange === "function") onSelectionChange();
+    }
+    grid.querySelectorAll(".process-pick").forEach((cb) => {
+      cb.addEventListener("change", onPickChange);
+    });
+    refreshProcessDetailPanel(
+      detailPanelId,
+      gridSelector,
+      processOptions,
+      options.initialState,
+      blockId
+    );
+  }
+
   function getProcessOptions() {
     return processOptions.slice();
   }
@@ -654,6 +779,200 @@ window.CostCommon = (function () {
     return byCode;
   }
 
+  function supplierDisplayForSelection(item) {
+    if (!item || !isOutsourceProcess(item.code) || item.inhouse) {
+      return INHOUSE_SUPPLIER_LABEL;
+    }
+    const list = item.suppliers || (item.supplier ? [item.supplier] : []);
+    const names = list.filter(Boolean);
+    return names.length ? names.join("、") : "—";
+  }
+
+  function orderedProcessSelections(record) {
+    const selections = record.process_selections || [];
+    if (!selections.length) return [];
+    const byCode = {};
+    selections.forEach((item) => {
+      byCode[item.code] = item;
+    });
+    const order =
+      Array.isArray(record.process_order) && record.process_order.length
+        ? record.process_order
+        : selections.map((s) => s.code);
+    const seen = new Set();
+    const ordered = [];
+    order.forEach((code) => {
+      if (byCode[code] && !seen.has(code)) {
+        ordered.push(byCode[code]);
+        seen.add(code);
+      }
+    });
+    selections.forEach((item) => {
+      if (!seen.has(item.code)) ordered.push(item);
+    });
+    return ordered;
+  }
+
+  function renderCostRecordDetailHtml(record) {
+    if (!record) return "";
+    const ordered = orderedProcessSelections(record);
+    const ro = ' readonly tabindex="-1"';
+
+    const pickHtml = ordered
+      .map(
+        (item) => `
+    <div class="process-pick-item process-pick-item--pick-only process-pick-item--readonly">
+      <span class="process-pick-head">
+        <span class="process-pick-checkmark" aria-hidden="true">✓</span>
+        <span class="process-code">${escapeHtml(item.code)}</span>
+        <span class="process-name" data-hover-text="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+      </span>
+    </div>`
+      )
+      .join("");
+
+    const detailHtml = ordered
+      .map((item) => {
+        const inhouse = !isOutsourceProcess(item.code) || item.inhouse;
+        const priceVal =
+          item.price !== "" && item.price != null && item.price !== "0" && item.price !== 0
+            ? item.price
+            : "0";
+        const supplierText = supplierDisplayForSelection(item);
+        return `
+    <div class="process-detail-row process-detail-row--readonly" data-process-code="${escapeHtml(item.code)}">
+      <div class="process-detail-head">
+        <span class="process-detail-code">${escapeHtml(item.code)}</span>
+        <span class="process-detail-name" data-hover-text="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+      </div>
+      <div class="process-detail-fields">
+        <div class="field process-detail-supplier-field">
+          <span class="field-label">${inhouse ? "类型" : "供应商"}</span>
+          <div class="field-control">
+            <input class="cost-readonly-input" type="text"${ro} value="${escapeHtml(supplierText)}" />
+          </div>
+        </div>
+        <div class="field process-detail-price-field">
+          <span class="field-label">单价（可选）</span>
+          <input class="process-price cost-readonly-input" type="text"${ro} value="${escapeHtml(String(priceVal))}" />
+        </div>
+      </div>
+    </div>`;
+      })
+      .join("");
+
+    const orderHtml =
+      ordered.length > 1
+        ? `
+        <div class="process-order-block items-block">
+          <div class="items-head">
+            <h5>工艺顺序</h5>
+          </div>
+          <ol class="process-order-list process-order-list--readonly">
+            ${ordered
+              .map(
+                (item, idx) => `
+              <li class="process-order-item process-order-item--readonly">
+                <span class="process-order-seq">${idx + 1}</span>
+                <span class="process-order-code">${escapeHtml(item.code)}</span>
+                <span class="process-order-name">${escapeHtml(item.name)}</span>
+              </li>`
+              )
+              .join("")}
+          </ol>
+        </div>`
+        : "";
+
+    const metaExtra =
+      record.created_at &&
+      record.updated_at &&
+      record.created_at !== record.updated_at
+        ? ` · 首次录入：${formatDate(record.created_at)}`
+        : "";
+
+    return `
+    <div class="cost-entry-layout cost-preview-layout">
+      <div class="cost-header-table">
+        <div class="cost-header-row">
+          <label class="field">
+            <span>客户名称</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.customer_name)}" />
+          </label>
+          <label class="field">
+            <span>产品名称</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.product_name)}" />
+          </label>
+          <label class="field">
+            <span>模具编号</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.mold_no)}" />
+          </label>
+          <label class="field">
+            <span>产品料号</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.product_part_no)}" />
+          </label>
+        </div>
+        <div class="cost-header-row">
+          <label class="field">
+            <span>模穴</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.cavity)}" />
+          </label>
+          <label class="field">
+            <span>产品单重 (g)</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.unit_weight_g)}" />
+          </label>
+          <label class="field">
+            <span>材质</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.material)}" />
+          </label>
+          <label class="field">
+            <span>机台吨位</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.machine_tonnage)}" />
+          </label>
+        </div>
+        <div class="cost-header-row cost-header-row--calc">
+          <label class="field">
+            <span>原材单价</span>
+            <input type="text" class="cost-readonly-input"${ro} value="${escapeHtml(record.material_unit_price || "0")}" />
+          </label>
+        </div>
+      </div>
+      <div class="items-block">
+        <div class="items-head">
+          <h4>工序选择</h4>
+          <p class="items-subhint">已选 ${ordered.length} 道工序（预览不可修改）</p>
+        </div>
+        <div class="process-grid process-pick-grid process-pick-only-grid cost-preview-process-grid">${pickHtml || '<p class="empty-hint">未选择工序</p>'}</div>
+      </div>
+      ${
+        ordered.length
+          ? `
+      <div class="items-block process-detail-block">
+        <div class="items-head">
+          <h4>单价与供应商</h4>
+        </div>
+        <div class="process-detail-panel">${detailHtml}</div>
+      </div>`
+          : ""
+      }
+      ${orderHtml}
+      <div class="result-grid cost-detail-costs">
+        <div class="result-row">
+          <span class="r-label">原材成本</span>
+          <span class="r-value">${money(record.material_cost)}</span>
+        </div>
+        <div class="result-row">
+          <span class="r-label">工艺合计</span>
+          <span class="r-value">${money(record.process_total)}</span>
+        </div>
+        <div class="result-row grand">
+          <span class="r-label">单件成本</span>
+          <span class="r-value">${money(record.unit_cost)}</span>
+        </div>
+      </div>
+      <p class="detail-meta">更新时间：${formatDate(record.updated_at || record.created_at)}${metaExtra}</p>
+    </div>`;
+  }
+
   return {
     INHOUSE_PROCESS_CODE,
     INHOUSE_SUPPLIER_LABEL,
@@ -676,6 +995,10 @@ window.CostCommon = (function () {
     collectProcessEntries,
     validateProcessSuppliers,
     renderProcessGridHtml,
+    renderProcessPickOnlyGridHtml,
+    refreshProcessDetailPanel,
+    bindStagedProcessPicker,
+    captureProcessDetailState,
     selectionsToMap,
     getProcesses,
     getProcessOptions,
@@ -683,5 +1006,6 @@ window.CostCommon = (function () {
     money,
     formatDate,
     renderQuotePreview,
+    renderCostRecordDetailHtml,
   };
 })();

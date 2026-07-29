@@ -1,6 +1,125 @@
 let selectedCount = 0;
+let entryProcessOptions = [];
 let processLabelByName = {};
 let lastLookupPart = "";
+let lookupSeq = 0;
+let processGridTouched = false;
+let applyingProcessPrices = false;
+let processApplyTimer = null;
+const PROCESS_APPLY_DELAY_MS = 400;
+
+function getCheckedProcessCodes() {
+  return Array.from(document.querySelectorAll("#processGrid .process-pick:checked"))
+    .map((cb) => cb.dataset.processCode)
+    .filter(Boolean)
+    .sort();
+}
+
+function cancelPendingProcessApply() {
+  if (processApplyTimer) {
+    clearTimeout(processApplyTimer);
+    processApplyTimer = null;
+  }
+}
+
+function shouldSkipProcessApply(checkedAtStart) {
+  if (processGridTouched) return true;
+  if ((checkedAtStart || []).length > 0) return true;
+  return getCheckedProcessCodes().length > 0;
+}
+
+function scheduleProcessApply(processPrices, processSelections, checkedAtStart) {
+  cancelPendingProcessApply();
+  if (!hasProcessLookupData(processPrices, processSelections)) return;
+  const snapshot = (checkedAtStart || []).slice();
+  processApplyTimer = setTimeout(() => {
+    processApplyTimer = null;
+    if (shouldSkipProcessApply(snapshot)) return;
+    applyProcessPrices(processPrices, processSelections);
+  }, PROCESS_APPLY_DELAY_MS);
+}
+
+function hasProcessLookupData(processPrices, processSelections) {
+  if (Array.isArray(processSelections) && processSelections.length) return true;
+  if (processPrices && typeof processPrices === "object" && Object.keys(processPrices).length) {
+    return true;
+  }
+  return false;
+}
+
+function buildProcessPricesByCode(processPrices, processSelections) {
+  const byCode = {};
+  if (Array.isArray(processSelections) && processSelections.length) {
+    processSelections.forEach((item) => {
+      byCode[item.code] = {
+        price: item.price,
+        supplier: item.supplier || "",
+        suppliers: item.suppliers || (item.supplier ? [item.supplier] : []),
+      };
+    });
+  } else if (processPrices && Object.keys(processPrices).length) {
+    Object.entries(processPrices).forEach(([code, val]) => {
+      if (val && typeof val === "object") {
+        byCode[code] = {
+          price: val.price != null ? val.price : "0",
+          supplier: val.supplier || "",
+          suppliers: val.suppliers || (val.supplier ? [val.supplier] : []),
+        };
+      } else {
+        byCode[code] = { price: val, supplier: "", suppliers: [] };
+      }
+    });
+  }
+  return byCode;
+}
+
+function setProcessGridLoading(loading) {
+  const grid = document.getElementById("processGrid");
+  if (grid) grid.classList.toggle("is-lookup-loading", loading);
+}
+
+function markProcessGridTouched() {
+  if (applyingProcessPrices) return;
+  processGridTouched = true;
+  cancelPendingProcessApply();
+}
+
+function resetProcessGridTouched() {
+  processGridTouched = false;
+  cancelPendingProcessApply();
+}
+
+function setupProcessGridWatch() {
+  const form = document.getElementById("costEntryForm");
+  if (!form || form.dataset.processTouchBound === "1") return;
+  form.dataset.processTouchBound = "1";
+  const changeSel =
+    ".process-pick, .process-price, .process-supplier, .process-supplier-search, .process-supplier-add-input";
+  form.addEventListener("change", (e) => {
+    if (e.target.matches(changeSel)) markProcessGridTouched();
+  });
+  form.addEventListener("input", (e) => {
+    if (e.target.matches(".process-price, .process-supplier-search, .process-supplier-add-input")) {
+      markProcessGridTouched();
+    }
+  });
+  form.addEventListener("click", (e) => {
+    if (e.target.closest(".process-supplier-tag-remove")) markProcessGridTouched();
+  });
+  form.addEventListener(
+    "mousedown",
+    (e) => {
+      if (
+        e.target.closest(
+          ".process-pick, .process-pick-item, .process-detail-row, .process-suppliers-panel, .process-price, .process-supplier-add-input"
+        )
+      ) {
+        markProcessGridTouched();
+      }
+    },
+    true
+  );
+}
 
 function initCostEntryCombos() {
   const form = document.getElementById("costEntryForm");
@@ -63,84 +182,48 @@ function markAutoFilledWeight(filled) {
 }
 
 function applyProcessPrices(processPrices, processSelections) {
-  document.querySelectorAll(".process-pick:checked").forEach((cb) => {
-    cb.checked = false;
-    cb.dispatchEvent(new Event("change"));
-  });
-
-  const byCode = {};
-  if (Array.isArray(processSelections) && processSelections.length) {
-    processSelections.forEach((item) => {
-      byCode[item.code] = {
-        price: item.price,
-        supplier: item.supplier || "",
-        suppliers: item.suppliers || (item.supplier ? [item.supplier] : []),
-      };
-    });
-  } else if (processPrices && Object.keys(processPrices).length) {
-    Object.entries(processPrices).forEach(([code, val]) => {
-      if (val && typeof val === "object") {
-        byCode[code] = {
-          price: val.price != null ? val.price : "0",
-          supplier: val.supplier || "",
-          suppliers: val.suppliers || (val.supplier ? [val.supplier] : []),
-        };
-      } else {
-        byCode[code] = { price: val, supplier: "", suppliers: [] };
-      }
-    });
-  }
+  const byCode = buildProcessPricesByCode(processPrices, processSelections);
   if (!Object.keys(byCode).length) return;
 
-  Object.entries(byCode).forEach(([code, entry]) => {
-    const cb = document.querySelector(`.process-pick[data-process-code="${code}"]`);
-    if (!cb) return;
-    cb.checked = true;
-    cb.dispatchEvent(new Event("change"));
-    const inp = document.querySelector(`input.process-price[data-process-code="${code}"]`);
-    if (inp && entry.price !== "" && entry.price != null) {
-      inp.value = entry.price !== "0" ? entry.price : "";
-      inp.classList.toggle("filled", parseFloat(entry.price) > 0);
-    }
-    const panel = document.querySelector(
-      `.process-suppliers-panel[data-process-code="${code}"]`
+  applyingProcessPrices = true;
+  try {
+    document.querySelectorAll("#processGrid .process-pick").forEach((cb) => {
+      cb.checked = false;
+    });
+
+    const detailState = {};
+    Object.entries(byCode).forEach(([code, entry]) => {
+      const cb = document.querySelector(`#processGrid .process-pick[data-process-code="${code}"]`);
+      if (cb) cb.checked = true;
+      detailState[code] = {
+        price: entry.price,
+        suppliers: entry.suppliers || (entry.supplier ? [entry.supplier] : []),
+      };
+    });
+
+    CostCommon.refreshProcessDetailPanel(
+      "processDetailPanel",
+      "#processGrid",
+      entryProcessOptions,
+      detailState
     );
-    const suppliers = entry.suppliers || (entry.supplier ? [entry.supplier] : []);
-    if (panel) {
-      CostCommon.setProcessSuppliersPanel(panel, suppliers);
-      CostCommon.setProcessSuppliersDisabled(panel, false);
-    } else {
-      const combo = document.querySelector(
-        `.process-supplier-combo:has(.process-supplier[data-process-code="${code}"])`
-      );
-      if (combo && entry.supplier) {
-        const hidden = combo.querySelector(".process-supplier");
-        const search = combo.querySelector(".process-supplier-search");
-        if (hidden) hidden.value = entry.supplier;
-        if (search) {
-          search.value = entry.supplier;
-          search.disabled = false;
-        }
-        if (hidden) hidden.disabled = false;
-      } else {
-        const sel = document.querySelector(
-          `input.process-supplier[data-process-code="${code}"], select.process-supplier[data-process-code="${code}"]`
-        );
-        if (sel && entry.supplier) sel.value = entry.supplier;
-      }
-    }
-  });
-  selectedCount = document.querySelectorAll("#processGrid .process-pick:checked").length;
-  updateProcessSelectionSummary();
-  const order =
-    Array.isArray(processSelections) && processSelections.length
-      ? processSelections.map((s) => s.code)
-      : null;
-  if (order) CostCommon.setProcessOrder("processGrid", order);
-  else CostCommon.refreshProcessOrder("processGrid");
+
+    selectedCount = document.querySelectorAll("#processGrid .process-pick:checked").length;
+    updateProcessSelectionSummary();
+    const order =
+      Array.isArray(processSelections) && processSelections.length
+        ? processSelections.map((s) => s.code)
+        : null;
+    if (order) CostCommon.setProcessOrder("processGrid", order);
+    else CostCommon.refreshProcessOrder("processGrid");
+    resetProcessGridTouched();
+  } finally {
+    applyingProcessPrices = false;
+  }
 }
 
-function applySuggestedFill(suggested) {
+function applySuggestedFill(suggested, opts) {
+  const options = opts || {};
   const form = document.getElementById("costEntryForm");
   if (!form || !suggested) return;
 
@@ -159,10 +242,22 @@ function applySuggestedFill(suggested) {
     if (form[name]) form[name].value = value;
   });
 
-  if (suggested.process_prices || suggested.process_selections) {
-    applyProcessPrices(suggested.process_prices, suggested.process_selections);
+  if (
+    !options.skipProcesses &&
+    hasProcessLookupData(suggested.process_prices, suggested.process_selections)
+  ) {
+    if (options.deferProcesses) {
+      scheduleProcessApply(
+        suggested.process_prices,
+        suggested.process_selections,
+        options.checkedAtStart || []
+      );
+    } else {
+      applyProcessPrices(suggested.process_prices, suggested.process_selections);
+    }
   }
   markAutoFilledWeight(Boolean(suggested.unit_weight_g && parseFloat(suggested.unit_weight_g) > 0));
+  return Boolean(options.skipProcesses);
 }
 
 async function lookupPartNo() {
@@ -174,33 +269,60 @@ async function lookupPartNo() {
   }
   if (partNo === lastLookupPart) return;
 
-  const res = await fetch(`/api/cost/lookup?${new URLSearchParams({ product_part_no: partNo })}`);
-  const data = await res.json();
-  if (!res.ok) {
+  const checkedAtStart = getCheckedProcessCodes();
+  const preserveProcesses = shouldSkipProcessApply(checkedAtStart);
+  const seq = ++lookupSeq;
+  setProcessGridLoading(true);
+  setPartLookupHint("正在载入 BOM，请稍候再勾选工序…", "warn");
+
+  try {
+    const res = await fetch(`/api/cost/lookup?${new URLSearchParams({ product_part_no: partNo })}`);
+    const data = await res.json();
+    if (seq !== lookupSeq) return;
+
+    if (!res.ok) {
+      lastLookupPart = "";
+      setPartLookupHint(data.error || "料号查询失败", "error");
+      return;
+    }
+
+    lastLookupPart = partNo;
+
+    if (!data.found) {
+      markAutoFilledWeight(false);
+      setPartLookupHint("BOM 中未找到该料号，请填写完整信息后保存", "warn");
+      return;
+    }
+
+    const skippedProcesses = applySuggestedFill(data.suggested || {}, {
+      skipProcesses: preserveProcesses,
+      deferProcesses: !preserveProcesses,
+      checkedAtStart,
+    });
+
+    const hints = [];
+    if (data.from_bom) hints.push("已载入 BOM 主数据");
+    if (data.from_cost_record) hints.push("已载入历史记录");
+    if (skippedProcesses) hints.push("工序区保留您的手工勾选");
+    else if (!preserveProcesses && hasProcessLookupData(
+      data.suggested?.process_prices,
+      data.suggested?.process_selections
+    )) {
+      hints.push(`${PROCESS_APPLY_DELAY_MS / 1000} 秒内点工序将保留手工勾选`);
+    }
+    if ((data.auto_filled || []).includes("unit_weight_g")) {
+      hints.push(`产品单重 ${data.suggested.unit_weight_g}g`);
+    } else {
+      hints.push("产品单重需手动填写");
+    }
+    setPartLookupHint(hints.join(" · "), "ok");
+  } catch (_err) {
+    if (seq !== lookupSeq) return;
     lastLookupPart = "";
-    setPartLookupHint(data.error || "料号查询失败", "error");
-    return;
+    setPartLookupHint("料号查询失败，请检查网络后重试", "error");
+  } finally {
+    if (seq === lookupSeq) setProcessGridLoading(false);
   }
-
-  lastLookupPart = partNo;
-
-  if (!data.found) {
-    markAutoFilledWeight(false);
-    setPartLookupHint("BOM 中未找到该料号，请填写完整信息后保存", "warn");
-    return;
-  }
-
-  applySuggestedFill(data.suggested || {});
-
-  const hints = [];
-  if (data.from_bom) hints.push("已载入 BOM 主数据");
-  if (data.from_cost_record) hints.push("已载入历史记录");
-  if ((data.auto_filled || []).includes("unit_weight_g")) {
-    hints.push(`产品单重 ${data.suggested.unit_weight_g}g`);
-  } else {
-    hints.push("产品单重需手动填写");
-  }
-  setPartLookupHint(hints.join(" · "), "ok");
 }
 
 function setupPartLookup() {
@@ -209,13 +331,14 @@ function setupPartLookup() {
   if (!partInput || !form) return;
 
   partInput.addEventListener("change", () => {
+    const partNo = partInput.value.trim();
+    const prev = lastLookupPart;
     lastLookupPart = "";
+    if (prev && partNo !== prev) resetProcessGridTouched();
     lookupPartNo();
   });
 
-  partInput.addEventListener("blur", () => {
-    lookupPartNo();
-  });
+  // 仅 change 触发 lookup；避免 blur+change 重复请求导致工序被刷掉
 
   form.customer_name.addEventListener("change", () => {
     const partNo = form.product_part_no.value.trim();
@@ -247,15 +370,16 @@ function updateProcessSelectionSummary() {
 function renderProcessPicker(processOptions) {
   const grid = document.getElementById("processGrid");
   if (!grid) return;
+  entryProcessOptions = processOptions || [];
   processLabelByName = {};
-  processOptions.forEach((p) => {
+  entryProcessOptions.forEach((p) => {
     processLabelByName[p.name] = `${p.code} ${p.name}`;
   });
 
-  grid.innerHTML = CostCommon.renderProcessGridHtml(processOptions);
+  grid.innerHTML = CostCommon.renderProcessPickOnlyGridHtml(entryProcessOptions);
   selectedCount = 0;
   updateProcessSelectionSummary();
-  CostCommon.bindProcessPickerGrid(grid, () => {
+  CostCommon.bindStagedProcessPicker(grid, "processDetailPanel", entryProcessOptions, () => {
     selectedCount = grid.querySelectorAll(".process-pick:checked").length;
     updateProcessSelectionSummary();
     CostCommon.refreshProcessOrder("processGrid");
@@ -264,8 +388,9 @@ function renderProcessPicker(processOptions) {
     "processGrid",
     "processOrderList",
     "processOrderBlock",
-    processOptions
+    entryProcessOptions
   );
+  setupProcessGridWatch();
 }
 
 function collectBasicForm(form) {
@@ -283,11 +408,11 @@ function collectBasicForm(form) {
 }
 
 function collectSelectedProcesses() {
-  return CostCommon.collectProcessEntries("#processGrid");
+  return CostCommon.collectProcessEntries("#costEntryForm");
 }
 
 function validateSuppliers(msgEl) {
-  const missing = CostCommon.validateProcessSuppliers("#processGrid");
+  const missing = CostCommon.validateProcessSuppliers("#costEntryForm");
   if (!missing.length) return true;
   if (msgEl) {
     msgEl.textContent = `外发工序请至少添加一个供应商：${missing.join("、")}`;
@@ -377,12 +502,13 @@ async function submitRecord() {
   msg.className = "msg ok";
   form.reset();
   lastLookupPart = "";
+  resetProcessGridTouched();
   markAutoFilledWeight(false);
   setPartLookupHint("");
   document.querySelectorAll(".process-pick:checked").forEach((cb) => {
     cb.checked = false;
-    cb.dispatchEvent(new Event("change"));
   });
+  CostCommon.refreshProcessDetailPanel("processDetailPanel", "#processGrid", entryProcessOptions, {});
   selectedCount = 0;
   updateProcessSelectionSummary();
   CostCommon.clearProcessOrder("processGrid");

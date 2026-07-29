@@ -27,6 +27,7 @@
 |------|---------|
 | BOM 批量导入 | BF-0001～BF-0008、BF-0013、BF-0014 |
 | BOM 查询 | BF-0006、BF-0015 |
+| BOM 录入 | BF-0016、BF-0017、BF-0018 |
 | Agent 治理 | BF-0009 |
 | Git 推送 | BF-0010 |
 | OCR 识别 | BF-0011 |
@@ -35,6 +36,42 @@
 ---
 
 ## 变更记录
+
+### BF-0018 · 2026-07-29
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0245 |
+| 模块 | `cost_entry.js` |
+| 现象 | 本地手速快仍被刷回；云端旧版快操作反而不复现；员工慢操作也投诉 |
+| 根因 | 快网络 lookup 完成早于用户点击，立即 `applyProcessPrices`；下拉选料号误清 `processGridTouched` |
+| 修复 | 工序回填延迟 400ms，期间 mousedown 即视为手工编辑并取消回填；去掉 onSelect 清标记 |
+| 防复发 | `test_bom_entry_lookup_race.py` |
+| 验证 | Tab 料号后 400ms 内点工序应保留 |
+
+### BF-0017 · 2026-07-29
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0244 |
+| 模块 | `cost_entry.js` |
+| 现象 | 员工手速快时 BOM 录入工序/供应商刚勾选就被刷没，本地可稳定复现 |
+| 根因 | 用户先改工序或 lookup 未完成时编辑，返回后 `applyProcessPrices` 仍整段覆盖 |
+| 修复 | `processGridTouched`：已手工编辑则 lookup 跳过工序回填；去掉 blur 双次 lookup |
+| 防复发 | `test_bom_entry_lookup_race.py` 场景2 |
+| 验证 | 先勾「烤漆」再填料号 → 载入后仍保留 |
+
+### BF-0016 · 2026-07-29
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0243 |
+| 模块 | `cost_entry.js` |
+| 现象 | BOM 录入勾选工序、添加供应商到一半，工序区突然全部回到未勾选/供应商清空；订单模块无此反馈 |
+| 根因 | 料号 lookup 异步返回时 `applyProcessPrices` 先取消全部工序再回填；若 BOM 无已存工序则 early return 导致整页工序被清空；用户可在 lookup 完成前编辑，产生竞态 |
+| 修复 | 先构建工序 map，无数据则不改动 DOM；lookup in-flight 锁定工序区并提示；忽略过期 lookup 响应 |
+| 防复发 | 手工：录料号后立即点工序应短暂不可点；空工序 BOM 载入不清空已勾选项 |
+| 验证 | BOM 录入页 Ctrl+F5 后复测；不涉及数据库变更 |
 
 ### BF-0014 · 2026-07-29
 
@@ -131,6 +168,22 @@
 | 修复 | 改为 `ORDER BY updated_at DESC`；解析 updated_at 时去掉时区或统一格式 |
 | 防复发 | `test_list_records_ordered_by_updated_at` |
 | 验证 | 重复导入同一 Excel 后，查询顶部为刚覆盖记录 |
+
+---
+
+## 记录
+
+### BF-0016 · 2026-07-29
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0243 |
+| 模块 | `cost_entry.js` |
+| 现象 | BOM 录入勾选工序、添加供应商到一半，工序区突然全部回到未勾选/供应商清空；订单模块无此反馈 |
+| 根因 | 料号 lookup 异步返回时 `applyProcessPrices` 先取消全部工序再回填；若 BOM 无已存工序则 early return 导致整页工序被清空；用户可在 lookup 完成前编辑，产生竞态 |
+| 修复 | 先构建工序 map，无数据则不改动 DOM；lookup in-flight 锁定工序区并提示；忽略过期 lookup 响应 |
+| 防复发 | 手工：录料号后立即点工序应短暂不可点；空工序 BOM 载入不清空已勾选项 |
+| 验证 | BOM 录入页 Ctrl+F5 后复测；不涉及数据库变更 |
 
 ### BF-0015 · 2026-07-29
 

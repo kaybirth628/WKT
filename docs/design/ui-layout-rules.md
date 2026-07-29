@@ -315,7 +315,58 @@ Consolas, "Courier New", ui-monospace, monospace
 | `.customer-form` | 客商维护横向 field |
 
 输入：边框 `--border-strong`；圆角 8px；focus 时 `--primary-focus` + `--focus-ring`。  
-select 同表单风格（见 `cost.css` / 全局 `select`）。
+select 同表单风格（见 `cost.css` / 全局 `select`）。  
+**combo / 自定义输入必须与 `.field input` 一致**，详见 **§7.9**。
+
+### 7.9 表单输入一致性与多列对齐（全局）
+
+> 来源：BOM 录入「单价与供应商」对齐修复（CL-0247 · UI-0016）。**凡新建或修改表单 UI 必守。**
+
+#### 7.9.1 单一视觉标准（禁止两套输入框）
+
+| 属性 | 标准 |
+|------|------|
+| 边框 | `1px solid var(--border-strong)` |
+| 圆角 | **8px**（禁止 combo 单独用 6px） |
+| 背景 | `var(--surface)` |
+| 字号 | 默认 **0.9375rem**（`.field input`）；紧凑模块 **0.8125rem** + 高 **2rem** |
+| focus | `--primary-focus` + `--focus-ring` |
+| 字体 | `font-family: inherit` |
+
+**实现位置**
+
+- 标准输入：`style.css` → `.field input` / `.field select`
+- 可搜索 combo 主输入：`style.css` → `.inv-bom-combo > input`（与上表同 token，**不得**在模块 CSS 另写浅边框/小圆角）
+- 紧凑模块（如 BOM 明细）：`cost.css` → `.cost-entry-layout .process-detail-row …` 仅覆盖 **尺寸**，不改 border/radius/focus
+
+#### 7.9.2 多列字段 HTML 模板（底对齐）
+
+并列两列（或多列）时，**每列结构必须相同**：
+
+```html
+<div class="field …-field">
+  <span class="field-label">标签</span>
+  <div class="field-control"><!-- input / combo / 自定义控件 --></div>
+</div>
+```
+
+或第二列为原生 input 时：`span.field-label` + `input`（同列 flex 纵向，`input` 或 `.field-control` 设 `margin-top: auto`）。
+
+| 规则 | 说明 |
+|------|------|
+| 标签 | 统一 `.field-label`：`0.75rem`、`line-height/min-height: 1.2rem` |
+| 网格 | 父级 `grid-template-columns: 1fr 1fr`（等宽）+ `align-items: stretch` |
+| 对齐 | 列内 `display:flex; flex-direction:column`；控件 `margin-top:auto` → **输入框横向底对齐** |
+| 禁止 | 一列 `label>input`、另一列 `div>panel>wrap>input` 且无对齐处理 |
+| 禁止 | combo 使用与 `.field input` 不同的 border / border-radius |
+
+**参考实现**：`cost_common.js` → `refreshProcessDetailPanel`；`cost.css` → `.process-detail-fields` / `.field-label` / `.field-control`。
+
+#### 7.9.3 反模式（§15 已收录）
+
+- 在 `cost.css` 等模块为 `.inv-bom-combo input` 单独写 `border-radius: 6px` 或 `var(--border)` 浅边框
+- 仅改一列字号/标签行高导致两列输入不在同一水平线
+- 多列不等宽（如 `118px 1fr`）除非设计文档明确例外
 
 ### 7.5 消息与状态
 
@@ -352,7 +403,7 @@ select 同表单风格（见 `cost.css` / 全局 `select`）。
 | 搜索 | 下拉 **顶部固定搜索框**（`.inv-bom-suggest-search`）；与主输入双向同步 |
 | 列表内容 | **单列**：客户仅公司名、料号仅料号、品名仅品名（勿堆料号+客户+单重于一行） |
 | 互填 | 选 **料号优先**：回填品名、单重、材质、客户；品名/料号 `bindPair` |
-| 样式 | 复用 `style.css` 中 `.inv-bom-*`；表单内 combo `width:100%` |
+| 样式 | 复用 `style.css` 中 `.inv-bom-*`；**主输入视觉同 §7.9**（8px 圆角、`--border-strong`）；表单内 combo `width:100%` |
 | 初始化 | `openOnFocus:true` `minChars:0` `showToggle:true` `simpleList:true`（订单录入） |
 
 参考实现：`app.js` → `initOrderEntryCombos()`；库存/BOM 页同库。
@@ -574,6 +625,8 @@ BOM/成本手动录入：`cost-form-card` + `.field` 网格（见 `cost_entry.ht
 | 用 title 做 tooltip | `.hover-tip` |
 | 长列表用原生 select | §7.8 `InventoryBomLookup` |
 | 表单字段宽窄不一、随意通栏 | §9.5 等宽网格 |
+| combo/number/text 输入框样式分裂 | §7.9 统一 token |
+| 多列表单标签+输入结构不一致 | §7.9.2 模板 |
 | 新建订单手填接单日期 | 隐藏字段默认当天 |
 
 ---
@@ -611,4 +664,5 @@ BOM/成本手动录入：`cost-form-card` + `.field` 网格（见 `cost_entry.ht
 |------|------|------|
 | V1 | 2026-05-30 | `ui-style-guide-v1.md` 侧栏时代 |
 | V2 | 2026-07-28 | 清爽录入 + UI-CHANGELOG 体系 |
+| V3.1 | 2026-07-29 | §7.9 全局输入框一致性与多列底对齐（BOM 明细实践） |
 | V3 | 2026-07-28 | **合并全部全局规则**：顶栏、主题、 typography、组件、list-table、间距、交互 |

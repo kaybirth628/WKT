@@ -2093,6 +2093,68 @@ body {
   box-shadow: var(--focus-ring);
 }
 
+/* §7.9 可搜索 combo 主输入与 .field input 同视觉（禁止模块内单独 6px 圆角/浅边框） */
+.field .inv-bom-combo > input,
+.inv-bom-combo > input:not(.inv-bom-suggest-search) {
+  box-sizing: border-box;
+  padding: 0.65rem 2rem 0.65rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.field .inv-bom-combo > input::placeholder,
+.inv-bom-combo > input:not(.inv-bom-suggest-search)::placeholder {
+  color: var(--muted);
+}
+
+.field .inv-bom-combo > input:focus,
+.inv-bom-combo > input:not(.inv-bom-suggest-search):focus {
+  outline: none;
+  border-color: var(--primary-focus);
+  box-shadow: var(--focus-ring);
+}
+
+/* §7.9 多列表单：标签 + 控件底对齐（BOM 明细等可复用） */
+.field-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2rem;
+  min-height: 1.2rem;
+  color: var(--text-muted, #5c6370);
+}
+
+.field-control {
+  width: 100%;
+  min-width: 0;
+  margin-top: auto;
+}
+
+.field-rows-equal {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 1rem;
+  align-items: stretch;
+}
+
+.field-rows-equal > .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.field-rows-equal > .field > input,
+.field-rows-equal > .field > .field-control {
+  margin-top: auto;
+}
+
 .items-block {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -3640,7 +3702,28 @@ body {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
   white-space: pre-wrap;
   word-break: break-word;
-  pointer-events: none;
+  pointer-events: auto;
+  user-select: text;
+  cursor: text;
+}
+
+.hover-tip-body {
+  user-select: text;
+}
+
+.hover-tip-hint {
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.62);
+  user-select: none;
+  cursor: default;
+}
+
+.hover-tip.is-copied {
+  outline: 1px solid rgba(120, 200, 140, 0.55);
 }
 
 /* ===== 极简纯白主题：全白底、细灰线、表头/按钮仍为 HP 深蓝 ===== */

@@ -25,6 +25,7 @@ alwaysApply: true
 - **字体/色**：变量与 `_font_links.html`；料号 `list-td-mono`
 - **tooltip**：`.hover-tip`，禁止 `title`
 - **可搜索下拉**：客户/料号/品名/BOM → §7.8 `InventoryBomLookup`（带 ▼、框内搜索、单列展示、料号优先互填）
+- **输入框一致**：text/number/select/combo 主输入 → §7.9（8px 圆角、`border-strong`；多列用 `field-label` + `field-control` 底对齐）
 - **表单网格**：订单手动录入 §9.5（2 行 × 5 列等宽）；隐藏系统默认字段
 
 ## 完成后
