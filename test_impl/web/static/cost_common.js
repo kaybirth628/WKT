@@ -157,6 +157,7 @@ window.CostCommon = (function () {
       });
       search.addEventListener("keydown", (ev) => {
         if (ev.key === "Escape") {
+          ev.stopPropagation();
           list.hidden = true;
           const hidden = combo.querySelector(".process-supplier");
           if (hidden && hidden.value) search.value = hidden.value;
@@ -164,6 +165,7 @@ window.CostCommon = (function () {
           const first = list.querySelector(".process-supplier-option");
           if (first && !list.hidden) {
             ev.preventDefault();
+            ev.stopPropagation();
             setSupplierValue(combo, first.dataset.value || "");
           }
         }

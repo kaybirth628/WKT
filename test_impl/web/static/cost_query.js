@@ -297,6 +297,18 @@ function closeEdit() {
   editingRecordId = null;
 }
 
+function isEditModalOpen() {
+  const modal = document.getElementById("costEditModal");
+  return !!(modal && !modal.hidden);
+}
+
+function isEditSupplierDropdownOpen() {
+  if (!isEditModalOpen()) return false;
+  return !!document.querySelector(
+    "#costEditModal .process-supplier-list:not([hidden])"
+  );
+}
+
 async function saveEdit(e) {
   e.preventDefault();
   if (!editingRecordId) return;
@@ -418,14 +430,24 @@ document.getElementById("costDetailModal").addEventListener("click", (e) => {
 document.getElementById("costEditClose").addEventListener("click", closeEdit);
 document.getElementById("costEditCancel").addEventListener("click", closeEdit);
 document.getElementById("costEditForm").addEventListener("submit", saveEdit);
-document.getElementById("costEditModal").addEventListener("click", (e) => {
-  if (e.target.id === "costEditModal") closeEdit();
+document.getElementById("costEditForm").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const tag = (e.target && e.target.tagName) || "";
+  if (tag === "TEXTAREA") return;
+  if (e.target && e.target.type === "submit") return;
+  if (e.target && e.target.closest(".process-supplier-combo")) return;
+  e.preventDefault();
 });
 
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  closeDetail();
-  closeEdit();
+  if (isEditSupplierDropdownOpen()) return;
+  const detailModal = document.getElementById("costDetailModal");
+  if (isEditModalOpen()) {
+    closeEdit();
+    return;
+  }
+  if (detailModal && !detailModal.hidden) closeDetail();
 });
 
 CostCommon.loadOptions()
