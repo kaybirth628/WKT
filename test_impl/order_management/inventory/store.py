@@ -426,38 +426,27 @@ class InventoryStore:
             "created_at": now,
         }
 
-    def next_movement_doc_no(self, action_prefix: str, day: Optional[str] = None) -> str:
-        """动作前缀-YYYYMMDD-当日序号，如 RK-20260725-001。
-
-        RK 与历史 WG 共用入库序号；CK 与 FC/CP 共用出库序号。
-        """
-        code = (action_prefix or "").strip().upper()
-        if not code:
-            raise ValueError("单号前缀不能为空")
+    def next_movement_doc_no(self, action_prefix: str = "", day: Optional[str] = None) -> str:
+        """WKT+YYYYMMDD+三位序号，如 WKT20260729001（当日递增）。"""
+        _ = action_prefix  # 历史参数保留，统一 WKT 前缀
         stamp = day or datetime.now().strftime("%Y%m%d")
-        prefix_aliases = {
-            "RK": ("RK", "WG"),
-            "CK": ("CK", "FC", "CP"),
-        }
-        aliases = prefix_aliases.get(code, (code,))
+        head = f"WKT{stamp}"
+        row = self._conn.execute(
+            """
+            SELECT doc_no FROM inventory_movements
+            WHERE doc_no LIKE ?
+            ORDER BY id DESC LIMIT 1
+            """,
+            (f"{head}%",),
+        ).fetchone()
         seq = 0
-        for alias in aliases:
-            like = f"{alias}-{stamp}-%"
-            row = self._conn.execute(
-                """
-                SELECT doc_no FROM inventory_movements
-                WHERE doc_no LIKE ?
-                ORDER BY id DESC LIMIT 1
-                """,
-                (like,),
-            ).fetchone()
-            if row and row["doc_no"]:
-                tail = str(row["doc_no"]).rsplit("-", 1)[-1]
-                try:
-                    seq = max(seq, int(tail))
-                except ValueError:
-                    pass
-        return f"{code}-{stamp}-{seq + 1:03d}"
+        if row and row["doc_no"]:
+            tail = str(row["doc_no"])[len(head) :]
+            try:
+                seq = int(tail)
+            except ValueError:
+                pass
+        return f"{head}{seq + 1:03d}"
 
     def next_replenish_doc_no(self, day: Optional[str] = None) -> str:
         """BC-YYYYMMDD-序号（当日递增）。"""

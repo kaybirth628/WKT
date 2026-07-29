@@ -17,6 +17,7 @@ function renderBoard(items) {
   const host = document.getElementById("invBoardCards");
   const empty = document.getElementById("invBoardEmpty");
   const count = document.getElementById("invBoardCount");
+  const INHOUSE_SUPPLIER_LABEL = "场内自制";
   if (!host) return;
   if (!items.length) {
     host.innerHTML = "";
@@ -36,23 +37,24 @@ function renderBoard(items) {
             "inv-stage" +
             (s.is_outsource ? " is-outsource" : "") +
             (hasTransit ? " is-transit-pending" : "");
-          const supplierHint = (s.suppliers || [])
-            .map((x) => `${esc(x.supplier_name)} ${esc(x.qty)}`)
-            .join("；");
+          const supplierLine = (s.supplier || INHOUSE_SUPPLIER_LABEL).trim();
           const pendingHint = hasTransit
             ? `<div class="inv-stage-pending">待回货</div>`
             : "";
           return `<div class="${cls}">
             <div class="inv-stage-name">${esc(s.process_code)} ${esc(s.process_name)}</div>
-            <div class="inv-stage-qty">场内 <b>${esc(s.inhouse_qty)}</b></div>
-            <div class="inv-stage-qty">在途 <b>${esc(s.outsource_qty)}</b>${supplierHint ? `<br/>${supplierHint}` : ""}</div>
+            <div class="inv-stage-qty">场内库存 <b>${esc(s.inhouse_qty)}</b></div>
+            <div class="inv-stage-qty">在途库存 <b>${esc(s.outsource_qty)}</b></div>
+            <div class="inv-stage-qty">返修 <b>${esc(s.repair_qty || "0")}</b></div>
+            <div class="inv-stage-supplier">供应商：${esc(supplierLine)}</div>
             ${pendingHint}
           </div>`;
         })
         .join("");
       const finishedBox = `<div class="inv-stage is-finished">
             <div class="inv-stage-name">成品库存</div>
-            <div class="inv-stage-qty"><b>${esc(row.finished_qty)}</b> PCS</div>
+            <div class="inv-stage-qty">成品库存 <b>${esc(row.finished_qty)}</b> PCS</div>
+            <div class="inv-stage-qty">返修在途 <b>${esc(row.finished_repair_qty || "0")}</b> PCS</div>
           </div>`;
       return `<article class="inv-card">
         <div class="inv-card-head">

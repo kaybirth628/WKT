@@ -2242,7 +2242,7 @@ document.getElementById("addCustomerBtn").addEventListener("click", async () => 
 });
 
 document.getElementById("addPartBtn").addEventListener("click", () => {
-  alert("料号主数据请在顶部菜单「BOM分析 → BOM录入」中维护。");
+  alert("料号主数据请在顶部菜单「BOM信息 → BOM录入」中维护。");
 });
 
 /* ========== 手动录入 ========== */

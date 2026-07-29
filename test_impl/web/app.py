@@ -298,7 +298,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260728-ocr-material-code",
+            "build": "20260729-inv-simplify",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -626,6 +626,66 @@ def inventory_ship():
             note=payload["note"],
         )
         return jsonify({"ok": True, "movement": result})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/inventory/stage-flow", methods=["POST"])
+def inventory_stage_flow():
+    data = request.get_json(force=True) or {}
+    part = str(data.get("product_part_no") or "").strip()
+    qty = data.get("qty")
+    if not part:
+        return jsonify({"error": "产品料号不能为空"}), 400
+    if qty in (None, ""):
+        return jsonify({"error": "数量不能为空"}), 400
+    try:
+        movement = inventory_service.record_stage_flow(
+            part,
+            from_process_code=str(data.get("from_process_code") or "").strip(),
+            from_status=str(data.get("from_status") or "").strip(),
+            to_process_code=str(data.get("to_process_code") or "").strip(),
+            to_status=str(data.get("to_status") or "").strip(),
+            qty=qty,
+            from_supplier_name=str(data.get("from_supplier_name") or "").strip(),
+            to_supplier_name=str(data.get("to_supplier_name") or "").strip(),
+            note=str(data.get("note") or "").strip(),
+        )
+        return jsonify({"ok": True, "movement": movement})
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/inventory/stage-set", methods=["POST"])
+def inventory_stage_set():
+    data = request.get_json(force=True) or {}
+    part = str(data.get("product_part_no") or "").strip()
+    code = str(data.get("process_code") or "").strip()
+    if not part:
+        return jsonify({"error": "产品料号不能为空"}), 400
+    if not code:
+        return jsonify({"error": "须指定工序"}), 400
+    try:
+        result = inventory_service.set_stage_buckets(
+            part,
+            code,
+            inhouse_qty=data.get("inhouse_qty"),
+            outsource_qty=data.get("outsource_qty"),
+            repair_qty=data.get("repair_qty"),
+            finished_qty=data.get("finished_qty"),
+            finished_repair_qty=data.get("finished_repair_qty"),
+            supplier_name=str(data.get("supplier_name") or "").strip(),
+            note=str(data.get("note") or "").strip(),
+        )
+        movements = result.get("movements") or []
+        return jsonify(
+            {
+                "ok": True,
+                "count": result.get("count", len(movements)),
+                "movements": movements,
+                "movement": movements[-1] if movements else None,
+            }
+        )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 

@@ -58,8 +58,8 @@ python scripts/capture_ocr_preview_only.py
 | `10-customer-maint.png` | 客户信息维护表格 | 客商信息维护 → 客户 |
 | `10-delivery-preview.png` | 送货单预览 | 客户一览 · 预览 |
 | `11-supplier-maint.png` | 供应商维护 | 客商信息维护 → 供应商 |
-| `12-bom-entry.png` | BOM录入 + 工序勾选 | BOM分析 → BOM录入 |
-| `12-bom-query.png` | BOM查询结果 | BOM分析 → BOM查询 |
+| `12-bom-entry.png` | BOM录入 + 工序勾选 | BOM信息 → BOM录入 |
+| `12-bom-query.png` | BOM查询结果 | BOM信息 → BOM查询 |
 | `13-inventory-board.png` | 库存总览卡片（测/实） | 库存 → 库存总览 |
 | `13-inventory-entry.png` | 工序出入库登记 | 库存 → 工序出入库 |
 | `14-col-filter.png` | 表头 ▾ 列筛选面板 | 任意列表 |

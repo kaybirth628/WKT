@@ -30,10 +30,23 @@
 | Agent 治理 | BF-0009 |
 | Git 推送 | BF-0010 |
 | OCR 识别 | BF-0011 |
+| 工序库存 | BF-0012 |
 
 ---
 
 ## 变更记录
+
+### BF-0012 · 2026-07-28
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0209 |
+| 模块 | `inventory/service.py` · 流动记录展示 |
+| 现象 | 载入 TST-PL-002 报 `Unexpected token '<'`；004 正常 |
+| 根因 | `_movement_route_display` 的 `stage_flow` 分支使用未定义变量 `from_st` |
+| 修复 | 从 row 读取 `from_status`/`to_status` 再拼接展示 |
+| 防复发 | `test_stage_flow_movement_route_display` |
+| 验证 | 002/004 均可 `list_movements`；页面载入无红字 |
 
 ### BF-0011 · 2026-07-28
 

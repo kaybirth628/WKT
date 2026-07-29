@@ -106,17 +106,17 @@ class TestInventoryService(unittest.TestCase):
 
     def test_auto_doc_no_by_action(self) -> None:
         m1 = self.inv.inbound(_PART, "01", "10")
-        self.assertTrue(str(m1["doc_no"]).startswith("RK-"))
+        self.assertTrue(str(m1["doc_no"]).startswith("WKT"))
         m2 = self.inv.outbound(_PART, "01", "02", "5", supplier_name=_SUPPLIER)
-        self.assertTrue(str(m2["doc_no"]).startswith("CK-"))
+        self.assertTrue(str(m2["doc_no"]).startswith("WKT"))
         m3 = self.inv.inbound(_PART, "02", "5", supplier_name=_SUPPLIER)
-        self.assertTrue(str(m3["doc_no"]).startswith("RK-"))
+        self.assertTrue(str(m3["doc_no"]).startswith("WKT"))
         self.inv.outbound(_PART, "02", "28", "5")
         self.inv.inbound(_PART, "28", "5")
         self.inv.outbound(_PART, "28", "34", "5")
         self.inv.inbound(_PART, "34", "5")
         m4 = self.inv.ship_finished(_PART, "2")
-        self.assertTrue(str(m4["doc_no"]).startswith("CK-"))
+        self.assertTrue(str(m4["doc_no"]).startswith("WKT"))
         m5 = self.inv.inbound(_PART, "01", "1", doc_no="MANUAL-1")
         self.assertEqual(m5["doc_no"], "MANUAL-1")
 
@@ -152,7 +152,7 @@ class TestInventoryService(unittest.TestCase):
 
         mov = self.inv.skip_outbound(_PART, "01", "28", "40", note="2道来不及先发3道")
         self.assertEqual(mov["action_type"], "skip_outbound")
-        self.assertTrue(str(mov["doc_no"]).startswith("TK-"))
+        self.assertTrue(str(mov["doc_no"]).startswith("WKT"))
         self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("60"))
         self.assertEqual(self.inv.store.get_qty(_PART, "28", STATUS_OUTSOURCE, ""), Decimal("40"))
         self.assertEqual(self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("0"))
@@ -252,18 +252,23 @@ class TestInventoryService(unittest.TestCase):
         mov = self.inv.adjust_balance(_PART, target_qty="120", status=STATUS_FINISHED)
         self.assertEqual(self.inv.store.get_qty(_PART, PROCESS_FINISHED, STATUS_FINISHED), Decimal("120"))
         self.assertEqual(float(mov["qty"]), 30.0)
-        self.assertIn("库存校正", mov["note"])
-        self.assertIn("150", mov["note"])
-        self.assertIn("120", mov["note"])
-        self.assertTrue(str(mov["doc_no"]).startswith("TZ-"))
+        self.assertNotIn("修改成品库存", mov["note"])
+        self.assertTrue(str(mov["doc_no"]).startswith("WKT"))
+        enriched = self.inv.list_movements(product_part_no=_PART, limit=1)[0]
+        self.assertEqual(enriched["action_label"], "修改成品库存")
+        self.assertEqual(enriched["qty"], "30")
+        self.assertEqual(enriched["route_display"], "成品")
 
     def test_adjust_inhouse_balance(self) -> None:
         self.inv.inbound(_PART, "01", "100")
         mov = self.inv.adjust_balance(_PART, target_qty="80", process_code="01", status=STATUS_INHOUSE)
         self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("80"))
-        self.assertIn("库存校正", mov["note"])
-        self.assertIn("100", mov["note"])
-        self.assertIn("80", mov["note"])
+        self.assertNotIn("修改场内库存", mov["note"])
+        enriched = self.inv.list_movements(product_part_no=_PART, limit=1)[0]
+        self.assertEqual(enriched["action_label"], "修改场内库存")
+        self.assertEqual(enriched["qty"], "20")
+        self.assertIn("01", enriched["route_display"])
+        self.assertNotIn("场内", enriched["route_display"])
 
     def test_adjust_rejects_noop(self) -> None:
         self.inv.inbound(_PART, "01", "50")
@@ -326,6 +331,134 @@ class TestInventoryService(unittest.TestCase):
         self.assertEqual(
             self.inv.store.get_qty(_PART, PROCESS_FINISHED, STATUS_REPAIR), Decimal("0")
         )
+
+    def test_board_stage_includes_supplier(self) -> None:
+        self.inv.inbound(_PART, "01", "10")
+        board = self.inv.board(product_part_no=_PART)[0]
+        stage02 = next(s for s in board["stages"] if s["process_code"] == "02")
+        self.assertEqual(stage02["supplier"], _SUPPLIER)
+
+    def test_set_stage_buckets_syncs_supplier(self) -> None:
+        self.inv.inbound(_PART, "01", "100")
+        alt = "备用外协厂"
+        with patch(
+            "test_impl.order_management.cost_analysis.record_service.list_profile_suppliers",
+            return_value=[_SUPPLIER, alt],
+        ):
+            self.inv.set_stage_buckets(
+                _PART,
+                "02",
+                inhouse_qty="5",
+                supplier_name=alt,
+                note="换供应商",
+            )
+        route = self.inv.get_route(_PART)
+        step02 = next(s for s in route if s["code"] == "02")
+        self.assertEqual(step02["supplier"], alt)
+
+    def test_set_stage_buckets_records_movements(self) -> None:
+        self.inv.inbound(_PART, "01", "100")
+        result = self.inv.set_stage_buckets(
+            _PART,
+            "01",
+            inhouse_qty="80",
+            outsource_qty="10",
+            repair_qty="5",
+            supplier_name="场内自制",
+        )
+        self.assertEqual(result["count"], 3)
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("80"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_OUTSOURCE), Decimal("10"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_REPAIR), Decimal("5"))
+        movements = self.inv.list_movements(product_part_no=_PART, limit=10)
+        adjust_rows = [
+            m for m in movements if str(m.get("action_label", "")).startswith("修改")
+        ]
+        self.assertGreaterEqual(len(adjust_rows), 3)
+        self.assertIn("场内自制", adjust_rows[0]["note"])
+
+    def test_set_stage_buckets_noop_raises(self) -> None:
+        self.inv.inbound(_PART, "01", "50")
+        with self.assertRaises(ValueError) as ctx:
+            self.inv.set_stage_buckets(_PART, "01", inhouse_qty="50")
+        self.assertIn("未变更", str(ctx.exception))
+
+    def test_adjust_outsource_balance_display(self) -> None:
+        self.inv.inbound(_PART, "01", "100")
+        self.inv.outbound(_PART, "01", "02", "50", supplier_name=_SUPPLIER)
+        self.inv.adjust_balance(
+            _PART,
+            target_qty="80",
+            process_code="02",
+            status=STATUS_OUTSOURCE,
+            supplier_name=_SUPPLIER,
+        )
+        enriched = self.inv.list_movements(product_part_no=_PART, limit=1)[0]
+        self.assertEqual(enriched["action_label"], "修改在途库存")
+        self.assertIn("02", enriched["route_display"])
+        self.assertNotIn("在途", enriched["route_display"])
+        self.assertEqual(enriched["qty"], "30")
+
+    def test_stage_flow_same_process(self) -> None:
+        self.inv.inbound(_PART, "01", "100")
+        mov = self.inv.record_stage_flow(
+            _PART,
+            from_process_code="01",
+            from_status="inhouse",
+            to_process_code="01",
+            to_status="repair",
+            qty="15",
+            note="返修送修",
+        )
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("85"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_REPAIR), Decimal("15"))
+        self.assertEqual(mov["action_type"], "stage_flow")
+        self.assertTrue(str(mov["doc_no"]).startswith("WKT"))
+
+    def test_stage_flow_cross_process(self) -> None:
+        self.inv.inbound(_PART, "01", "50")
+        self.inv.record_stage_flow(
+            _PART,
+            from_process_code="01",
+            from_status="inhouse",
+            to_process_code="02",
+            to_status="outsource",
+            qty="30",
+            to_supplier_name=_SUPPLIER,
+        )
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("20"))
+        self.assertEqual(
+            self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("30")
+        )
+
+    def test_stage_flow_external_in(self) -> None:
+        self.inv.record_stage_flow(
+            _PART,
+            from_process_code="EXT",
+            from_status="",
+            to_process_code="01",
+            to_status="inhouse",
+            qty="40",
+            note="来料",
+        )
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("40"))
+
+    def test_stage_flow_movement_route_display(self) -> None:
+        self.inv.inbound(_PART, "01", "100")
+        self.inv.record_stage_flow(
+            _PART,
+            from_process_code="01",
+            from_status="inhouse",
+            to_process_code="02",
+            to_status="outsource",
+            qty="20",
+            to_supplier_name=_SUPPLIER,
+        )
+        items = self.inv.list_movements(product_part_no=_PART)
+        stage_flow = [r for r in items if r.get("action_type") == "stage_flow"]
+        self.assertEqual(len(stage_flow), 1)
+        self.assertIn("→", stage_flow[0]["route_display"])
+        self.assertIn("01", stage_flow[0]["route_display"])
 
 
 if __name__ == "__main__":

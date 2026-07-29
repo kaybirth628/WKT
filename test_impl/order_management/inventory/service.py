@@ -7,10 +7,11 @@
 """
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 from typing import List, Optional
 
-from test_impl.common.money import round_qty, to_decimal
+from test_impl.common.money import round_qty, serialize_qty, to_decimal
 from test_impl.order_management.cost_analysis import CostRecordService
 from test_impl.order_management.cost_analysis.cost_store import CostStore
 from test_impl.order_management.cost_analysis.models import (
@@ -38,6 +39,7 @@ ACTION_OUT_SEND = "outsource_send"
 ACTION_OUT_RECV = "outsource_receive"
 ACTION_SHIP = "ship_finished"
 ACTION_ADJUST = "balance_adjust"
+ACTION_STAGE_FLOW = "stage_flow"
 
 ACTION_LABELS = {
     ACTION_INBOUND: "入库",
@@ -49,7 +51,22 @@ ACTION_LABELS = {
     ACTION_OUT_SEND: "出库",
     ACTION_OUT_RECV: "入库",
     ACTION_SHIP: "出库",
-    ACTION_ADJUST: "库存校正",
+    ACTION_ADJUST: "工序调整",
+    ACTION_STAGE_FLOW: "工序流转",
+}
+
+STATUS_LABELS = {
+    STATUS_INHOUSE: "场内",
+    STATUS_OUTSOURCE: "在途",
+    STATUS_REPAIR: "返修在途",
+    STATUS_FINISHED: "成品",
+}
+
+ADJUST_BUCKET_LABELS = {
+    STATUS_INHOUSE: "修改场内库存",
+    STATUS_OUTSOURCE: "修改在途库存",
+    STATUS_REPAIR: "修改返修库存",
+    STATUS_FINISHED: "修改成品库存",
 }
 
 # 进出单号前缀：动作-YYYYMMDD-当日序号
@@ -64,6 +81,7 @@ DOC_PREFIX = {
     ACTION_OUT_RECV: "RK",
     ACTION_SHIP: "CK",
     ACTION_ADJUST: "TZ",
+    ACTION_STAGE_FLOW: "LZ",
 }
 
 
@@ -86,10 +104,24 @@ class InventoryService:
         manual = (doc_no or "").strip()
         if manual:
             return manual
-        prefix = DOC_PREFIX.get(action_type)
-        if not prefix:
+        _ = action_type
+        return self._store.next_movement_doc_no()
+
+    @staticmethod
+    def _supplier_only_note(*names: str) -> str:
+        seen: set[str] = set()
+        parts: List[str] = []
+        for raw in names:
+            name = str(raw or "").strip()
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            parts.append(name)
+        if not parts:
             return ""
-        return self._store.next_movement_doc_no(prefix)
+        if len(parts) == 1:
+            return parts[0]
+        return " → ".join(parts)
 
     @staticmethod
     def _normalize_doc_no_display(doc_no: str) -> str:
@@ -547,7 +579,10 @@ class InventoryService:
         elif not code or not st:
             raise ValueError("须指定工序与库存状态")
         if st == STATUS_OUTSOURCE and not supplier:
-            raise ValueError("在途校正须选择供应商")
+            route = self.get_route(part)
+            step = self._find(route, code)
+            if step.get("is_outsource"):
+                raise ValueError("外发工序在途须选择供应商")
         target = round_qty(target_qty)
         if target < 0:
             raise ValueError("目标数量不能为负")
@@ -556,9 +591,7 @@ class InventoryService:
         if delta == 0:
             raise ValueError(f"当前已是 {round_qty(current)}，无需校正")
         amount = abs(delta)
-        label = f"{current}→{target}"
-        base_note = f"库存校正 {label}"
-        full_note = f"{base_note}；{note}" if note else base_note
+        movement_note = self._supplier_only_note(note, supplier)
         if delta > 0:
             return self._store.record_movement(
                 product_part_no=part,
@@ -569,7 +602,7 @@ class InventoryService:
                 to_status=st,
                 to_supplier=supplier if st == STATUS_OUTSOURCE else "",
                 doc_no=self._resolve_doc_no(ACTION_ADJUST),
-                note=full_note,
+                note=movement_note,
                 deltas=[(code, st, supplier if st == STATUS_OUTSOURCE else "", delta)],
             )
         return self._store.record_movement(
@@ -581,8 +614,251 @@ class InventoryService:
             from_status=st,
             from_supplier=supplier if st == STATUS_OUTSOURCE else "",
             doc_no=self._resolve_doc_no(ACTION_ADJUST),
-            note=full_note,
+            note=movement_note,
             deltas=[(code, st, supplier if st == STATUS_OUTSOURCE else "", delta)],
+        )
+
+    def _sync_process_supplier(self, part: str, process_code: str, supplier_name: str) -> None:
+        """工序库存页改供应商时回写 BOM（场内压铸等不可改）。"""
+        from test_impl.order_management.cost_analysis.models import is_inhouse_process
+
+        code = (process_code or "").strip()
+        supplier = (supplier_name or "").strip()
+        if not code or not supplier or code in ("EXT", "FIN", PROCESS_FINISHED):
+            return
+        if is_inhouse_process(code):
+            return
+        row = self._cost.find_latest_by_part_no(part)
+        if row is None:
+            return
+        data = self._records.record_to_dict(row)
+        current = next(
+            (str(s.get("supplier") or "").strip() for s in data.get("process_selections") or [] if s.get("code") == code),
+            "",
+        )
+        if current == supplier:
+            return
+        suppliers = dict(data.get("process_suppliers") or {})
+        suppliers[code] = supplier
+        payload = {
+            "customer_name": data["customer_name"],
+            "product_name": data["product_name"],
+            "mold_no": data["mold_no"],
+            "product_part_no": data["product_part_no"],
+            "cavity": data["cavity"],
+            "unit_weight_g": data["unit_weight_g"],
+            "material": data["material"],
+            "machine_tonnage": data["machine_tonnage"],
+            "material_unit_price": data["material_unit_price"],
+            "process_prices": data["process_prices"],
+            "process_suppliers": suppliers,
+            "process_order": data["process_order"],
+        }
+        self._records.update_record(row.id, payload, skip_customer_check=True)
+
+    def set_stage_buckets(
+        self,
+        product_part_no: str,
+        process_code: str,
+        *,
+        inhouse_qty=None,
+        outsource_qty=None,
+        repair_qty=None,
+        finished_qty=None,
+        finished_repair_qty=None,
+        supplier_name: str = "",
+        note: str = "",
+    ) -> dict:
+        """自由设定某道工序（或成品）各桶目标数；每个变更桶各记一条流水。"""
+        part = product_part_no.strip()
+        code = (process_code or "").strip()
+        if not part or not code:
+            raise ValueError("须指定料号与工序")
+        user_note = (note or "").strip()
+        _ = user_note
+        movements: List[dict] = []
+
+        if code in (PROCESS_FINISHED, "FIN"):
+            if finished_qty is not None:
+                movements.append(
+                    self.adjust_balance(
+                        part,
+                        target_qty=finished_qty,
+                        status=STATUS_FINISHED,
+                        note="",
+                    )
+                )
+            if finished_repair_qty is not None:
+                movements.append(
+                    self.adjust_balance(
+                        part,
+                        target_qty=finished_repair_qty,
+                        process_code=PROCESS_FINISHED,
+                        status=STATUS_REPAIR,
+                        note="",
+                    )
+                )
+        else:
+            route = self.get_route(part)
+            step = self._find(route, code)
+            bom_supplier = (supplier_name or "").strip()
+            if bom_supplier:
+                self._sync_process_supplier(part, code, bom_supplier)
+                route = self.get_route(part)
+                step = self._find(route, code)
+            outsource_supplier = str(step.get("supplier") or "").strip()
+            if bom_supplier and step.get("is_outsource"):
+                outsource_supplier = bom_supplier
+            elif not outsource_supplier and step.get("is_outsource") and outsource_qty is not None:
+                raise ValueError(f"外发工序「{step['name']}」须选择供应商")
+            bucket_specs = (
+                (inhouse_qty, STATUS_INHOUSE, ""),
+                (outsource_qty, STATUS_OUTSOURCE, outsource_supplier),
+                (repair_qty, STATUS_REPAIR, ""),
+            )
+            for target, status, sup in bucket_specs:
+                if target is None:
+                    continue
+                try:
+                    movements.append(
+                        self.adjust_balance(
+                            part,
+                            target_qty=target,
+                            process_code=code,
+                            status=status,
+                            supplier_name=sup if status == STATUS_OUTSOURCE else "",
+                            note=bom_supplier,
+                        )
+                    )
+                except ValueError as exc:
+                    if "无需校正" in str(exc):
+                        continue
+                    raise
+
+        if not movements:
+            raise ValueError("数量未变更，请修改至少一项")
+        return {"movements": movements, "count": len(movements)}
+
+    def _resolve_flow_endpoint(
+        self,
+        route: List[dict],
+        process_code: str,
+        status_key: str,
+        *,
+        supplier_name: str = "",
+    ) -> tuple[str, str, str]:
+        code = (process_code or "").strip()
+        key = (status_key or "").strip().lower()
+        if code in ("", "EXT", "外部"):
+            return "", "", ""
+        if code in (PROCESS_FINISHED, "FIN"):
+            code = PROCESS_FINISHED
+            if key == "finished":
+                return code, STATUS_FINISHED, ""
+            if key in ("repair", "finished_repair"):
+                return code, STATUS_REPAIR, ""
+            raise ValueError("成品须选择「成品库存」或「返修在途」状态")
+        step = self._find(route, code)
+        if key == "inhouse":
+            return code, STATUS_INHOUSE, ""
+        if key == "outsource":
+            sup = (supplier_name or "").strip() or str(step.get("supplier") or "").strip()
+            if step.get("is_outsource") and not sup:
+                raise ValueError(f"「{code} {step['name']}」在途须指定供应商")
+            return code, STATUS_OUTSOURCE, sup
+        if key == "repair":
+            return code, STATUS_REPAIR, ""
+        raise ValueError(f"未知库存状态：{status_key}")
+
+    @staticmethod
+    def _status_label_for_store(status: str) -> str:
+        return STATUS_LABELS.get(status, status)
+
+    def record_stage_flow(
+        self,
+        product_part_no: str,
+        *,
+        from_process_code: str = "",
+        from_status: str = "",
+        to_process_code: str = "",
+        to_status: str = "",
+        qty,
+        from_supplier_name: str = "",
+        to_supplier_name: str = "",
+        note: str = "",
+    ) -> dict:
+        """登记工序流转：从某工序某状态 → 另一工序某状态（可跨道；来源可为外部来料）。"""
+        part = product_part_no.strip()
+        if not part:
+            raise ValueError("产品料号不能为空")
+        amount = round_qty(qty)
+        if amount <= 0:
+            raise ValueError("数量必须大于 0")
+
+        route = self.get_route(part)
+        if from_supplier_name.strip() and (from_process_code or "").strip() not in ("", "EXT"):
+            self._sync_process_supplier(part, from_process_code, from_supplier_name)
+        if to_supplier_name.strip() and (to_process_code or "").strip():
+            self._sync_process_supplier(part, to_process_code, to_supplier_name)
+        route = self.get_route(part)
+        from_code, from_st, from_sup = self._resolve_flow_endpoint(
+            route,
+            from_process_code,
+            from_status,
+            supplier_name=from_supplier_name,
+        )
+        to_code, to_st, to_sup = self._resolve_flow_endpoint(
+            route,
+            to_process_code,
+            to_status,
+            supplier_name=to_supplier_name,
+        )
+        if not to_code or not to_st:
+            raise ValueError("须选择流入工序与状态")
+        external_in = not from_code and not from_st
+        if external_in:
+            pass
+        elif not from_code or not from_st:
+            raise ValueError("须选择流出工序与状态")
+        elif from_code == to_code and from_st == to_st and from_sup == to_sup:
+            raise ValueError("流出与流入不能相同")
+        else:
+            have = self._store.get_qty(part, from_code, from_st, from_sup)
+            if have < amount:
+                label = self._process_display(from_code)
+                st_label = self._status_label_for_store(from_st)
+                raise ValueError(
+                    f"「{label} · {st_label}」仅有 {round_qty(have)}，无法转出 {amount}"
+                )
+
+        from_disp = (
+            "外部来料"
+            if external_in
+            else f"{self._process_display(from_code)} · {self._status_label_for_store(from_st)}"
+        )
+        to_disp = f"{self._process_display(to_code)} · {self._status_label_for_store(to_st)}"
+        _ = (from_disp, to_disp, note)
+        note_text = self._supplier_only_note(from_sup, to_sup)
+
+        deltas: List[tuple] = []
+        if not external_in:
+            deltas.append((from_code, from_st, from_sup, -amount))
+        deltas.append((to_code, to_st, to_sup, amount))
+
+        return self._store.record_movement(
+            product_part_no=part,
+            action_type=ACTION_STAGE_FLOW,
+            qty=amount,
+            process_code=to_code,
+            from_process_code=from_code,
+            from_status=from_st,
+            from_supplier=from_sup,
+            to_process_code=to_code,
+            to_status=to_st,
+            to_supplier=to_sup,
+            doc_no=self._resolve_doc_no(ACTION_STAGE_FLOW),
+            note=note_text,
+            deltas=deltas,
         )
 
     def repair_out(
@@ -1088,6 +1364,7 @@ class InventoryService:
                     "process_code": s["code"],
                     "process_name": s["name"],
                     "is_outsource": s["is_outsource"],
+                    "supplier": s.get("supplier") or "",
                     "inhouse_qty": "0",
                     "outsource_qty": "0",
                     "repair_qty": "0",
@@ -1165,6 +1442,7 @@ class InventoryService:
             ACTION_OUT_SEND,
             ACTION_OUT_RECV,
             ACTION_SHIP,
+            ACTION_STAGE_FLOW,
         )
 
     @staticmethod
@@ -1203,9 +1481,40 @@ class InventoryService:
                 return f"入库成品 · {self._process_display(code)}"
             if code:
                 return f"入库 · {self._process_display(code)}"
+        if action == ACTION_ADJUST:
+            proc_code = code or from_code or to_code
+            return self._process_display(proc_code)
+        if action == ACTION_STAGE_FLOW:
+            from_st = str(row.get("from_status") or "").strip()
+            to_st = str(row.get("to_status") or "").strip()
+            if not from_code:
+                to_label = self._status_label_for_store(to_st) if to_st else ""
+                suffix = f" · {to_label}" if to_label else ""
+                return f"来料 → {self._process_display(to_code)}{suffix}"
+            from_label = self._status_label_for_store(from_st) if from_st else ""
+            to_label = self._status_label_for_store(to_st) if to_st else ""
+            from_part = self._process_display(from_code)
+            if from_label:
+                from_part = f"{from_part} · {from_label}"
+            to_part = self._process_display(to_code)
+            if to_label:
+                to_part = f"{to_part} · {to_label}"
+            return f"{from_part} → {to_part}"
         if code:
             return self._process_display(code)
         return "—"
+
+    @staticmethod
+    def _adjust_status_from_row(row: dict) -> str:
+        return str(row.get("to_status") or row.get("from_status") or "").strip()
+
+    @staticmethod
+    def _adjust_qty_range_display(row: dict) -> str:
+        note = str(row.get("note") or "")
+        match = re.search(r"(\d+(?:\.\d+)?)→(\d+(?:\.\d+)?)", note)
+        if match:
+            return f"{serialize_qty(match.group(1))}-{serialize_qty(match.group(2))}"
+        return serialize_qty(row.get("qty"))
 
     def _enrich_movement(self, row: dict, *, bom_cache: dict | None = None) -> dict:
         part = str(row.get("product_part_no") or "").strip()
@@ -1239,6 +1548,13 @@ class InventoryService:
         )
         route_display = self._movement_route_display(row)
         doc_no = self._normalize_doc_no_display(str(row.get("doc_no") or ""))
+        action_type = str(row.get("action_type") or "")
+        action_label = ACTION_LABELS.get(action_type, row.get("action_type"))
+        qty_display = str(round_qty(row.get("qty")))
+        if action_type == ACTION_ADJUST:
+            st = self._adjust_status_from_row(row)
+            action_label = ADJUST_BUCKET_LABELS.get(st, action_label)
+            qty_display = self._adjust_qty_range_display(row)
         return {
             **row,
             "doc_no": doc_no,
@@ -1247,7 +1563,7 @@ class InventoryService:
             "process_name": process_name,
             "from_process_name": from_process_name,
             "route_display": route_display,
-            "action_label": ACTION_LABELS.get(str(row.get("action_type") or ""), row.get("action_type")),
-            "qty": str(round_qty(row.get("qty"))),
+            "action_label": action_label,
+            "qty": qty_display,
             "editable": self._movement_editable(row),
         }

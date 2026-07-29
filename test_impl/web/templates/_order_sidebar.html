@@ -111,7 +111,7 @@
           aria-haspopup="menu"
         >
           <span class="top-nav-icon" aria-hidden="true">{{ nav_icon('cost') }}</span>
-          <span class="top-nav-label">BOM分析</span>
+          <span class="top-nav-label">BOM信息</span>
           <span class="top-nav-chevron" aria-hidden="true"></span>
         </button>
         <div class="top-nav-dropdown-menu" id="topNavCostMenu" role="menu">
@@ -144,7 +144,7 @@
             <span class="module-icon">{{ nav_icon('open') }}</span><span class="module-name">库存总览</span>
           </a>
           <a class="top-nav-dropdown-item module-sub{% if active == 'inventory_entry' %} active{% endif %}" href="/inventory/entry" role="menuitem">
-            <span class="module-icon">{{ nav_icon('entry') }}</span><span class="module-name">工序出入库</span>
+            <span class="module-icon">{{ nav_icon('entry') }}</span><span class="module-name">工序库存</span>
           </a>
           <a class="top-nav-dropdown-item module-sub{% if active == 'inventory_movements' %} active{% endif %}" href="/inventory/movements" role="menuitem">
             <span class="module-icon">{{ nav_icon('open') }}</span><span class="module-name">出入库流水</span>
