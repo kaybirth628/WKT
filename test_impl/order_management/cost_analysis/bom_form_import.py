@@ -13,7 +13,12 @@ from test_impl.order_management.customer_name import (
     resolve_customer_from_hint,
     dedupe_customer_names,
 )
-from test_impl.order_management.cost_analysis.cost_store import CostStore, normalize_part_no
+from test_impl.order_management.cost_analysis.cost_store import (
+    CostStore,
+    UNFILLED_PART_NO,
+    is_unfilled_part_no,
+    normalize_part_no,
+)
 from test_impl.order_management.cost_analysis.models import (
     INHOUSE_SUPPLIER_LABEL,
     LEGACY_PROCESS_ALIASES,
@@ -169,6 +174,23 @@ def _strip_process_name(raw: str) -> str:
     return s
 
 
+def _resolve_product_part_no(part_raw: Any) -> str:
+    """表内产品料号：未填或占位 → `/`；有值则原样规范化（含 11*000000/08016-01）。"""
+    if isinstance(part_raw, (int, float)):
+        text = _coerce_part_no_text(part_raw)
+    else:
+        text = _norm_text(part_raw)
+    if text == UNFILLED_PART_NO:
+        return UNFILLED_PART_NO
+    if (
+        _is_placeholder_field(text)
+        or not text
+        or _norm_label(text) in _PART_NO_REJECT_LABELS
+    ):
+        return UNFILLED_PART_NO
+    return normalize_part_no(text)
+
+
 def _fallback_from_sheet_title(title: str) -> str:
     t = _norm_text(title)
     if not t or t.casefold() in _SKIP_SHEET_NAMES:
@@ -256,7 +278,20 @@ def _parse_weight(raw: str) -> str:
     return m.group(0) if m else s
 
 
+def _split_multi_part_nos(raw: str) -> List[str]:
+    """产品料号：仅换行表示同 Sheet 多个产品；料号内的 / 原样保留（如 11*000000/08016-01）。"""
+    if isinstance(raw, (int, float)):
+        text = _coerce_part_no_text(raw)
+    else:
+        text = _norm_text(raw)
+    if not text:
+        return []
+    chunks = re.split(r"[\n\r]+", text)
+    return [c.strip() for c in chunks if c.strip()]
+
+
 def _split_multi_values(raw: str) -> List[str]:
+    """品名等多值字段：换行或 / 分隔。"""
     text = _norm_text(raw)
     if not text:
         return []
@@ -295,9 +330,12 @@ def _parse_multi_weights(raw: str, count: int) -> List[str]:
 
 
 def _expand_multi_product_row(row: dict) -> List[dict]:
-    parts = _split_multi_values(row.get("product_part_no", ""))
+    parts = _split_multi_part_nos(row.get("product_part_no", ""))
     if len(parts) <= 1:
-        return [row]
+        copy = dict(row)
+        if parts:
+            copy["product_part_no"] = normalize_part_no(parts[0])
+        return [copy]
     names = _expand_short_product_names(_split_multi_values(row.get("product_name", "")))
     while len(names) < len(parts):
         names.append(parts[len(names)])
@@ -527,6 +565,95 @@ def _parse_processes_vertical(ws: _SheetGrid) -> Tuple[List[dict], List[str]]:
     return _dedupe_processes(processes), warnings
 
 
+def _coerce_part_no_text(value: Any) -> str:
+    """Excel 数值单元格（如 11000061.0）转为料号字符串。"""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return _norm_text(value)
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        if value == int(value):
+            return str(int(value))
+    s = _norm_text(value)
+    if re.fullmatch(r"\d+\.0+", s):
+        return s.split(".", 1)[0]
+    return s
+
+
+def _shared_suffix_from_combined_name(combined: str) -> str:
+    combined = _norm_text(combined)
+    if not combined:
+        return ""
+    m = re.search(r"([\u4e00-\u9fff]+)\s*$", combined.replace("/", ""))
+    return m.group(1) if m else ""
+
+
+def _product_name_for_sheet(sheet_title: str, combined_name: str) -> str:
+    """表内品名含 / 多型号时，按 Sheet 名取当前产品品名。"""
+    title = _norm_text(sheet_title)
+    combined = _norm_text(combined_name)
+    if not title or "/" not in combined:
+        return combined
+
+    segments = _split_multi_values(combined)
+    suffix = _shared_suffix_from_combined_name(combined)
+    for seg in segments:
+        if title == seg or title in seg or seg.startswith(title):
+            if suffix and suffix not in seg:
+                return f"{seg}{suffix}"
+            return seg
+
+    prefix_m = re.match(r"^(.+?-)", segments[0]) if segments else None
+    prefix = prefix_m.group(1) if prefix_m else ""
+
+    for seg in segments:
+        candidate = seg
+        if prefix and not candidate.startswith(prefix) and re.match(r"^[\w]", candidate):
+            candidate = f"{prefix}{candidate}"
+        if title == candidate or candidate.startswith(title) or title.endswith(
+            candidate.replace(prefix, "")
+        ):
+            if suffix and suffix not in candidate:
+                return f"{candidate}{suffix}"
+            return candidate
+
+    if suffix and suffix not in title:
+        return f"{title}{suffix}"
+    return title
+
+
+def _apply_one_sheet_one_bom(row: dict, seen_part_nos: dict[str, str]) -> None:
+    """一 Sheet 一 BOM：表头多型号品名按 Sheet 拆开；料号仅来自表内「产品料号」。"""
+    sheet = _norm_text(row.get("sheet_name"))
+    combined_name = _norm_text(row.get("product_name"))
+    part_no = normalize_part_no(_coerce_part_no_text(row.get("product_part_no")))
+    warnings = list(row.get("warnings") or [])
+    multi_name = combined_name.count("/") >= 1
+
+    if multi_name and sheet:
+        specific = _product_name_for_sheet(sheet, combined_name)
+        if specific != combined_name:
+            warnings.append(
+                f"表内品名「{combined_name}」含多个型号，已按 Sheet「{sheet}」取「{specific}」"
+            )
+            row["product_name"] = specific
+
+    if part_no and not is_unfilled_part_no(part_no) and part_no in seen_part_nos and seen_part_nos[part_no] != sheet:
+        warnings.append(
+            f"料号「{part_no}」与 Sheet「{seen_part_nos[part_no]}」重复，"
+            f"请核对各 Sheet 表内「产品料号」是否填写正确"
+        )
+
+    row["product_part_no"] = part_no
+    if part_no == UNFILLED_PART_NO:
+        warnings.append("产品料号未填（/），导入后请补录")
+    elif part_no:
+        seen_part_nos[part_no] = sheet
+    row["warnings"] = warnings
+
+
 def _parse_processes(ws: _SheetGrid) -> Tuple[List[dict], List[str]]:
     processes, warnings = _parse_processes_horizontal(ws)
     if processes:
@@ -538,28 +665,23 @@ def _parse_sheet(ws: _SheetGrid) -> Optional[dict]:
     fields = _parse_header_fields(ws)
     sheet_part = _fallback_from_sheet_title(ws.title)
     part_raw = fields.get("product_part_no", "")
-    if (
-        _is_placeholder_field(part_raw)
-        or not _norm_text(part_raw)
-        or _norm_label(part_raw) in _PART_NO_REJECT_LABELS
-    ):
-        if sheet_part:
-            fields["product_part_no"] = sheet_part
     product_raw = fields.get("product_name", "")
     if _is_placeholder_field(product_raw) or not _norm_text(product_raw):
         if sheet_part or _norm_text(ws.title):
             fields["product_name"] = _norm_text(ws.title)
 
     has_identity = bool(
-        _norm_text(fields.get("product_part_no"))
+        _norm_text(part_raw)
         or _norm_text(fields.get("customer_name"))
         or sheet_part
+        or _norm_text(product_raw)
+        or _norm_text(fields.get("product_name"))
     )
     if not has_identity:
         return None
 
     processes, proc_warnings = _parse_processes(ws)
-    part_no = normalize_part_no(fields.get("product_part_no", "") or sheet_part)
+    part_no = _resolve_product_part_no(part_raw)
     warnings = list(proc_warnings)
     row = {
         "sheet_name": _norm_text(ws.title),
@@ -654,12 +776,15 @@ def _load_workbook_sheets(file_bytes: bytes, *, filename: str = "") -> List[_She
 def parse_bom_workbook(file_bytes: bytes, *, filename: str = "") -> List[dict]:
     sheets = _load_workbook_sheets(file_bytes, filename=filename)
     rows: List[dict] = []
+    seen_part_nos: dict[str, str] = {}
     for ws in sheets:
         if _norm_text(ws.title).casefold() in _SKIP_SHEET_NAMES:
             continue
         parsed = _parse_sheet(ws)
         if parsed:
-            rows.extend(_expand_multi_product_row(parsed))
+            for row in _expand_multi_product_row(parsed):
+                _apply_one_sheet_one_bom(row, seen_part_nos)
+                rows.append(row)
     return rows
 
 
@@ -696,7 +821,48 @@ def build_import_payload(parsed: dict) -> dict:
     }
 
 
-def _tier_for_row(parsed: dict, store: CostStore) -> Tuple[str, List[str]]:
+_DUPLICATE_PART_HINT_PREFIX = "本批料号重复"
+
+
+def apply_batch_duplicate_part_hints(previews: List[dict]) -> int:
+    """本批预览中相同料号互相标记（解析阶段不写库，仅提醒）。"""
+    prefix = _DUPLICATE_PART_HINT_PREFIX
+    for item in previews:
+        issues = [i for i in (item.get("issues") or []) if not str(i).startswith(prefix)]
+        item["issues"] = issues
+        item["duplicate_part_no"] = False
+
+    by_part: dict[str, List[int]] = {}
+    for i, item in enumerate(previews):
+        part = normalize_part_no((item.get("parsed") or {}).get("product_part_no", ""))
+        if not part or is_unfilled_part_no(part):
+            continue
+        by_part.setdefault(part, []).append(i)
+
+    affected = 0
+    for part, indexes in by_part.items():
+        if len(indexes) < 2:
+            continue
+        affected += len(indexes)
+        row_label = "、".join(str(i + 1) for i in indexes)
+        hint = f"{prefix}（第 {row_label} 行均为「{part}」），上传时以后者为准"
+        for i in indexes:
+            item = previews[i]
+            item["duplicate_part_no"] = True
+            issues = list(item.get("issues") or [])
+            issues.append(hint)
+            item["issues"] = issues
+            if item.get("tier") == "passed":
+                item["tier"] = "pending"
+    return affected
+
+
+def _tier_for_row(
+    parsed: dict,
+    store: CostStore,
+    *,
+    check_existing_db: bool = False,
+) -> Tuple[str, List[str]]:
     issues: List[str] = list(parsed.get("warnings") or [])
     part = normalize_part_no(parsed.get("product_part_no", ""))
     customer = _norm_text(parsed.get("customer_name"))
@@ -706,6 +872,8 @@ def _tier_for_row(parsed: dict, store: CostStore) -> Tuple[str, List[str]]:
         issues.append("缺少客户")
     if not part:
         issues.append("缺少产品料号")
+    elif is_unfilled_part_no(part):
+        issues.append("产品料号未填（显示 /），请后续补录")
     if not product_name:
         issues.append("缺少产品名称")
     if not parsed.get("processes"):
@@ -719,11 +887,11 @@ def _tier_for_row(parsed: dict, store: CostStore) -> Tuple[str, List[str]]:
         if not _norm_text(parsed.get(key)):
             issues.append(f"缺少{label}")
 
-    if part:
+    if check_existing_db and part and not is_unfilled_part_no(part):
         binding = store.get_part_binding(part)
         if binding and binding.get("customer_name"):
             issues.append(
-                f"料号已存在（客户：{binding['customer_name']}），导入时将按料号覆盖"
+                f"料号已存在（客户：{binding['customer_name']}），上传时将按料号覆盖"
             )
 
     blocking = [
@@ -813,6 +981,7 @@ def revalidate_preview_item(
     *,
     store: CostStore,
     fields: Optional[dict] = None,
+    check_existing_db: bool = False,
 ) -> dict:
     """人工确认/修改字段后重新计算档位与 payload。"""
     row = dict(parsed or {})
@@ -853,7 +1022,7 @@ def revalidate_preview_item(
     raw = _norm_text(row.get("sheet_customer_raw"))
     if confirmed and raw and raw != confirmed:
         row["warnings"].append(f"客户已人工确认为「{confirmed}」（表内原为「{raw}」）")
-    tier, issues = _tier_for_row(row, store)
+    tier, issues = _tier_for_row(row, store, check_existing_db=check_existing_db)
     return {
         "tier": tier,
         "issues": issues,
@@ -869,10 +1038,11 @@ def preview_import_rows(
     parsed_rows: List[dict],
     *,
     store: CostStore,
+    check_existing_db: bool = False,
 ) -> List[dict]:
     previews: List[dict] = []
     for idx, row in enumerate(parsed_rows):
-        tier, issues = _tier_for_row(row, store)
+        tier, issues = _tier_for_row(row, store, check_existing_db=check_existing_db)
         previews.append(
             {
                 "index": idx,
@@ -886,6 +1056,7 @@ def preview_import_rows(
                 ),
             }
         )
+    apply_batch_duplicate_part_hints(previews)
     return previews
 
 
@@ -902,4 +1073,5 @@ def preview_import_batch(
         customer_names=customer_names or [],
     )
     items = preview_import_rows(rows, store=store)
-    return {**meta, "items": items}
+    duplicate_parts = sum(1 for item in items if item.get("duplicate_part_no"))
+    return {**meta, "items": items, "duplicate_parts": duplicate_parts}

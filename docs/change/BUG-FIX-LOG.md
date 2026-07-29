@@ -25,7 +25,7 @@
 
 | 模块 | BF 编号 |
 |------|---------|
-| BOM 批量导入 | BF-0001～BF-0008 |
+| BOM 批量导入 | BF-0001～BF-0008、BF-0013、BF-0014 |
 | BOM 查询 | BF-0006 |
 | Agent 治理 | BF-0009 |
 | Git 推送 | BF-0010 |
@@ -35,6 +35,30 @@
 ---
 
 ## 变更记录
+
+### BF-0014 · 2026-07-29
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0218 |
+| 模块 | `bom_form_import.py` |
+| 现象 | `11*000000/08016-01` 被拆成 `11*000000` 与 `08016-01` 两条 BOM |
+| 根因 | 料号与品名共用 `/` 分隔逻辑 |
+| 修复 | 料号仅换行拆分；`/` 原样保留 |
+| 防复发 | `test_part_no_slash_preserved_ruiba` |
+| 验证 | 锐霸 819/826/826A 头壳各 1 条完整料号 |
+
+### BF-0013 · 2026-07-29
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0217 |
+| 模块 | `bom_form_import.py` |
+| 现象 | 多 Sheet Excel 批量导入后只余 1 条 BOM，品名如 `SD-819/826/826A头壳`、料号 `11000061.0` |
+| 根因 | 各 Sheet 共用表头（多型号品名 + 相同客户料号）；解析未按 Sheet 区分，导入时同料号互相覆盖 |
+| 修复 | 一 Sheet 一 BOM：表内品名含 `/` 或 workbook 内料号重复时，按 Sheet 名生成独立料号/品名；Excel 数值料号去 `.0` |
+| 防复发 | `test_one_sheet_one_bom_shared_header`、`test_coerce_excel_float_part_no` |
+| 验证 | `python -m unittest discover -s tests -p test_bom_form_import.py` |
 
 ### BF-0012 · 2026-07-28
 

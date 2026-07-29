@@ -33,6 +33,74 @@
 
 ## 变更记录
 
+### CL-0221 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `bom_form_import.py`、`app.py`、`cost_bom_import.js`、`cost.css` |
+| 变更内容 | BOM 解析预览：**本批相同料号行橙色高亮** +「料号重复」标签；说明列提示重复行号；改料号后自动刷新重复标记 |
+| 根因 | — |
+| 防复发 | `test_batch_duplicate_part_hints` |
+| 验证 | `python -m unittest discover -s tests -p test_bom_form_import.py -v` |
+| SOP 同步 | 否 |
+
+### CL-0220 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `bom_form_import.py`、`app.py`、`cost_bom_import.js`、`test_bom_form_import.py` |
+| 变更内容 | BOM Excel **解析预览**不再查库、不提示覆盖，**完整保留**全部解析行供人工核对；点 **批量上传** 前才校验库内已存在料号并提示覆盖，写入仍按料号覆盖逻辑 |
+| 根因 | — |
+| 防复发 | `test_existing_part_preview_not_blocked` 分拆解析/上传两阶段断言 |
+| 验证 | `python -m unittest tests.test_bom_form_import -v` |
+| SOP 同步 | 是 |
+
+### CL-0219 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `bom_form_import.py`、`record_service.py`、`cost_store.py` |
+| 变更内容 | 表内未填产品料号：预览/入库显示 **`/`**，档位待核可导入；多个 `/` 互不覆盖 |
+| 根因 | — |
+| 防复发 | `test_unfilled_part_no_shows_slash_and_imports` |
+| 验证 | `test_bom_form_import.py` |
+| SOP 同步 | 否 |
+
+### CL-0218 · 2026-07-29 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `bom_form_import.py`、`test_bom_form_import.py` |
+| 变更内容 | 产品料号 **完整保留** Excel 原值；仅 **换行** 表示同 Sheet 多产品；料号内 `/` 不再拆分（如 `11*000000/08016-01`） |
+| 根因 | `_split_multi_values` 对料号也按 `/` 拆，锐霸 composite 料号被拆成两条 |
+| 防复发 | BF-0014；`test_part_no_slash_preserved_ruiba` |
+| 验证 | `test_bom_form_import.py`；锐霸 xls 解析 46 行（原误 73 行） |
+| SOP 同步 | 否 |
+
+### CL-0217 · 2026-07-29 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `bom_form_import.py`、`test_bom_form_import.py` |
+| 变更内容 | BOM 批量导入：**一 Sheet 一 BOM**；共用表头多型号品名/重复料号时按 Sheet 名拆分；Excel 数值料号规范化 |
+| 根因 | 多 Sheet 同料号导入互相覆盖；表头品名 `A/B/C` 未按 Sheet 拆开 |
+| 防复发 | BF-0013；新增单元测试 |
+| 验证 | `test_bom_form_import.py` 26 项通过 |
+| SOP 同步 | 是 |
+| 关联 | BF-0013 |
+
+### CL-0216 · 2026-07-29 · 文档（D）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `docs/SOP/工序出入库-操作说明.md/pdf`、`scripts/export_inv_stage_guide_pdf.py` |
+| 变更内容 | 新增工序出入库员工宣导 PDF（含点选/编辑截图与操作要点） |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | `python scripts/export_inv_stage_guide_pdf.py` 生成 PDF |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 独立宣导材料，非系统操作 SOP 正文变更 |
+
 ### CL-0215 · 2026-07-29 · 优化（C）
 
 | 字段 | 内容 |

@@ -10,6 +10,14 @@ from typing import List, Optional
 
 from test_impl.order_management.order_entry.line_store import default_db_path
 
+# Excel 未填产品料号时的占位显示（可导入，后续人工补录）
+UNFILLED_PART_NO = "/"
+
+
+def is_unfilled_part_no(part: str) -> bool:
+    s = normalize_part_no(part)
+    return s == UNFILLED_PART_NO
+
 
 def normalize_part_no(part: str) -> str:
     """料号规范化：去空格、统一连字符（OCR/手工录入差异）。"""

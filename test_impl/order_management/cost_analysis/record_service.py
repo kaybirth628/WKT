@@ -8,7 +8,7 @@ from test_impl.order_management.customer_name import customer_names_match
 from test_impl.order_management.order_entry.line_store import LineStore
 from test_impl.order_management.supplier_profile.store import list_profile_suppliers
 
-from .cost_store import CostRecordRow, CostStore
+from .cost_store import CostRecordRow, CostStore, is_unfilled_part_no
 from .models import (
     PROCESS_BY_CODE,
     PROCESS_ORDER_KEY,
@@ -148,9 +148,10 @@ class CostRecordService:
         for idx, payload in enumerate(payloads):
             try:
                 part_no = str(payload.get("product_part_no") or "").strip()
-                existing_ids = (
-                    self._store.list_ids_by_part_no(part_no) if overwrite and part_no else []
-                )
+                if overwrite and part_no and not is_unfilled_part_no(part_no):
+                    existing_ids = self._store.list_ids_by_part_no(part_no)
+                else:
+                    existing_ids = []
                 if existing_ids:
                     keep_id = existing_ids[0]
                     for dup_id in existing_ids[1:]:
@@ -332,7 +333,7 @@ class CostRecordService:
     ) -> None:
         part_no = (product_part_no or "").strip()
         customer = (customer_name or "").strip()
-        if not part_no:
+        if not part_no or is_unfilled_part_no(part_no):
             return
         binding = self._store.get_part_binding(
             part_no,

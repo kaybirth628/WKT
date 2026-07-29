@@ -32,6 +32,7 @@ from test_impl.order_management.cost_analysis import (
     BomService,
 )
 from test_impl.order_management.cost_analysis.bom_form_import import (
+    apply_batch_duplicate_part_hints,
     parse_bom_workbook,
     preview_import_batch,
     preview_import_rows,
@@ -298,7 +299,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260729-inv-simplify",
+            "build": "20260729-bom-dup-highlight",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -1846,6 +1847,7 @@ def cost_bom_import_parse():
         passed = sum(1 for p in previews if p["tier"] == "passed")
         pending = sum(1 for p in previews if p["tier"] == "pending")
         blocked = sum(1 for p in previews if p["tier"] == "blocked")
+        duplicate_parts = sum(1 for p in previews if p.get("duplicate_part_no"))
         return jsonify(
             {
                 "ok": True,
@@ -1853,6 +1855,7 @@ def cost_bom_import_parse():
                 "passed": passed,
                 "pending": pending,
                 "blocked": blocked,
+                "duplicate_parts": duplicate_parts,
                 "customer_hint": batch.get("customer_hint", ""),
                 "customer_resolved": batch.get("customer_resolved", ""),
                 "customer_error": batch.get("customer_error", ""),
@@ -1904,11 +1907,13 @@ def cost_bom_import_revalidate():
             continue
         customer = str(item.get("customer_name") or parsed.get("customer_name") or "").strip()
         fields = item.get("fields") if isinstance(item.get("fields"), dict) else {}
+        check_existing_db = bool(data.get("check_existing_db", False))
         updated = revalidate_preview_item(
             parsed,
             customer,
             store=store,
             fields=fields,
+            check_existing_db=check_existing_db,
         )
         updated["index"] = item.get("index")
         if item.get("sheet_name"):
@@ -1927,6 +1932,48 @@ def cost_bom_import_revalidate():
             "pending": pending,
             "blocked": blocked,
             "total": len(results),
+        }
+    )
+
+
+@app.route("/api/cost/bom-import/sync-duplicates", methods=["POST"])
+def cost_bom_import_sync_duplicates():
+    data = request.get_json(force=True) or {}
+    raw_items = data.get("items") or []
+    if not isinstance(raw_items, list) or not raw_items:
+        return jsonify({"error": "没有可同步的数据"}), 400
+    items = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        parsed = item.get("parsed")
+        if not isinstance(parsed, dict):
+            continue
+        items.append(
+            {
+                "index": item.get("index"),
+                "parsed": dict(parsed),
+                "tier": item.get("tier", "pending"),
+                "issues": list(item.get("issues") or []),
+                "duplicate_part_no": bool(item.get("duplicate_part_no")),
+            }
+        )
+    if not items:
+        return jsonify({"error": "同步项缺少 parsed"}), 400
+    duplicate_parts = apply_batch_duplicate_part_hints(items)
+    return jsonify(
+        {
+            "ok": True,
+            "duplicate_parts": duplicate_parts,
+            "items": [
+                {
+                    "index": it.get("index"),
+                    "tier": it.get("tier"),
+                    "issues": it.get("issues") or [],
+                    "duplicate_part_no": bool(it.get("duplicate_part_no")),
+                }
+                for it in items
+            ],
         }
     )
 

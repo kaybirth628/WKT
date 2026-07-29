@@ -79,12 +79,14 @@
     var passed = 0;
     var pending = 0;
     var blocked = 0;
+    var duplicate = 0;
     previewItems.forEach(function (item) {
       if (item.tier === "passed") passed += 1;
       else if (item.tier === "pending") pending += 1;
       else blocked += 1;
+      if (item.duplicate_part_no) duplicate += 1;
     });
-    statsEl.innerHTML =
+    var html =
       '<span class="bom-stat"><em>' +
       previewItems.length +
       '</em>条</span>' +
@@ -97,6 +99,13 @@
       '<span class="bom-stat bom-stat-block"><em>' +
       blocked +
       "</em>阻断</span>";
+    if (duplicate) {
+      html +=
+        '<span class="bom-stat bom-stat-dup"><em>' +
+        duplicate +
+        "</em>料号重复</span>";
+    }
+    statsEl.innerHTML = html;
   }
 
   function updateToolbar() {
@@ -117,7 +126,7 @@
 
   function renderStats(data) {
     if (!statsEl) return;
-    statsEl.innerHTML =
+    var html =
       '<span class="bom-stat"><em>' +
       (data.total || 0) +
       '</em>条</span>' +
@@ -130,6 +139,13 @@
       '<span class="bom-stat bom-stat-block"><em>' +
       (data.blocked || 0) +
       "</em>阻断</span>";
+    if (data.duplicate_parts) {
+      html +=
+        '<span class="bom-stat bom-stat-dup"><em>' +
+        data.duplicate_parts +
+        "</em>料号重复</span>";
+    }
+    statsEl.innerHTML = html;
   }
 
   function clearSuccessBanner() {
@@ -264,6 +280,7 @@
     opts = opts || {};
     var cls = ("bom-import-field-input " + rowInputClass(previewItems[idx] || {})).trim();
     if (opts.mono) cls += " bom-field-mono";
+    if (opts.duplicatePart) cls += " bom-part-duplicate";
     var list = opts.list ? ' list="' + opts.list + '"' : "";
     var ph = opts.placeholder ? ' placeholder="' + escAttr(opts.placeholder) + '"' : "";
     var ro = opts.readonly ? " readonly" : "";
@@ -327,15 +344,19 @@
     var p = item.parsed || {};
     var issues = (item.issues || []).join("；") || "—";
     var processText = item.process_display || "—";
+    var isDup = !!item.duplicate_part_no;
+    var rowClass =
+      "bom-tier-" + esc(item.tier) + (isDup ? " bom-duplicate-part" : "");
     var splitBadge =
       splitCountsCache[item.sheet_name] > 1
         ? ' <span class="bom-split-tag">拆分</span>'
         : "";
+    var dupBadge = isDup ? ' <span class="bom-dup-tag">料号重复</span>' : "";
     var weight = p.unit_weight_g;
     if (weight === undefined || weight === null || weight === "") weight = "";
     return (
-      '<tr class="bom-tier-' +
-      esc(item.tier) +
+      '<tr class="' +
+      rowClass +
       '" data-index="' +
       idx +
       '">' +
@@ -351,8 +372,10 @@
       '<td class="list-td-mono">' +
       fieldInput(idx, "product_part_no", p.product_part_no || "", {
         mono: true,
+        duplicatePart: isDup,
         placeholder: "料号",
       }) +
+      dupBadge +
       "</td>" +
       '<td class="list-td-text">' +
       fieldInput(idx, "product_name", p.product_name || "", { placeholder: "产品名称" }) +
@@ -426,6 +449,44 @@
       updated.process_display || previewItems[idx].process_display;
     if (updated.sheet_name) previewItems[idx].sheet_name = updated.sheet_name;
     if (extra && extra.sheet_name) previewItems[idx].sheet_name = extra.sheet_name;
+    if (updated.duplicate_part_no !== undefined) {
+      previewItems[idx].duplicate_part_no = !!updated.duplicate_part_no;
+    }
+  }
+
+  async function syncDuplicateHints() {
+    if (!previewItems.length) return;
+    var payloadItems = previewItems.map(function (item, idx) {
+      var row = collectRowFromDom(idx);
+      var parsed = Object.assign({}, item.parsed || {}, row.fields || {});
+      return {
+        index: idx,
+        parsed: parsed,
+        tier: item.tier,
+        issues: item.issues || [],
+        duplicate_part_no: !!item.duplicate_part_no,
+      };
+    });
+    var res = await fetch("/api/cost/bom-import/sync-duplicates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ items: payloadItems }),
+    });
+    var data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "重复料号同步失败");
+    }
+    (data.items || []).forEach(function (row) {
+      var idx = Number(row.index);
+      if (Number.isNaN(idx) || !previewItems[idx]) return;
+      previewItems[idx].tier = row.tier;
+      previewItems[idx].issues = row.issues || [];
+      previewItems[idx].duplicate_part_no = !!row.duplicate_part_no;
+      updatePreviewRowDom(idx);
+    });
+    bindEllipsisTips(body);
+    refreshStatsFromItems();
   }
 
   function updatePreviewRowDom(idx) {
@@ -435,7 +496,8 @@
     tr.outerHTML = renderPreviewRow(previewItems[idx], idx);
   }
 
-  async function revalidateItems(indexes) {
+  async function revalidateItems(indexes, options) {
+    options = options || {};
     if (!indexes.length) return;
     var payloadItems = indexes.map(function (idx) {
       return collectRowFromDom(idx);
@@ -444,7 +506,10 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ items: payloadItems }),
+      body: JSON.stringify({
+        items: payloadItems,
+        check_existing_db: !!options.checkExistingDb,
+      }),
     });
     var data = await res.json();
     if (!res.ok) {
@@ -456,6 +521,7 @@
       mergeRevalidatedItem(idx, updated, payloadItems[idx]);
       updatePreviewRowDom(idx);
     });
+    await syncDuplicateHints();
     bindEllipsisTips(body);
     refreshStatsFromItems();
     updateToolbar();
@@ -556,7 +622,7 @@
       var allIndexes = previewItems.map(function (_, idx) {
         return idx;
       });
-      await revalidateItems(allIndexes);
+      await revalidateItems(allIndexes, { checkExistingDb: true });
       var items = previewItems.filter(function (p) {
         return allowed[p.tier];
       });

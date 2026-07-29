@@ -920,6 +920,40 @@ tr.bom-tier-pending td {
   background: rgba(245, 158, 11, 0.08);
 }
 
+tr.bom-duplicate-part td {
+  background: rgba(234, 88, 12, 0.1);
+}
+
+tr.bom-duplicate-part td:first-child {
+  box-shadow: inset 3px 0 0 #ea580c;
+}
+
+.bom-import-field-input.bom-part-duplicate {
+  border-color: #ea580c;
+  background: rgba(234, 88, 12, 0.08);
+  font-weight: 600;
+}
+
+.bom-dup-tag {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(234, 88, 12, 0.15);
+  color: #c2410c;
+  font-size: 0.625rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.bom-stat-dup {
+  color: #c2410c;
+}
+
+.bom-stat-dup em {
+  color: #ea580c;
+}
+
 .cost-form-card .section-h3 {
   margin: 0 0 0.75rem;
 }
