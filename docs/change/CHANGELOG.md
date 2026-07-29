@@ -33,6 +33,217 @@
 
 ## 变更记录
 
+### CL-0266 · 2026-07-30 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `inventory/service.py`、`inventory/store.py`、`test_inventory.py` |
+| 变更内容 | 历史出入库明细按料号回放库存变动，补算并持久化 **变更前 → 变更后**；打开明细列表时自动 backfill 缺失区间 |
+| 根因 | 旧流水 note 未存数量区间，仅新登记有区间 |
+| 防复发 | `test_replay_historical_movement_qty` |
+| 验证 | 去掉 note 区间后 list_movements 仍显示 `0 → 100` 并写回 DB |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 展示逻辑增强，SOP 已说明区间格式 |
+
+### CL-0265 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `inventory/service.py`、出入库明细 UI、SOP、`test_inventory.py` |
+| 变更内容 | 出入库明细 **数量** 列改为 **变更前 → 变更后**（如 `100 → 80`），不再只显示差额；登记流水时写入数量区间，备注列去掉重复区间 |
+| 根因 | — |
+| 防复发 | `test_adjust_*`、`test_stage_flow_movement_route_display` 断言 qty 区间 |
+| 验证 | 工序改数/流转后明细数量列为 `原 → 新` |
+| SOP 同步 | 是 |
+
+### CL-0264 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 出入库明细页（`inventory_movements.*`）、库存编辑区明细表（`inventory_entry.js`、`inventory.html`）、导航、SOP |
+| 变更内容 | 「出入库流水」改名为 **出入库明细**；明细列表移除 **操作/修改** 列，统一只读；改错仍通过工序点选编辑 |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | 导航与页面标题为出入库明细；明细表无修改按钮 |
+| SOP 同步 | 是 |
+
+### CL-0263 · 2026-07-29 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存页（`inventory.js`） |
+| 变更内容 | 编辑后点 **返回总览** 恢复进入编辑前的搜索条件，不再因表单仍填单料号而只显示一条 |
+| 根因 | 进入编辑时把料号/品名/客户写入搜索框，返回总览仍用该条件查询 |
+| 防复发 | 进入编辑前快照筛选条件，返回时还原 |
+| 验证 | 总览多料号 → 编辑 → 返回总览，仍显示原列表 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | bugfix |
+| 关联 | BF-0023 |
+
+### CL-0262 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存页（`inventory.html/js`、`inventory_entry.js`、`inventory.css`）、SOP |
+| 变更内容 | 总览与编辑分离：每张料号卡片有 **编辑** 按钮；进入编辑后只显示该料号工序登记界面（原工序库存），隐藏其他料号；**返回总览** 回到卡片列表；查询仅刷新总览不自动进入编辑 |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | `/inventory` 多卡片各有编辑；点编辑后仅单料号工序+流水；返回总览恢复卡片列表 |
+| SOP 同步 | 是 |
+
+### CL-0261 · 2026-07-29 · 重构（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存页（`inventory.html/js`、`inventory_entry.js`）、导航、SOP、`data-model.md` |
+| 变更内容 | 工序库存并入库存总览：单页 `/inventory` 含总览卡片、工序点选编辑、流动记录；移除导航「工序库存」；`/inventory/entry` 重定向至 `/inventory`；总览卡片可点击载入编辑 |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | 导航仅「库存」「出入库流水」；`/inventory` 查询料号后可编辑工序；`/inventory/entry` 跳转总览 |
+| SOP 同步 | 是 |
+
+### CL-0260 · 2026-07-29 · 重构（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存导航（`_order_sidebar.html`）、`app.py`、`inventory_planning.html/js`、`inventory.css`、`flask_integration.py`、`data-model.md` |
+| 变更内容 | 移除库存模块「排产对照」子模块：导航入口、独立页与 `GET/POST /api/inventory/planning*`；旧 URL `/inventory/planning` 重定向至库存总览；未结订单缺口仍经 `GET /api/lines?view=open` 返回 |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | 导航无排产对照；访问 `/inventory/planning` 跳转总览；`tests/test_planning.py` 通过 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 移除已下线子模块，SOP 无对应章节 |
+
+### CL-0259 · 2026-07-29 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 全局 HoverTip（`hover_tip.js`）、BOM 查询列表（`cost_query.js`） |
+| 变更内容 | 拖选复制时不再弹出悬停复制框；列表料号/品名单元格取消 HoverTip；只读输入仅在截断时才提示 |
+| 根因 | mouseenter 触发 HoverTip 浮层，与拖选复制冲突 |
+| 防复发 | mousedown/selectionchange 时强制隐藏；`.no-hover-tip` |
+| 验证 | BOM 查询列表拖选复制无浮层干扰 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | UI 交互 |
+| 关联 | BF-0022 |
+
+### CL-0258 · 2026-07-29 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | BOM 查询预览（`cost_common.js`、`cost_query.js`、`cost.css`） |
+| 变更内容 | 预览中外发工序多供应商改为逐条标签展示；列表拖选复制料号/品名时不再误触打开预览 |
+| 根因 | 供应商用单行 input 拼接「、」难读；行 click 未排除文本选中 |
+| 防复发 | click 前检测 selection + 拖拽位移 |
+| 验证 | BOM 查询预览 CNC 两家供应商分行；列表单元格拖选复制不弹预览 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | UI bugfix |
+| 关联 | BF-0021 |
+
+### CL-0257 · 2026-07-29 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存搜索联想（`inventory_bom_lookup.js`、`inventory_entry.js`、`inventory.js`） |
+| 变更内容 | 载入/选中 BOM 后关闭下拉，不再重复显示相同信息；`simpleList` 模式去掉下拉内嵌重复筛选框；程序填值时不触发联想 reopen |
+| 根因 | `applyItem` 派发 `input` 致三个下拉同时重开；下拉内嵌搜索框与主输入框重复展示 |
+| 防复发 | `closeAllCombos()` 载入前后调用；`withSuppressSuggest` 静默填值 |
+| 验证 | 工序库存载入 TST-PL-001 后搜索框下无重复行 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | UI bugfix |
+| 关联 | BF-0020 |
+
+### CL-0256 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存工序卡片（`inventory.css`） |
+| 变更内容 | 全部工序卡统一 `min-height: 6.25rem`（按含「待回货」卡片高度），跨料号/跨行尺寸一致 |
+| 根因 | `stretch` 仅同行等高，不同产品行因有无「待回货」高度不同 |
+| 防复发 | — |
+| 验证 | 库存总览多行料号：所有工序卡高度相同 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | UI 对齐 |
+| 关联 | CL-0255 |
+
+### CL-0255 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存工序卡片（`inventory.css`） |
+| 变更内容 | 同一行工序卡恢复等高（`align-items: stretch`）；「待回货」贴底；统一 `padding-bottom` 留少量底白 |
+| 根因 | CL-0254 改用 `flex-start` 导致同行卡片高度不齐 |
+| 防复发 | — |
+| 验证 | 含「待回货」行：所有工序卡与最高卡同高，底部留白一致 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | UI 对齐 |
+| 关联 | CL-0254 |
+
+### CL-0254 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存工序卡片 UI（`inventory.css`） |
+| 变更内容 | 去掉供应商展示后压缩工序卡高度：取消 `min-height: 8.5rem`，收紧内边距与行高，卡片随内容自适应 |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | 库存总览/工序库存卡片底部留白约为原先三分之一 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 纯 UI 密度 |
+| 关联 | CL-0253 |
+
+### CL-0253 · 2026-07-29 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 库存总览、工序库存（`inventory.js`、`inventory_entry.js`） |
+| 变更内容 | 库存总览与工序载入卡片不再展示供应商；仅点选工序进入编辑时显示 BOM 供应商下拉（外发工序必选，不预填） |
+| 根因 | — |
+| 防复发 | 编辑面板 `supplierChoicesForCode` 仍读 BOM `suppliers` 列表 |
+| 验证 | 总览/载入无供应商行；点 CNC 编辑见 BOM 全部供应商可选 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 交互简化，步骤更少 |
+| 关联 | CL-0252 |
+
+### CL-0252 · 2026-07-29 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 工序库存/库存总览 UI（`inventory.css`、`inventory_entry.js`、`inventory.js`） |
+| 变更内容 | BOM 多供应商工序在库存卡片改为标签逐条展示；去掉单行省略号截断；优先用 BOM route 完整供应商列表 |
+| 根因 | 后端已返回全部供应商，但 `.inv-stage-supplier` 使用 `nowrap + ellipsis`，视觉上只剩第一家 |
+| 防复发 | `test_board_supplier_display_lists_all_bom_suppliers` |
+| 验证 | TST-PL-001 CNC 应显示 3 家供应商标签；build=`20260729-inv-bom-suppliers` |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 仅展示样式 |
+| 关联 | BF-0019 · CL-0251 |
+
+### CL-0251 · 2026-07-29 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 工序库存 BOM 联动（`inventory/service.py`、`inventory_entry.js`、`inventory.js`、`cost_store.py`、`inventory_bom_lookup.js`） |
+| 变更内容 | 工序卡供应商改为展示 BOM 全部供应商（`supplier_display`）；载入时用 route 覆盖 board 工序元数据；BOM 下拉点选后自动重新载入；客户名模糊匹配（如「凯泰」）可正确关联 BOM |
+| 根因 | 卡片仅显示主供应商，与 BOM 详情不一致；下拉选料号不触发载入；`find_latest_by_part_no` 客户过滤过严导致查不到 BOM |
+| 防复发 | `test_get_route_reflects_bom_update` 校验 `supplier_display`；30 项 inventory 测试 |
+| 验证 | TST-PL-001 改 BOM 供应商后工序库存卡片显示全部供应商；`/api/health` build=`20260729-inv-bom-live` |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 展示与 BOM 一致，无新步骤 |
+| 关联 | BF-0019 · CL-0250 |
+
+### CL-0250 · 2026-07-29 · 修复（B）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 工序库存（`inventory/service.py`、`inventory_entry.js`、`app.py`）、测试 `test_inventory.py` |
+| 变更内容 | BOM 修改后工序库存载入仍显示旧工序/供应商：路由 API 与前端载入增加 `customer_name` 过滤；改料号/客户/品名时清空已载入看板避免内存缓存；`board()` 按客户解析 BOM |
+| 根因 | `get_route` 仅按料号取最新 BOM，未传客户名；前端 `loadAll` 未带客户参数；改搜索条件后未失效已渲染工序卡 |
+| 防复发 | `test_get_route_reflects_bom_update`、`test_get_route_scoped_by_customer` |
+| 验证 | `python -m unittest discover -s tests -p test_inventory.py` 30 OK；BOM 查询改供应商 → 工序库存填同客户再点「载入工序库存」应同步 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 载入逻辑与 BOM 查询一致，无新操作步骤 |
+| 关联 | BF-0019 |
+
 ### CL-0249 · 2026-07-29 · 优化（C）
 
 | 字段 | 内容 |

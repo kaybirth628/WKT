@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
+from test_impl.order_management.customer_name import customer_names_match
 from test_impl.order_management.order_entry.line_store import default_db_path
 
 # Excel 未填产品料号时的占位显示（可导入，后续人工补录）
@@ -283,14 +284,23 @@ class CostStore:
         if row:
             return _row_to_record(row)
         want = part_no.casefold()
+        cust_q = customer.casefold() if customer else ""
         for raw in self._conn.execute(
             """
             SELECT * FROM cost_records
             ORDER BY updated_at DESC, id DESC
             """
         ).fetchall():
-            if normalize_part_no(str(raw["product_part_no"] or "")).casefold() == want:
-                return _row_to_record(raw)
+            if normalize_part_no(str(raw["product_part_no"] or "")).casefold() != want:
+                continue
+            if cust_q:
+                row_customer = str(raw["customer_name"] or "").strip().casefold()
+                if not (
+                    cust_q in row_customer
+                    or customer_names_match(str(raw["customer_name"] or ""), customer)
+                ):
+                    continue
+            return _row_to_record(raw)
         return None
 
     def find_latest_by_product_name(self, product_name: str) -> Optional[CostRecordRow]:

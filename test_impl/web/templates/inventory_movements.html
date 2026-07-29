@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WKT 销售管理系统 · 出入库流水</title>
+  <title>WKT 销售管理系统 · 出入库明细</title>
   {% include '_theme_head.html' %}
   <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
   <link rel="stylesheet" href="/static/cost.css?v=20260729-ui-full-align" />
@@ -14,7 +14,7 @@
     {% include '_order_sidebar.html' %}
     <div class="app-main">
       <main class="content-stack cost-stack">
-        <h3 class="section-h3 submodule-page-title">出入库流水</h3>
+        <h3 class="section-h3 submodule-page-title">出入库明细</h3>
         <section class="card list-card">
           <form id="invMovForm" class="filter-bar filter-bar-compact">
             <label class="cost-filter-field inv-bom-field">
@@ -55,23 +55,22 @@
                     <th>数量</th>
                     <th class="list-th-text">单号</th>
                     <th class="list-th-text">备注</th>
-                    <th>操作</th>
                   </tr>
                 </thead>
                 <tbody id="invMovBody"></tbody>
               </table>
             </div>
           </div>
-          <p id="invMovEmpty" class="empty-hint list-empty-hint" hidden>暂无流水记录</p>
+          <p id="invMovEmpty" class="empty-hint list-empty-hint" hidden>暂无明细记录</p>
         </section>
       </main>
       <footer class="page-footer">
-        <h2 class="page-title">库存 · 出入库流水</h2>
-        <p class="page-desc">按料号或日期查询历史出入库变动（含在途回货、订单出货扣库等）</p>
+        <h2 class="page-title">库存 · 出入库明细</h2>
+        <p class="page-desc">按料号或日期查询历史出入库变动（只读）</p>
       </footer>
     </div>
   </div>
   <script src="/static/inventory_bom_lookup.js?v=20260729-ui-full-align"></script>
-  <script src="/static/inventory_movements.js?v=20260729-ui-full-align"></script>
+  <script src="/static/inventory_movements.js?v=20260729-inv-mov-detail"></script>
 </body>
 </html>

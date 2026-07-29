@@ -3,7 +3,6 @@ let boardRow = null;
 let selectedStages = [];
 let supplierNames = [];
 let editPanelOpen = false;
-let editingMovId = null;
 let lastMovementItems = [];
 
 const INHOUSE_SUPPLIER_LABEL = "场内自制";
@@ -28,7 +27,7 @@ function fmtDate(iso) {
 }
 
 function setMsg(text, ok) {
-  const el = document.getElementById("invEntryMsg");
+  const el = document.getElementById("invBoardMsg");
   if (!el) return;
   el.hidden = !text;
   el.textContent = text || "";
@@ -49,8 +48,12 @@ function highlightMovementRow(movementId) {
   window.setTimeout(() => row.classList.remove("inv-mov-flash-new"), 1800);
 }
 
+function invForm() {
+  return document.getElementById("invBoardForm");
+}
+
 function partNo() {
-  const form = document.getElementById("invLoadForm");
+  const form = invForm();
   return form ? form.product_part_no.value.trim() : "";
 }
 
@@ -67,14 +70,59 @@ function routeStep(code) {
   return route.find((s) => s.code === code) || null;
 }
 
+function syncBoardRowFromRoute() {
+  if (!boardRow || !route.length) return;
+  const routeByCode = Object.fromEntries(route.map((s) => [s.code, s]));
+  const merged = [];
+  const seen = new Set();
+  for (const stage of boardRow.stages || []) {
+    const step = routeByCode[stage.process_code];
+    seen.add(stage.process_code);
+    merged.push({
+      ...stage,
+      process_name: step?.name || stage.process_name,
+      is_outsource: step ? step.is_outsource : stage.is_outsource,
+      supplier: step?.supplier ?? stage.supplier ?? "",
+      bom_suppliers: step?.suppliers || stage.bom_suppliers || [],
+    });
+  }
+  for (const step of route) {
+    if (seen.has(step.code)) continue;
+    merged.push({
+      process_code: step.code,
+      process_name: step.name,
+      is_outsource: step.is_outsource,
+      supplier: step.supplier || "",
+      bom_suppliers: step.suppliers || [],
+      inhouse_qty: "0",
+      outsource_qty: "0",
+      repair_qty: "0",
+      suppliers: [],
+    });
+  }
+  boardRow.stages = merged;
+  if (!boardRow.product_name && routeDataProductName) {
+    boardRow.product_name = routeDataProductName;
+  }
+}
+
+let routeDataProductName = "";
+
 function selectionBadge(index) {
   return String(index + 1);
 }
 
-function defaultSupplierForCode(code) {
-  const stage = stageRow(code);
+function processNeedsSupplier(code) {
   const step = routeStep(code);
-  return (stage?.supplier || step?.supplier || INHOUSE_SUPPLIER_LABEL).trim();
+  return !!(step && step.is_outsource);
+}
+
+function renderSupplierFieldHtml(fieldId, processCode) {
+  if (!processNeedsSupplier(processCode)) return "";
+  return `<label class="field inv-inline-field inv-supplier-field">
+        <span>供应商</span>
+        ${renderSupplierComboHtml(fieldId, "", processCode)}
+      </label>`;
 }
 
 async function ensureSuppliers() {
@@ -101,8 +149,7 @@ function supplierChoicesForCode(code) {
   const step = routeStep(code);
   const bomSuppliers = (step?.suppliers || []).filter(Boolean);
   if (bomSuppliers.length) {
-    const names = bomSuppliers.filter((n) => n !== INHOUSE_SUPPLIER_LABEL);
-    return [INHOUSE_SUPPLIER_LABEL].concat(names);
+    return bomSuppliers.filter((name, idx, arr) => arr.indexOf(name) === idx);
   }
   return supplierChoices();
 }
@@ -262,6 +309,27 @@ function toggleStageSelection(code) {
   renderStations();
 }
 
+function clearEntryBoard() {
+  boardRow = null;
+  route = [];
+  selectedStages = [];
+  editPanelOpen = false;
+  renderStations();
+}
+
+function resetSelection() {
+  selectedStages = [];
+  editPanelOpen = false;
+  boardRow = null;
+  route = [];
+}
+
+function invalidateLoadedBoard() {
+  if (!boardRow) return;
+  clearEntryBoard();
+  setLoadedUi(false);
+}
+
 function clearSelection() {
   selectedStages = [];
   editPanelOpen = false;
@@ -290,7 +358,7 @@ function renderSingleStageEditPanel(code) {
   const stage = stageRow(code);
   const step = routeStep(code);
   const label = step ? stepLabel(step) : code;
-  const defaultSupplier = defaultSupplierForCode(code);
+  const supplierField = renderSupplierFieldHtml("supplier_name", code);
   return `<div class="inv-stage-edit-panel" id="invEditPanel">
     <div class="inv-stage-edit-head">
       <div class="inv-stage-edit-head-main">
@@ -299,10 +367,7 @@ function renderSingleStageEditPanel(code) {
       </div>
     </div>
     <form id="invSingleEditForm" class="inv-submit-row">
-      <label class="field inv-inline-field inv-supplier-field">
-        <span>供应商</span>
-        ${renderSupplierComboHtml("supplier_name", defaultSupplier, code)}
-      </label>
+      ${supplierField}
       <label class="field inv-inline-field">
         <span>场内库存 (PCS)</span>
         <input name="inhouse_qty" type="number" step="0.1" min="0" value="${esc(stage?.inhouse_qty || "0")}" required />
@@ -357,8 +422,18 @@ function renderDualFlowEditPanel() {
   const toStage = stageRow(toCode);
   const fromLabel = fromStep ? stepLabel(fromStep) : fromCode;
   const toLabel = toStep ? stepLabel(toStep) : toCode;
-  const fromSupplier = defaultSupplierForCode(fromCode);
-  const toSupplier = defaultSupplierForCode(toCode);
+  const fromSupplierField = processNeedsSupplier(fromCode)
+    ? `<label class="field inv-inline-field inv-supplier-field">
+        <span>① 流出供应商</span>
+        ${renderSupplierComboHtml("from_supplier_name", "", fromCode)}
+      </label>`
+    : "";
+  const toSupplierField = processNeedsSupplier(toCode)
+    ? `<label class="field inv-inline-field inv-supplier-field">
+        <span>② 流入供应商</span>
+        ${renderSupplierComboHtml("to_supplier_name", "", toCode)}
+      </label>`
+    : "";
   return `<div class="inv-stage-edit-panel" id="invEditPanel">
     <div class="inv-stage-edit-head">
       <div class="inv-stage-edit-head-main">
@@ -367,18 +442,12 @@ function renderDualFlowEditPanel() {
       </div>
     </div>
     <form id="invDualEditForm" class="inv-submit-row">
-      <label class="field inv-inline-field inv-supplier-field">
-        <span>① 流出供应商</span>
-        ${renderSupplierComboHtml("from_supplier_name", fromSupplier, fromCode)}
-      </label>
+      ${fromSupplierField}
       <label class="field inv-inline-field">
         <span>① 流出状态</span>
         ${statusSelectHtml("from_status", "inhouse")}
       </label>
-      <label class="field inv-inline-field inv-supplier-field">
-        <span>② 流入供应商</span>
-        ${renderSupplierComboHtml("to_supplier_name", toSupplier, toCode)}
-      </label>
+      ${toSupplierField}
       <label class="field inv-inline-field">
         <span>② 流入状态</span>
         ${statusSelectHtml("to_status", toStep?.is_outsource ? "outsource" : "inhouse")}
@@ -452,10 +521,14 @@ function bindEditPanelEvents(host) {
       };
     } else {
       const combo = form.querySelector(".inv-supplier-combo");
-      const supplier = getSupplierComboValue(combo);
-      if (!supplier) {
-        setMsg("请选择供应商", false);
-        return;
+      let supplier = combo ? getSupplierComboValue(combo) : "";
+      if (processNeedsSupplier(code)) {
+        if (!supplier) {
+          setMsg("请选择供应商", false);
+          return;
+        }
+      } else {
+        supplier = INHOUSE_SUPPLIER_LABEL;
       }
       url = "/api/inventory/stage-set";
       payload = {
@@ -481,7 +554,8 @@ function bindEditPanelEvents(host) {
       }
       editPanelOpen = false;
       selectedStages = [];
-      await loadAll();
+      if (window.loadBoardOverview && !window.isInvEditMode?.()) await window.loadBoardOverview();
+      await loadEntryPart();
       const mov = data.movement || (data.movements || [])[data.movements?.length - 1];
       setMsg("✓ 已保存，库存已更新", true);
       highlightMovementRow(mov?.id);
@@ -500,10 +574,20 @@ function bindEditPanelEvents(host) {
     }
     const fromCombo = form.querySelector('[data-field-id="from_supplier_name"]');
     const toCombo = form.querySelector('[data-field-id="to_supplier_name"]');
-    const fromSupplier = getSupplierComboValue(fromCombo);
-    const toSupplier = getSupplierComboValue(toCombo);
-    if (!fromSupplier || !toSupplier) {
-      setMsg("两道均须选择供应商", false);
+    const fromCode = selectedStages[0];
+    const toCode = selectedStages[1];
+    const fromSupplier = processNeedsSupplier(fromCode)
+      ? getSupplierComboValue(fromCombo)
+      : INHOUSE_SUPPLIER_LABEL;
+    const toSupplier = processNeedsSupplier(toCode)
+      ? getSupplierComboValue(toCombo)
+      : INHOUSE_SUPPLIER_LABEL;
+    if (processNeedsSupplier(fromCode) && !fromSupplier) {
+      setMsg("请选择①流出供应商", false);
+      return;
+    }
+    if (processNeedsSupplier(toCode) && !toSupplier) {
+      setMsg("请选择②流入供应商", false);
       return;
     }
     const payload = {
@@ -530,7 +614,8 @@ function bindEditPanelEvents(host) {
       }
       editPanelOpen = false;
       selectedStages = [];
-      await loadAll();
+      if (window.loadBoardOverview && !window.isInvEditMode?.()) await window.loadBoardOverview();
+      await loadEntryPart();
       setMsg("✓ 已登记流转", true);
       highlightMovementRow(data.movement?.id);
     } catch (err) {
@@ -565,14 +650,12 @@ function renderStations() {
         (hasTransit ? " is-transit-pending" : "") +
         selected;
       const pendingHint = hasTransit ? `<div class="inv-stage-pending">待回货</div>` : "";
-      const supplierLine = (s.supplier || INHOUSE_SUPPLIER_LABEL).trim();
       return `<button type="button" class="${cls}" data-key="${esc(s.process_code)}" data-kind="process">
         ${badge}
         <div class="inv-stage-name">${esc(s.process_code)} ${esc(s.process_name)}</div>
         <div class="inv-stage-qty">场内库存 <b>${esc(s.inhouse_qty)}</b></div>
         <div class="inv-stage-qty">在途库存 <b>${esc(s.outsource_qty)}</b></div>
         <div class="inv-stage-qty">返修 <b>${esc(s.repair_qty || "0")}</b></div>
-        <div class="inv-stage-supplier">供应商：${esc(supplierLine)}</div>
         ${pendingHint}
       </button>`;
     })
@@ -638,15 +721,12 @@ function renderMovements(items) {
   const tbody = document.getElementById("invEntryMovementBody");
   if (!tbody) return;
   if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="10" class="list-td-text">暂无出入库记录</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" class="list-td-text">暂无出入库明细</td></tr>`;
     return;
   }
   tbody.innerHTML = items
-    .map((r) => {
-      const op = r.editable
-        ? `<button type="button" class="btn btn-outline btn-sm inv-mov-edit" data-id="${esc(r.id)}">修改</button>`
-        : `<span class="list-td-muted">—</span>`;
-      const main = `<tr data-mov-id="${esc(r.id)}">
+    .map(
+      (r) => `<tr data-mov-id="${esc(r.id)}">
         <td>${esc(fmtDate(r.created_at))}</td>
         <td class="list-td-text">${esc(r.customer_name || "—")}</td>
         <td class="list-td-mono">${esc(r.product_part_no)}</td>
@@ -656,63 +736,9 @@ function renderMovements(items) {
         <td>${esc(r.qty)}</td>
         <td class="list-td-text">${esc(r.doc_no || "—")}</td>
         <td class="list-td-text">${esc(r.note || "—")}</td>
-        <td>${op}</td>
-      </tr>`;
-      if (editingMovId !== r.id) return main;
-      return (
-        main +
-        `<tr class="inv-mov-edit-row"><td colspan="10">
-          <form class="inv-mov-edit-form" data-id="${esc(r.id)}">
-            <label class="inv-mov-edit-field"><span>数量</span>
-              <input name="qty" type="number" step="0.1" min="0.1" required value="${esc(r.qty)}" /></label>
-            <label class="inv-mov-edit-field"><span>备注</span>
-              <input name="note" type="text" value="${esc(r.note || "")}" placeholder="可选" /></label>
-            <button type="submit" class="btn btn-primary btn-sm">保存</button>
-            <button type="button" class="btn btn-outline btn-sm inv-mov-cancel">取消</button>
-          </form>
-        </td></tr>`
-      );
-    })
+      </tr>`
+    )
     .join("");
-
-  tbody.querySelectorAll(".inv-mov-edit").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      editingMovId = Number(btn.getAttribute("data-id"));
-      renderMovements(lastMovementItems);
-    });
-  });
-  tbody.querySelectorAll(".inv-mov-cancel").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      editingMovId = null;
-      renderMovements(lastMovementItems);
-    });
-  });
-  tbody.querySelectorAll(".inv-mov-edit-form").forEach((form) => {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const id = Number(form.getAttribute("data-id"));
-      const qty = form.qty.value;
-      const note = form.note.value.trim();
-      setMsg("保存修改中…", true);
-      const res = await fetch(`/api/inventory/movements/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qty, note }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setMsg(data.error || "修改失败", false);
-        return;
-      }
-      editingMovId = null;
-      setMsg("✓ 已修改出入库流水，库存已同步", true);
-      if (boardRow && partNo()) {
-        await loadAll();
-      } else {
-        await loadMovements();
-      }
-    });
-  });
 }
 
 function todayYmd() {
@@ -741,8 +767,9 @@ async function loadMovements() {
   renderMovements(lastMovementItems);
 }
 
-async function loadAll() {
-  const form = document.getElementById("invLoadForm");
+async function loadEntryPart() {
+  window.InventoryBomLookup?.closeAllCombos?.();
+  const form = invForm();
   const partInput = form?.product_part_no;
   const nameInput = form?.product_name;
   let part = partInput?.value.trim() || "";
@@ -771,7 +798,10 @@ async function loadAll() {
     setMsg("未在 BOM 中找到对应料号", false);
     return;
   }
-  const qs = `?product_part_no=${encodeURIComponent(part)}`;
+  const customer = (form?.customer_name?.value || "").trim();
+  const qsPart = `product_part_no=${encodeURIComponent(part)}`;
+  const qsCustomer = customer ? `&customer_name=${encodeURIComponent(customer)}` : "";
+  const qs = `?${qsPart}${qsCustomer}`;
   const [routeRes, boardRes] = await Promise.all([
     fetch(`/api/inventory/route${qs}`),
     fetch(`/api/inventory/board${qs}`),
@@ -789,10 +819,11 @@ async function loadAll() {
     return;
   }
   route = routeData.route || [];
+  routeDataProductName = routeData.product_name || "";
   boardRow = (boardData.items || [])[0] || {
     product_part_no: part,
-    product_name: "",
-    customer_name: "",
+    product_name: routeDataProductName,
+    customer_name: customer,
     finished_qty: "0",
     finished_repair_qty: "0",
     is_demo: false,
@@ -802,47 +833,26 @@ async function loadAll() {
       process_name: s.name,
       is_outsource: s.is_outsource,
       supplier: s.supplier || "",
+      bom_suppliers: s.suppliers || [],
       inhouse_qty: "0",
       outsource_qty: "0",
       repair_qty: "0",
     })),
   };
+  syncBoardRowFromRoute();
   selectedStages = selectedStages.filter(
     (code) => code === "FIN" || route.some((s) => s.code === code)
   );
   renderStations();
   await loadMovements();
   setLoadedUi(true);
+  window.InventoryBomLookup?.closeAllCombos?.();
 }
 
-document.getElementById("invLoadForm")?.addEventListener("submit", (e) => {
-  e.preventDefault();
-  selectedStages = [];
-  editPanelOpen = false;
-  boardRow = null;
-  setLoadedUi(false);
-  loadAll().catch((err) => setMsg(String(err), false));
-});
-
-(function initInvEntryBomLookup() {
-  const form = document.getElementById("invLoadForm");
-  if (!form || !window.InventoryBomLookup) return;
-  const comboOpts = window.InventoryBomLookup?.STANDARD_COMBO_OPTS || {
-    openOnFocus: true,
-    minChars: 0,
-    showToggle: true,
-    simpleList: true,
-  };
-  window.InventoryBomLookup.bindPair({
-    partInput: form.product_part_no,
-    nameInput: form.product_name,
-    customerInput: form.customer_name,
-    hintEl: null,
-    ...comboOpts,
-  });
-  if (form.customer_name) {
-    window.InventoryBomLookup.bindCustomer({ customerInput: form.customer_name, ...comboOpts });
-  }
-})();
-
-loadMovements().catch(() => renderMovements([]));
+window.InventoryEntry = {
+  loadEntryPart,
+  loadMovements,
+  clearEntryBoard,
+  invalidateLoadedBoard,
+  resetSelection,
+};

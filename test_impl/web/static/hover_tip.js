@@ -4,6 +4,51 @@ window.HoverTip = (function () {
   let _body = null;
   let _hint = null;
   let hideTimer = null;
+  let suppressUntil = 0;
+  let pointerDown = false;
+
+  function hideNow() {
+    if (_el) {
+      _el.style.display = "none";
+      _el.classList.remove("is-copied");
+    }
+    cancelHide();
+  }
+
+  function bumpSuppress(ms) {
+    suppressUntil = Math.max(suppressUntil, Date.now() + (ms || 0));
+  }
+
+  function isSuppressed() {
+    if (pointerDown) return true;
+    if (Date.now() < suppressUntil) return true;
+    const sel = window.getSelection();
+    return !!(sel && sel.toString().trim());
+  }
+
+  if (!document.documentElement.dataset.hoverTipGlobalBound) {
+    document.documentElement.dataset.hoverTipGlobalBound = "1";
+    document.addEventListener(
+      "mousedown",
+      () => {
+        pointerDown = true;
+        hideNow();
+        bumpSuppress(400);
+      },
+      true
+    );
+    document.addEventListener(
+      "mouseup",
+      () => {
+        pointerDown = false;
+        bumpSuppress(350);
+      },
+      true
+    );
+    document.addEventListener("selectionchange", () => {
+      if (isSuppressed()) hideNow();
+    });
+  }
 
   function ensure() {
     if (!_el) {
@@ -40,7 +85,14 @@ window.HoverTip = (function () {
 
   function needsTip(el) {
     if (!el) return false;
-    if (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA") return true;
+    if (el.closest(".no-hover-tip")) return false;
+    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+      if (el.readOnly || el.disabled) {
+        return el.scrollWidth > el.clientWidth + 1;
+      }
+      return false;
+    }
+    if (el.tagName === "SELECT") return true;
     if (el.dataset.hoverText) return true;
     return el.scrollWidth > el.clientWidth + 1;
   }
@@ -48,10 +100,8 @@ window.HoverTip = (function () {
   function scheduleHide() {
     clearTimeout(hideTimer);
     hideTimer = setTimeout(() => {
-      if (_el) {
-        _el.style.display = "none";
-        _el.classList.remove("is-copied");
-      }
+      if (isSuppressed()) return;
+      hideNow();
     }, 180);
   }
 
@@ -122,6 +172,7 @@ window.HoverTip = (function () {
   }
 
   function showTip(el, e, followCursor) {
+    if (isSuppressed()) return;
     const text = getText(el).trim();
     if (!text || !needsTip(el)) return;
     el.removeAttribute("title");
@@ -140,10 +191,10 @@ window.HoverTip = (function () {
 
   function bind(el) {
     if (!el || el.dataset.hoverBound) return;
+    if (el.closest(".no-hover-tip")) return;
     el.dataset.hoverBound = "1";
     el.removeAttribute("title");
-    const followCursor =
-      el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA";
+    const followCursor = false;
     if (el.tagName === "TD") {
       el.classList.toggle("has-ellipsis-tip", needsTip(el));
     }
@@ -173,7 +224,7 @@ window.HoverTip = (function () {
     });
   }
 
-  return { bind, bindAll, bindEllipsis, needsTip };
+  return { bind, bindAll, bindEllipsis, needsTip, hide: hideNow };
 })();
 
 window.bindHoverTip = window.HoverTip.bind;

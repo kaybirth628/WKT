@@ -261,7 +261,7 @@ def inventory_page():
 
 @app.route("/inventory/entry")
 def inventory_entry_page():
-    return render_template("inventory_entry.html", active="inventory_entry")
+    return redirect("/inventory")
 
 
 @app.route("/inventory/movements")
@@ -271,7 +271,7 @@ def inventory_movements_page():
 
 @app.route("/inventory/planning")
 def inventory_planning_page():
-    return render_template("inventory_planning.html", active="inventory_planning")
+    return redirect("/inventory")
 
 
 @app.route("/cost/entry")
@@ -299,7 +299,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260729-bom-query-preview",
+            "build": "20260730-inv-qty-backfill",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -416,9 +416,18 @@ def bom_lookup_for_order():
 @app.route("/api/inventory/route", methods=["GET"])
 def inventory_route():
     part_no = request.args.get("product_part_no", "")
+    customer = request.args.get("customer_name", "")
     try:
-        route = inventory_service.get_route(part_no)
-        return jsonify({"product_part_no": part_no.strip(), "route": route})
+        route = inventory_service.get_route(part_no, customer_name=customer)
+        bom = inventory_service.lookup_bom_header(part_no, customer_name=customer)
+        return jsonify(
+            {
+                "product_part_no": part_no.strip(),
+                "product_name": (bom or {}).get("product_name", ""),
+                "customer_name": (bom or {}).get("customer_name", ""),
+                "route": route,
+            }
+        )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -820,24 +829,6 @@ def inventory_seed_board_demo():
         limit = 10
     try:
         result = inventory_service.seed_board_demo(cost_record_service, limit=limit)
-        return jsonify(result)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-
-
-@app.route("/api/inventory/planning", methods=["GET"])
-def inventory_planning():
-    customer = request.args.get("customer", "")
-    q = request.args.get("q", "")
-    items = planning_service.compare_open_lines(customer=customer, q=q)
-    return jsonify({"items": items})
-
-
-@app.route("/api/inventory/planning/seed-demo", methods=["POST"])
-def inventory_planning_seed_demo():
-    """写入 PLAN-A/B/C 未结订单各 1000 + 库存 500/600/700，便于看排产缺口。"""
-    try:
-        result = planning_service.seed_planning_demo(cost_record_service)
         return jsonify(result)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400

@@ -788,6 +788,19 @@ window.CostCommon = (function () {
     return names.length ? names.join("、") : "—";
   }
 
+  function buildReadonlySuppliersHtml(suppliers) {
+    const list = (suppliers || []).map((s) => String(s || "").trim()).filter(Boolean);
+    if (!list.length) {
+      return '<span class="process-inhouse-tag">—</span>';
+    }
+    if (list.length === 1) {
+      return `<span class="cost-preview-supplier-tag">${escapeHtml(list[0])}</span>`;
+    }
+    return `<ul class="cost-preview-supplier-tags">${list
+      .map((name) => `<li class="cost-preview-supplier-tag">${escapeHtml(name)}</li>`)
+      .join("")}</ul>`;
+  }
+
   function orderedProcessSelections(record) {
     const selections = record.process_selections || [];
     if (!selections.length) return [];
@@ -838,7 +851,10 @@ window.CostCommon = (function () {
           item.price !== "" && item.price != null && item.price !== "0" && item.price !== 0
             ? item.price
             : "0";
-        const supplierText = supplierDisplayForSelection(item);
+        const supplierNames = item.suppliers || (item.supplier ? [item.supplier] : []);
+        const supplierControl = inhouse
+          ? `<span class="process-inhouse-tag">${escapeHtml(INHOUSE_SUPPLIER_LABEL)}</span>`
+          : buildReadonlySuppliersHtml(supplierNames);
         return `
     <div class="process-detail-row process-detail-row--readonly" data-process-code="${escapeHtml(item.code)}">
       <div class="process-detail-head">
@@ -848,8 +864,8 @@ window.CostCommon = (function () {
       <div class="process-detail-fields">
         <div class="field process-detail-supplier-field">
           <span class="field-label">${inhouse ? "类型" : "供应商"}</span>
-          <div class="field-control">
-            <input class="cost-readonly-input" type="text"${ro} value="${escapeHtml(supplierText)}" />
+          <div class="field-control cost-preview-supplier-control">
+            ${supplierControl}
           </div>
         </div>
         <div class="field process-detail-price-field">

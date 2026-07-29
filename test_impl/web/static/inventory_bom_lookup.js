@@ -63,6 +63,27 @@ window.InventoryBomLookup = (function () {
     simpleList: true,
   };
 
+  let suppressSuggestDepth = 0;
+
+  function withSuppressSuggest(fn) {
+    suppressSuggestDepth += 1;
+    try {
+      return fn();
+    } finally {
+      suppressSuggestDepth -= 1;
+    }
+  }
+
+  function isSuggestSuppressed() {
+    return suppressSuggestDepth > 0;
+  }
+
+  function useInnerSearch(opts, withSearch) {
+    if (!withSearch) return false;
+    if (opts.simpleList) return false;
+    return opts.innerSearch !== false;
+  }
+
   function comboOptsFrom(raw) {
     if (typeof raw === "function") return { fetchFn: raw };
     return raw || {};
@@ -184,10 +205,10 @@ window.InventoryBomLookup = (function () {
     });
   }
 
-  function renderList(combo, items, mode, withSearch, simpleList) {
+  function renderList(combo, items, mode, withSearch, simpleList, innerSearch) {
     const list = combo.querySelector(".inv-bom-suggest");
     if (!list) return;
-    if (withSearch) ensureSuggestSearch(combo);
+    if (innerSearch) ensureSuggestSearch(combo);
     clearSuggestItems(list);
     if (!items.length) {
       const empty = document.createElement("li");
@@ -287,9 +308,11 @@ window.InventoryBomLookup = (function () {
   }
 
   function applyItem(partInput, nameInput, customerInput, part, name, customer, hintEl, onSelect) {
-    if (partInput) partInput.value = part || "";
-    if (nameInput) nameInput.value = name || "";
-    if (customerInput && customer) customerInput.value = customer;
+    withSuppressSuggest(() => {
+      if (partInput) partInput.value = part || "";
+      if (nameInput) nameInput.value = name || "";
+      if (customerInput && customer) customerInput.value = customer;
+    });
     hideAllLists();
     const bits = [part, name].filter(Boolean).join(" · ");
     if (part) {
@@ -308,36 +331,40 @@ window.InventoryBomLookup = (function () {
     const openOnFocus = !!opts.openOnFocus;
     const withSearch = useDropdownSearch(opts);
     const simpleList = !!opts.simpleList;
+    const innerSearch = useInnerSearch(opts, withSearch);
 
     async function loadSuggestions(focusSearch) {
+      if (isSuggestSuppressed()) return;
       const q = getComboQuery(combo, input);
       if (minChars > 0 && q.length < minChars) {
         hideAllLists();
         return;
       }
       const items = await fetchSuggestions(q, minChars === 0 ? 30 : 15);
-      renderList(combo, items, mode, withSearch, simpleList);
-      if (focusSearch && withSearch) focusSuggestSearch(combo);
+      renderList(combo, items, mode, withSearch, simpleList, innerSearch);
+      if (focusSearch && innerSearch) focusSuggestSearch(combo);
     }
 
     const runSuggest = debounce(() => loadSuggestions(false), 180);
 
-    if (withSearch) {
+    if (innerSearch) {
       wireSuggestSearch(combo, input, loadSuggestions, ".inv-bom-suggest-item[data-part]");
     }
 
     input.addEventListener("focus", () => {
+      if (isSuggestSuppressed()) return;
       if (openOnFocus || input.value.trim()) {
         syncSearchFromExternal(combo, input);
-        loadSuggestions(withSearch);
+        loadSuggestions(innerSearch);
       }
     });
     input.addEventListener("input", () => {
+      if (isSuggestSuppressed()) return;
       if (mode === "part" && nameInput) nameInput.dataset.userEdited = "";
       if (mode === "name" && partInput) partInput.dataset.userEdited = "";
       syncSearchFromExternal(combo, input);
       runSuggest();
-      if (withSearch) {
+      if (innerSearch) {
         const list = combo.querySelector(".inv-bom-suggest");
         if (list?.hidden) loadSuggestions(false);
       }
@@ -348,7 +375,7 @@ window.InventoryBomLookup = (function () {
       if (ev.key === "ArrowDown" && (!list || list.hidden)) {
         ev.preventDefault();
         syncSearchFromExternal(combo, input);
-        loadSuggestions(withSearch);
+        loadSuggestions(innerSearch);
         return;
       }
       if (!list || list.hidden) return;
@@ -400,45 +427,51 @@ window.InventoryBomLookup = (function () {
     const minChars = opts.minChars != null ? opts.minChars : 1;
     const openOnFocus = !!opts.openOnFocus;
     const withSearch = useDropdownSearch(opts);
+    const innerSearch = useInnerSearch(opts, withSearch);
 
     function applyPick(value) {
       const picked = value || "";
-      if (typeof opts.onSelect === "function") {
-        opts.onSelect(picked);
-        customerInput.value = "";
-      } else {
-        customerInput.value = picked;
-      }
+      withSuppressSuggest(() => {
+        if (typeof opts.onSelect === "function") {
+          opts.onSelect(picked);
+          customerInput.value = "";
+        } else {
+          customerInput.value = picked;
+        }
+      });
       hideAllLists();
     }
 
     async function loadSuggestions(focusSearch) {
+      if (isSuggestSuppressed()) return;
       const q = getComboQuery(combo, customerInput);
       if (minChars > 0 && q.length < minChars) {
         hideAllLists();
         return;
       }
       const items = await suggest(q);
-      renderCustomerList(combo, items, withSearch);
-      if (focusSearch && withSearch) focusSuggestSearch(combo);
+      renderCustomerList(combo, items, innerSearch);
+      if (focusSearch && innerSearch) focusSuggestSearch(combo);
     }
 
     const runSuggest = debounce(() => loadSuggestions(false), 180);
 
-    if (withSearch) {
+    if (innerSearch) {
       wireSuggestSearch(combo, customerInput, loadSuggestions, ".inv-bom-suggest-item[data-customer]");
     }
 
     customerInput.addEventListener("focus", () => {
+      if (isSuggestSuppressed()) return;
       if (openOnFocus || customerInput.value.trim()) {
         syncSearchFromExternal(combo, customerInput);
-        loadSuggestions(withSearch);
+        loadSuggestions(innerSearch);
       }
     });
     customerInput.addEventListener("input", () => {
+      if (isSuggestSuppressed()) return;
       syncSearchFromExternal(combo, customerInput);
       runSuggest();
-      if (withSearch) {
+      if (innerSearch) {
         const list = combo.querySelector(".inv-bom-suggest");
         if (list?.hidden) loadSuggestions(false);
       }
@@ -449,7 +482,7 @@ window.InventoryBomLookup = (function () {
       if (ev.key === "ArrowDown" && (!list || list.hidden)) {
         ev.preventDefault();
         syncSearchFromExternal(combo, customerInput);
-        loadSuggestions(withSearch);
+        loadSuggestions(innerSearch);
         return;
       }
       if (!list || list.hidden) return;
@@ -484,6 +517,7 @@ window.InventoryBomLookup = (function () {
     const withSearch = useDropdownSearch(opts);
 
     async function loadSuggestions(focusSearch) {
+      if (isSuggestSuppressed()) return;
       const q = getComboQuery(combo, keywordInput);
       if (minChars > 0 && q.length < minChars) {
         hideAllLists();
@@ -562,8 +596,11 @@ window.InventoryBomLookup = (function () {
     }
     const name = data.product_name || data.product_spec || "";
     const customer = data.customer_name || "";
-    if (nameInput && name) nameInput.value = name;
-    if (customerInput && customer) customerInput.value = customer;
+    withSuppressSuggest(() => {
+      if (nameInput && name) nameInput.value = name;
+      if (customerInput && customer) customerInput.value = customer;
+    });
+    hideAllLists();
     const hintBits = [part, name, customer].filter(Boolean).join(" · ");
     setHint(hintEl, `BOM：${hintBits}`, "ok");
     return part;
@@ -581,11 +618,14 @@ window.InventoryBomLookup = (function () {
       setHint(hintEl, "品名未在 BOM 中找到对应料号", "error");
       return "";
     }
-    if (partInput) partInput.value = part;
     const bomName = data.product_spec || data.product_name || name;
     const customer = data.customer_name || "";
-    if (nameInput && bomName) nameInput.value = bomName;
-    if (customerInput && customer) customerInput.value = customer;
+    withSuppressSuggest(() => {
+      if (partInput) partInput.value = part;
+      if (nameInput && bomName) nameInput.value = bomName;
+      if (customerInput && customer) customerInput.value = customer;
+    });
+    hideAllLists();
     const hintBits = [part, bomName, customer].filter(Boolean).join(" · ");
     setHint(hintEl, `BOM：${hintBits}`, "ok");
     return part;
@@ -643,6 +683,7 @@ window.InventoryBomLookup = (function () {
       minChars: opts.minChars != null ? opts.minChars : 1,
       openOnFocus: !!opts.openOnFocus,
       showToggle: !!opts.showToggle,
+      simpleList: !!opts.simpleList,
       fetchFn: opts.fetchSuggestions,
       fetchSuggestions: opts.fetchSuggestions,
       onSelect: opts.onSelect,
@@ -738,6 +779,14 @@ window.InventoryBomLookup = (function () {
     return "";
   }
 
+  function closeAllCombos() {
+    hideAllLists();
+    const active = document.activeElement;
+    if (active && active.closest && active.closest(".inv-bom-combo")) {
+      active.blur();
+    }
+  }
+
   return {
     STANDARD_COMBO_OPTS,
     fetchMasterCustomerSuggestions,
@@ -749,5 +798,6 @@ window.InventoryBomLookup = (function () {
     resolvePartNo,
     lookupByPartNo,
     lookupByProductName,
+    closeAllCombos,
   };
 })();

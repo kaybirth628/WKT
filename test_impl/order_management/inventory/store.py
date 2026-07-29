@@ -216,6 +216,35 @@ class InventoryStore:
         params.append(int(limit))
         return [dict(r) for r in self._conn.execute(sql, params).fetchall()]
 
+    def list_movements_chronological(self, *, product_part_no: str) -> List[dict]:
+        part = (product_part_no or "").strip()
+        if not part:
+            return []
+        sql = """
+            SELECT * FROM inventory_movements
+            WHERE LOWER(TRIM(product_part_no)) = LOWER(?)
+            ORDER BY datetime(created_at) ASC, id ASC
+        """
+        return [dict(r) for r in self._conn.execute(sql, (part,)).fetchall()]
+
+    def distinct_movement_parts(self) -> List[str]:
+        rows = self._conn.execute(
+            """
+            SELECT DISTINCT TRIM(product_part_no) AS part
+            FROM inventory_movements
+            WHERE TRIM(product_part_no) != ''
+            ORDER BY part
+            """
+        ).fetchall()
+        return [str(r["part"]) for r in rows if r["part"]]
+
+    def update_movement_note(self, movement_id: int, note: str) -> None:
+        self._conn.execute(
+            "UPDATE inventory_movements SET note = ? WHERE id = ?",
+            (str(note or "").strip(), int(movement_id)),
+        )
+        self._conn.commit()
+
     def get_movement(self, movement_id: int) -> Optional[dict]:
         row = self._conn.execute(
             "SELECT * FROM inventory_movements WHERE id = ?",

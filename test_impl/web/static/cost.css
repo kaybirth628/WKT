@@ -1273,7 +1273,11 @@ tr.bom-duplicate-part td:first-child {
   margin: 0 0 0.75rem;
 }
 
-/* BOM 查询 · 成本详情预览（与录入/修改同布局，只读） */
+.list-td-text.no-hover-tip,
+.list-td-mono.no-hover-tip {
+  user-select: text;
+  cursor: text;
+}
 .cost-preview-layout {
   padding-top: 0;
 }
@@ -1284,7 +1288,7 @@ tr.bom-duplicate-part td:first-child {
   box-sizing: border-box;
   background: var(--bg-soft, #f8f9fb);
   color: var(--text);
-  cursor: default;
+  cursor: text;
   user-select: text;
 }
 
@@ -1321,6 +1325,34 @@ tr.bom-duplicate-part td:first-child {
   margin: 0.75rem 0 0;
   font-size: 0.75rem;
   color: var(--text-muted, #5c6370);
+}
+
+.cost-preview-supplier-control {
+  width: 100%;
+}
+
+.cost-preview-supplier-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cost-preview-layout .cost-preview-supplier-tag {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.38rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg-soft, #f8f9fb);
+  color: var(--text);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  word-break: break-word;
+  user-select: text;
 }
 
 .process-order-list--readonly {

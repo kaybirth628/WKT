@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>WKT 销售管理系统 · 库存总览</title>
+  <title>WKT 销售管理系统 · 库存</title>
   {% include '_theme_head.html' %}
   <link rel="stylesheet" href="/static/style.css?v=20260729-ui-full-align" />
   <link rel="stylesheet" href="/static/cost.css?v=20260729-ui-full-align" />
-  <link rel="stylesheet" href="/static/inventory.css?v=20260729-ui-full-align" />
+  <link rel="stylesheet" href="/static/inventory.css?v=20260729-inv-edit-mode" />
 </head>
 <body>
   <div class="app-layout">
     {% include '_order_sidebar.html' %}
     <div class="app-main">
       <main class="content-stack cost-stack">
-        <h3 class="section-h3 submodule-page-title">库存总览</h3>
-        <section class="card list-card">
+        <h3 class="section-h3 submodule-page-title">库存</h3>
+        <section class="card list-card" id="invOverviewSection">
           <form id="invBoardForm" class="filter-bar filter-bar-compact">
             <label class="cost-filter-field inv-bom-field">
               <span>产品料号</span>
@@ -33,20 +33,55 @@
           </form>
           <p id="invBomHint" class="field-hint inv-bom-hint" hidden></p>
           <p id="invBoardMsg" class="msg list-msg"></p>
-          <div class="list-meta-row">
-            <p id="invBoardCount" class="list-summary">—</p>
+          <div id="invOverviewWrap">
+            <div class="list-meta-row">
+              <p id="invBoardCount" class="list-summary">—</p>
+            </div>
+            <div id="invBoardCards" class="inv-board"></div>
+            <p id="invBoardEmpty" class="empty-hint list-empty-hint" hidden>暂无库存数据，请先在 BOM 录入建档并登记工序</p>
           </div>
-          <div id="invBoardCards" class="inv-board"></div>
-          <p id="invBoardEmpty" class="empty-hint list-empty-hint" hidden>暂无库存数据，请先在「工序出入库」登记</p>
+        </section>
+
+        <section class="card list-card inv-entry-card" id="invEditSection" hidden>
+          <div class="inv-edit-toolbar">
+            <button type="button" class="btn btn-outline btn-sm" id="invBackOverview">返回总览</button>
+            <span id="invEditPartLabel" class="inv-edit-part-label"></span>
+          </div>
+          <div id="invStationHost" class="inv-board inv-station-board" hidden></div>
+
+          <h4 class="inv-section-title" id="invMovementTitle">出入库明细</h4>
+          <div class="list-scroll-host">
+            <div class="table-wrap list-table-wrap">
+              <table class="data-table list-table">
+                <thead>
+                  <tr class="list-header-row">
+                    <th class="list-th-text">时间</th>
+                    <th class="list-th-text">客户名称</th>
+                    <th class="list-th-text">客户料号</th>
+                    <th class="list-th-text">产品名称</th>
+                    <th>动作</th>
+                    <th>工序</th>
+                    <th>数量</th>
+                    <th class="list-th-text">单号</th>
+                    <th class="list-th-text">备注</th>
+                  </tr>
+                </thead>
+                <tbody id="invEntryMovementBody">
+                  <tr><td colspan="9" class="list-td-text">加载中…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
       </main>
       <footer class="page-footer">
-        <h2 class="page-title">库存 · 总览</h2>
-        <p class="page-desc">按 BOM 工序查看场内半成品、在途与成品数量</p>
+        <h2 class="page-title">库存</h2>
+        <p class="page-desc">总览各料号工序库存；点卡片「编辑」进入单料号工序登记，下方为出入库明细</p>
       </footer>
     </div>
   </div>
-  <script src="/static/inventory_bom_lookup.js?v=20260729-ui-full-align"></script>
-  <script src="/static/inventory.js?v=20260729-ui-full-align"></script>
+  <script src="/static/inventory_bom_lookup.js?v=20260729-inv-mov-detail"></script>
+  <script src="/static/inventory_entry.js?v=20260729-inv-mov-detail"></script>
+  <script src="/static/inventory.js?v=20260729-inv-back-fix"></script>
 </body>
 </html>

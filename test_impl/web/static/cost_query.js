@@ -107,18 +107,11 @@ function escHtml(text) {
 }
 
 function bindRowCellTips(tbody) {
-  if (!tbody || !window.HoverTip) return;
+  if (!tbody) return;
   tbody.querySelectorAll("td.list-td-text, td.list-td-mono").forEach((td) => {
-    const text = (td.textContent || "").trim();
-    if (!text) return;
-    if (window.HoverTip.needsTip(td)) {
-      td.classList.add("has-ellipsis-tip");
-      td.dataset.hoverText = text;
-      window.HoverTip.bind(td);
-    } else {
-      td.classList.remove("has-ellipsis-tip");
-      td.removeAttribute("data-hover-text");
-    }
+    td.classList.add("no-hover-tip");
+    td.removeAttribute("data-hover-text");
+    td.classList.remove("has-ellipsis-tip");
   });
 }
 
@@ -213,8 +206,20 @@ function renderTable(items, opts) {
   bindRowCellTips(tbody);
 
   tbody.querySelectorAll("tr[data-id]").forEach((row) => {
+    let press = null;
+    row.addEventListener("mousedown", (e) => {
+      if (e.target.closest("[data-action]")) return;
+      press = { x: e.clientX, y: e.clientY };
+    });
     row.addEventListener("click", (e) => {
       if (e.target.closest("[data-action]")) return;
+      const sel = window.getSelection();
+      if (sel && sel.toString().trim()) return;
+      if (press) {
+        const dx = Math.abs(e.clientX - press.x);
+        const dy = Math.abs(e.clientY - press.y);
+        if (dx > 4 || dy > 4) return;
+      }
       openDetail(Number(row.dataset.id));
     });
     row.addEventListener("keydown", (e) => {
@@ -244,9 +249,10 @@ function openDetail(id) {
   const body = document.getElementById("costDetailBody");
   body.innerHTML = CostCommon.renderCostRecordDetailHtml(record);
   if (window.HoverTip) {
-    body.querySelectorAll(".process-name, .process-detail-name, [data-hover-text]").forEach((el) =>
-      window.HoverTip.bind(el)
-    );
+    window.HoverTip.hide();
+    body.querySelectorAll(".process-name, .process-detail-name").forEach((el) => {
+      if (window.HoverTip.needsTip(el)) window.HoverTip.bind(el);
+    });
   }
   modal.hidden = false;
 }

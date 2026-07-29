@@ -227,7 +227,7 @@ def main() -> int:
         goto(page, f"{BASE}/inventory", wait_ms=1500)
         shot(page, "13-inventory-board.png", full_page=True)
 
-        goto(page, f"{BASE}/inventory/entry")
+        goto(page, f"{BASE}/inventory")
         shot(page, "13-inventory-entry.png", full_page=True)
 
         # OCR preview needs a sample PO file; static placeholder until one is added under data/sop_samples/

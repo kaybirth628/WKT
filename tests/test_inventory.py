@@ -256,7 +256,7 @@ class TestInventoryService(unittest.TestCase):
         self.assertTrue(str(mov["doc_no"]).startswith("WKT"))
         enriched = self.inv.list_movements(product_part_no=_PART, limit=1)[0]
         self.assertEqual(enriched["action_label"], "修改成品库存")
-        self.assertEqual(enriched["qty"], "30")
+        self.assertEqual(enriched["qty"], "150 → 120")
         self.assertEqual(enriched["route_display"], "成品")
 
     def test_adjust_inhouse_balance(self) -> None:
@@ -266,7 +266,7 @@ class TestInventoryService(unittest.TestCase):
         self.assertNotIn("修改场内库存", mov["note"])
         enriched = self.inv.list_movements(product_part_no=_PART, limit=1)[0]
         self.assertEqual(enriched["action_label"], "修改场内库存")
-        self.assertEqual(enriched["qty"], "20")
+        self.assertEqual(enriched["qty"], "100 → 80")
         self.assertIn("01", enriched["route_display"])
         self.assertNotIn("场内", enriched["route_display"])
 
@@ -338,6 +338,118 @@ class TestInventoryService(unittest.TestCase):
         stage02 = next(s for s in board["stages"] if s["process_code"] == "02")
         self.assertEqual(stage02["supplier"], _SUPPLIER)
 
+    def test_board_supplier_display_lists_all_bom_suppliers(self) -> None:
+        rec = self.cost_store.find_latest_by_part_no(_PART)
+        data = self.records.record_to_dict(rec)
+        multi = ["苏州麦凯良金属制品厂", "必盛克（浙江）精密科技有限公司", "丙供应商"]
+        process_prices = {}
+        for item in data["process_selections"]:
+            code = item["code"]
+            price = data.get("process_prices", {}).get(code, "0")
+            if code == "02":
+                process_prices[code] = {
+                    "price": price,
+                    "supplier": multi[0],
+                    "suppliers": multi,
+                }
+            else:
+                sup = str(item.get("supplier") or "场内自制").strip()
+                process_prices[code] = {"price": price, "supplier": sup, "suppliers": [sup]}
+        payload = {
+            "customer_name": data["customer_name"],
+            "product_name": data["product_name"],
+            "mold_no": data["mold_no"],
+            "product_part_no": data["product_part_no"],
+            "cavity": data["cavity"],
+            "unit_weight_g": data["unit_weight_g"],
+            "material": data["material"],
+            "machine_tonnage": data["machine_tonnage"],
+            "material_unit_price": data["material_unit_price"],
+            "process_prices": process_prices,
+            "process_order": data["process_order"],
+        }
+        self.records.update_record(rec.id, payload, skip_supplier_check=True)
+        board = self.inv.board(product_part_no=_PART)[0]
+        stage02 = next(s for s in board["stages"] if s["process_code"] == "02")
+        self.assertEqual(stage02["bom_suppliers"], multi)
+        self.assertEqual(stage02["supplier_display"], "、".join(multi))
+
+    def test_get_route_reflects_bom_update(self) -> None:
+        rec = self.cost_store.find_latest_by_part_no(_PART)
+        self.assertIsNotNone(rec)
+        data = self.records.record_to_dict(rec)
+        new_supplier = "更新后外协厂"
+        process_prices = {}
+        for item in data["process_selections"]:
+            code = item["code"]
+            sups = list(item.get("suppliers") or ([item["supplier"]] if item.get("supplier") else []))
+            primary = str(item.get("supplier") or (sups[0] if sups else "")).strip()
+            price = data.get("process_prices", {}).get(code, "0")
+            if code == "02":
+                primary = new_supplier
+                sups = [new_supplier]
+            process_prices[code] = {"price": price, "supplier": primary, "suppliers": sups}
+        payload = {
+            "customer_name": data["customer_name"],
+            "product_name": data["product_name"],
+            "mold_no": data["mold_no"],
+            "product_part_no": data["product_part_no"],
+            "cavity": data["cavity"],
+            "unit_weight_g": data["unit_weight_g"],
+            "material": data["material"],
+            "machine_tonnage": data["machine_tonnage"],
+            "material_unit_price": data["material_unit_price"],
+            "process_prices": process_prices,
+            "process_order": data["process_order"],
+        }
+        self.records.update_record(rec.id, payload, skip_supplier_check=True)
+        route = self.inv.get_route(_PART, customer_name=data["customer_name"])
+        step02 = next(s for s in route if s["code"] == "02")
+        self.assertEqual(step02["supplier"], new_supplier)
+        self.assertEqual(step02["supplier_display"], new_supplier)
+        board = self.inv.board(product_part_no=_PART, customer_name=data["customer_name"])[0]
+        stage02 = next(s for s in board["stages"] if s["process_code"] == "02")
+        self.assertEqual(stage02["supplier_display"], new_supplier)
+
+    def test_get_route_scoped_by_customer(self) -> None:
+        from bom_helpers import seed_bom_conflict
+
+        part = "DUP-INV-ROUTE"
+        alt_supplier = "乙客户外协厂"
+        seed_bom_conflict(
+            self.cost_store,
+            part,
+            customers=[("客户甲", "品A"), ("客户乙", "品B")],
+        )
+        ids = self.cost_store.list_ids_by_part_no(part)
+        self.assertEqual(len(ids), 2)
+        for rid in ids:
+            row = self.records.get_record(rid)
+            supplier = _SUPPLIER if row.customer_name == "客户甲" else alt_supplier
+            data = self.records.record_to_dict(row)
+            process_prices = {
+                "01": "1.0",
+                "02": {"price": "0.5", "supplier": supplier, "suppliers": [supplier]},
+            }
+            payload = {
+                "customer_name": data["customer_name"],
+                "product_name": data["product_name"],
+                "mold_no": data["mold_no"],
+                "product_part_no": data["product_part_no"],
+                "cavity": data["cavity"],
+                "unit_weight_g": data["unit_weight_g"],
+                "material": data["material"],
+                "machine_tonnage": data["machine_tonnage"],
+                "material_unit_price": data["material_unit_price"],
+                "process_prices": process_prices,
+                "process_order": ["01", "02"],
+            }
+            self.records.update_record(rid, payload, skip_customer_check=True, skip_supplier_check=True)
+        route_a = self.inv.get_route(part, customer_name="客户甲")
+        route_b = self.inv.get_route(part, customer_name="客户乙")
+        self.assertEqual(next(s for s in route_a if s["code"] == "02")["supplier"], _SUPPLIER)
+        self.assertEqual(next(s for s in route_b if s["code"] == "02")["supplier"], alt_supplier)
+
     def test_set_stage_buckets_syncs_supplier(self) -> None:
         self.inv.inbound(_PART, "01", "100")
         alt = "备用外协厂"
@@ -397,7 +509,7 @@ class TestInventoryService(unittest.TestCase):
         self.assertEqual(enriched["action_label"], "修改在途库存")
         self.assertIn("02", enriched["route_display"])
         self.assertNotIn("在途", enriched["route_display"])
-        self.assertEqual(enriched["qty"], "30")
+        self.assertEqual(enriched["qty"], "50 → 80")
 
     def test_stage_flow_same_process(self) -> None:
         self.inv.inbound(_PART, "01", "100")
@@ -459,6 +571,17 @@ class TestInventoryService(unittest.TestCase):
         self.assertEqual(len(stage_flow), 1)
         self.assertIn("→", stage_flow[0]["route_display"])
         self.assertIn("01", stage_flow[0]["route_display"])
+        self.assertEqual(stage_flow[0]["qty"], "100 → 80")
+
+    def test_replay_historical_movement_qty(self) -> None:
+        self.inv.inbound(_PART, "01", "100")
+        mid = int(self.inv.list_movements(product_part_no=_PART, limit=1)[0]["id"])
+        self.inv.store.update_movement_note(mid, "旧备注")
+        items = self.inv.list_movements(product_part_no=_PART, limit=1)
+        self.assertEqual(items[0]["qty"], "0 → 100")
+        row = self.inv.store.get_movement(mid)
+        self.assertIn("0→100", row["note"])
+        self.assertIn("旧备注", row["note"])
 
 
 if __name__ == "__main__":

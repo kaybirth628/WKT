@@ -70,7 +70,6 @@ def _register_audit_rules() -> None:
     _rule("POST", "/api/inventory/replenish", "inventory.replenish", "inventory", "补货单")
     _rule("POST", "/api/inventory/seed-demo", "inventory.seed_demo", "inventory", "写入库存演示数据")
     _rule("POST", "/api/inventory/seed-board-demo", "inventory.seed_board", "inventory", "写入看板演示数据")
-    _rule("POST", "/api/inventory/planning/seed-demo", "inventory.planning_seed", "inventory", "写入计划演示数据")
     # 成本/BOM
     _rule("POST", "/api/cost/records", "cost.record_create", "cost", "新建成本记录")
     _rule("POST", "/api/cost/bom-import/parse", "cost.bom_import_parse", "cost", "解析BOM Excel")

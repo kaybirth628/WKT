@@ -413,7 +413,7 @@ flowchart LR
 | `production_replenish_orders` | 生产补产单（CL-0118，UI 已收起） |
 | `inventory_part_tags` | 料号数据标注（CL-0124）：`product_part_no` PK、`is_demo`（1=测 / 0=实）、`updated_at` |
 
-统一模型（CL-0163）：**入库** = 首道+场内 / 非首道在途→场内 / 末道→成品；**出库** = 上道场内→下道在途 / 成品出库。末道入库写入 `process_code=FIN` 成品仓。页面：`/inventory`、`/inventory/entry`。展示文案「在途」对应库内状态 `outsource`。
+统一模型（CL-0163）：**入库** = 首道+场内 / 非首道在途→场内 / 末道→成品；**出库** = 上道场内→下道在途 / 成品出库。末道入库写入 `process_code=FIN` 成品仓。页面：`/inventory`（总览 + 工序编辑 + 流动记录）、`/inventory/movements`。展示文案「在途」对应库内状态 `outsource`。
 
 | `POST /api/inventory/inbound` | 入库；`process_code`、可选 `supplier_name`（外发回货） |
 | `POST /api/inventory/outbound` | 出库；`from_process_code`、`to_process_code`（成品出库时 from=`FIN`、to 空） |
@@ -425,18 +425,18 @@ flowchart LR
 
 订单出货（`OrderLineService.ship_line`，已注入库存服务）自动调用 `ship_finished` 扣成品仓；不足则拒绝。
 
-### 排产对照 / 补产单 API（CL-0115 / CL-0118）
+### 未结订单库存缺口 / 补产单 API（CL-0115 / CL-0118 / CL-0260）
+
+未结列表 `GET /api/lines?view=open` 经 `PlanningService.compare_open_lines` 附加 `finished_qty`、`semifinished_qty`、`gap_ship`、`gap_cover`、`stock_warn_level` 等字段（排产对照独立页已移除，CL-0260）。
 
 | 接口 | 说明 |
 |------|------|
-| `GET /api/inventory/planning?customer=&q=` | 未结订单行 × 成品/半成品缺口；**一行一条** |
-| `POST /api/inventory/planning/seed-demo` | 演示：PLAN-A/B/C 需求各 1000，可用库存约 500/600/700 |
 | `GET /api/inventory/replenish` | 补产单列表 |
 | `POST /api/inventory/replenish` | 生成补产单（可绑 `sales_order_no` / `line_id`） |
 | `POST /api/inventory/seed-demo` | 单料号流水演示 |
 | `POST /api/inventory/seed-board-demo` | 约 10 料号 BOM+各工序在途/成品（总览看板演示） |
-| `GET /api/inventory/movements` | 流水；可选 `product_part_no`、`customer_name`（模糊）、`on_date`；每项含 `customer_name`、`product_name`（BOM）、`action_label`、`editable` 等 |
-| `PUT /api/inventory/movements/{id}` | 修改手工出入库流水数量/备注（同步回滚库存；订单出货流水不可改，CL-0152） |
+| `GET /api/inventory/movements` | 出入库明细；可选 `product_part_no`、`customer_name`（模糊）、`on_date`；每项含 `customer_name`、`product_name`（BOM）、`action_label` 等（UI 只读，CL-0264） |
+| `PUT /api/inventory/movements/{id}` | 修改手工出入库明细数量/备注（API 保留；前端已不提供修改入口，CL-0264） |
 
 | `GET /api/reconciliation/due-outlook` | 应收到期：自本月起重 **6** 个收款月按客户汇总（CL-0129） |
 | `GET /api/payable/due-outlook` | 应付到期：自本月起重 **6** 个付款月按供应商汇总（CL-0129） |
