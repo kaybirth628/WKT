@@ -543,6 +543,38 @@ class TestInventoryService(unittest.TestCase):
             self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("30")
         )
 
+    def test_stage_flow_finished_to_upstream_process(self) -> None:
+        self.inv.adjust_balance(
+            _PART,
+            target_qty="50",
+            process_code=PROCESS_FINISHED,
+            status=STATUS_FINISHED,
+        )
+        self.inv.record_stage_flow(
+            _PART,
+            from_process_code="FIN",
+            from_status="finished",
+            to_process_code="01",
+            to_status="inhouse",
+            qty="20",
+            note="返修回场",
+        )
+        self.assertEqual(self.inv.finished_qty(_PART), Decimal("30"))
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("20"))
+
+    def test_stage_flow_process_to_finished(self) -> None:
+        self.inv.inbound(_PART, "01", "40")
+        self.inv.record_stage_flow(
+            _PART,
+            from_process_code="01",
+            from_status="inhouse",
+            to_process_code="FIN",
+            to_status="finished",
+            qty="15",
+        )
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("25"))
+        self.assertEqual(self.inv.finished_qty(_PART), Decimal("15"))
+
     def test_stage_flow_external_in(self) -> None:
         self.inv.record_stage_flow(
             _PART,

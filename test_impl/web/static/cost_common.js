@@ -58,6 +58,48 @@ window.CostCommon = (function () {
     return supplierNames.slice();
   }
 
+  async function renderMissingSupplierAlert(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    try {
+      const res = await fetch("/api/cost/missing-suppliers");
+      if (!res.ok) {
+        el.classList.add("is-hidden");
+        el.innerHTML = "";
+        return;
+      }
+      const data = await res.json();
+      const items = data.items || [];
+      if (!items.length) {
+        el.classList.add("is-hidden");
+        el.innerHTML = "";
+        return;
+      }
+      const chips = items
+        .map((item) => {
+          const count =
+            item.occurrence_count > 1
+              ? ` <span class="bom-missing-supplier-count">×${item.occurrence_count}</span>`
+              : "";
+          return `<span class="bom-missing-supplier-chip">${escapeHtml(item.supplier_name)}${count}</span>`;
+        })
+        .join("");
+      el.classList.remove("is-hidden");
+      el.innerHTML = `
+        <div class="bom-missing-supplier-alert-inner">
+          <div class="bom-missing-supplier-head">
+            <strong>供应商档案缺失</strong>
+            <span class="bom-missing-supplier-meta">${data.total_distinct} 家 · ${data.total_occurrences} 处引用</span>
+            <a href="/#supplier" class="bom-missing-supplier-link">去维护 →</a>
+          </div>
+          <div class="bom-missing-supplier-chips">${chips}</div>
+        </div>`;
+    } catch (_e) {
+      el.classList.add("is-hidden");
+      el.innerHTML = "";
+    }
+  }
+
   function getSupplierNames() {
     return supplierNames.slice();
   }
@@ -994,6 +1036,7 @@ window.CostCommon = (function () {
     INHOUSE_SUPPLIER_LABEL,
     loadOptions,
     loadSuppliers,
+    renderMissingSupplierAlert,
     getSupplierNames,
     isOutsourceProcess,
     buildSupplierSelectHtml,

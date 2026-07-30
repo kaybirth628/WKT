@@ -271,6 +271,55 @@ class TestCostRecordService(unittest.TestCase):
         self.assertEqual(sel["supplier"], _TEST_SUPPLIER)
         self.assertEqual(sel["suppliers"], [_TEST_SUPPLIER])
 
+    def test_list_missing_bom_suppliers(self) -> None:
+        import json
+
+        self.service.create_record(_sample_payload())
+        self._store.insert(
+            {
+                **_sample_payload(product_part_no="MISS-1"),
+                "process_prices_json": json.dumps(
+                    {
+                        "01": "1.5",
+                        "13": {"price": "3.2", "supplier": "未建档供应商A"},
+                    },
+                    ensure_ascii=False,
+                ),
+                "material_cost": "0",
+                "process_total": "3.2",
+                "unit_cost": "3.2",
+                "quote_price": "0",
+            }
+        )
+        self._store.insert(
+            {
+                **_sample_payload(product_part_no="INH-1"),
+                "process_prices_json": json.dumps(
+                    {
+                        "01": {"price": "1.5", "supplier": "场内不应统计厂"},
+                        "13": {"price": "3.2", "supplier": "未建档供应商A"},
+                    },
+                    ensure_ascii=False,
+                ),
+                "material_cost": "0",
+                "process_total": "3.2",
+                "unit_cost": "3.2",
+                "quote_price": "0",
+            }
+        )
+        with patch(
+            "test_impl.order_management.cost_analysis.record_service.resolve_supplier_name",
+            side_effect=lambda s: (s, "未找到"),
+        ):
+            result = self.service.list_missing_bom_suppliers()
+        names = [item["supplier_name"] for item in result["items"]]
+        self.assertIn("未建档供应商A", names)
+        self.assertNotIn(_TEST_SUPPLIER, names)
+        self.assertNotIn("场内不应统计厂", names)
+        self.assertEqual(result["total_occurrences"], 2)
+        row = next(i for i in result["items"] if i["supplier_name"] == "未建档供应商A")
+        self.assertEqual(row["occurrence_count"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

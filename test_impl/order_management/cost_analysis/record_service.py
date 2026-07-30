@@ -2,11 +2,15 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from typing import List, Optional
 
 from test_impl.order_management.customer_name import customer_names_match
 from test_impl.order_management.order_entry.line_store import LineStore
-from test_impl.order_management.supplier_profile.store import list_profile_suppliers
+from test_impl.order_management.supplier_profile.store import (
+    list_profile_suppliers,
+    resolve_supplier_name,
+)
 
 from .cost_store import CostRecordRow, CostStore, is_unfilled_part_no
 from .models import (
@@ -221,6 +225,42 @@ class CostRecordService:
             customer=customer,
             product_part_no=product_part_no,
         )
+
+    def list_missing_bom_suppliers(self) -> dict:
+        """扫描 BOM 外发工序供应商，返回未在 supplier_profiles 建档且无法解析的名称。"""
+        profile_set = {p.casefold() for p in list_profile_suppliers()}
+        missing: Counter[str] = Counter()
+
+        for record in self._store.list_records():
+            entries = record.process_prices or {}
+            if not isinstance(entries, dict):
+                continue
+            for code, entry in entries.items():
+                code_str = str(code).strip()
+                if code_str == PROCESS_ORDER_KEY or not isinstance(entry, dict):
+                    continue
+                if is_inhouse_process(code_str):
+                    continue
+                _, suppliers = normalize_process_suppliers(entry)
+                for name in suppliers:
+                    if not name or is_inhouse_supplier(name):
+                        continue
+                    if name.casefold() in profile_set:
+                        continue
+                    resolved, _ = resolve_supplier_name(name)
+                    if resolved and resolved.casefold() in profile_set:
+                        continue
+                    missing[name] += 1
+
+        items = [
+            {"supplier_name": name, "occurrence_count": count}
+            for name, count in missing.most_common()
+        ]
+        return {
+            "items": items,
+            "total_distinct": len(items),
+            "total_occurrences": sum(missing.values()),
+        }
 
     def get_record(self, record_id: int) -> CostRecordRow:
         return self._store.get(record_id)

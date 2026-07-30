@@ -6,7 +6,7 @@
   <title>WKT 销售管理系统 · BOM查询</title>
   {% include '_theme_head.html' %}
   <link rel="stylesheet" href="/static/style.css?v=20260729-form-input-unify" />
-  <link rel="stylesheet" href="/static/cost.css?v=20260729-no-copy-popup" />
+  <link rel="stylesheet" href="/static/cost.css?v=20260730-bom-missing-supplier-compact" />
 </head>
 <body>
   <div class="app-layout">
@@ -15,6 +15,7 @@
     <div class="app-main">
       <main class="content-stack cost-stack">
         <h3 class="section-h3 submodule-page-title">BOM查询</h3>
+        <div id="bomMissingSupplierAlert" class="bom-missing-supplier-alert is-hidden" role="alert" aria-live="polite"></div>
         <section class="card list-card" id="costQuerySection">
           <form id="costQueryForm" class="filter-bar filter-bar-compact">
             <label class="cost-filter-field inv-bom-field">
@@ -196,7 +197,7 @@
   <script src="/static/hover_tip.js?v=20260729-no-copy-popup"></script>
   <script src="/static/inventory_bom_lookup.js?v=20260729-bom-supplier-combo"></script>
   <script src="/static/list-col-filter.js?v=20260725-bom-query-seq"></script>
-  <script src="/static/cost_common.js?v=20260729-bom-preview-fix"></script>
-  <script src="/static/cost_query.js?v=20260729-no-copy-popup"></script>
+  <script src="/static/cost_common.js?v=20260730-bom-missing-supplier-compact"></script>
+  <script src="/static/cost_query.js?v=20260730-bom-missing-supplier-compact"></script>
 </body>
 </html>

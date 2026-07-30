@@ -296,12 +296,8 @@ function toggleStageSelection(code) {
   if (idx >= 0) {
     selectedStages.splice(idx, 1);
   } else if (selectedStages.length >= 2) {
-    setMsg("最多选择 2 道工序，请先清除再选", false);
+    setMsg("最多选择 2 项（工序或成品），请先清除再选", false);
     return;
-  } else if (code === "FIN" && selectedStages.length === 1) {
-    selectedStages = ["FIN"];
-  } else if (selectedStages.includes("FIN")) {
-    selectedStages = [code];
   } else {
     selectedStages.push(code);
   }
@@ -352,6 +348,29 @@ function statusSelectHtml(name, selected) {
       .join("") +
     "</select>"
   );
+}
+
+function finishedStatusSelectHtml(name, selected) {
+  const opts = [
+    { value: "finished", label: "成品库存" },
+    { value: "repair", label: "返修在途" },
+  ];
+  return (
+    `<select name="${esc(name)}">` +
+    opts
+      .map((o) => {
+        const sel = o.value === selected ? " selected" : "";
+        return `<option value="${esc(o.value)}"${sel}>${esc(o.label)}</option>`;
+      })
+      .join("") +
+    "</select>"
+  );
+}
+
+function flowEndpointLabel(code) {
+  if (code === "FIN") return "成品库存";
+  const step = routeStep(code);
+  return step ? stepLabel(step) : code;
 }
 
 function renderSingleStageEditPanel(code) {
@@ -416,24 +435,34 @@ function renderSingleFinishedEditPanel() {
 function renderDualFlowEditPanel() {
   const fromCode = selectedStages[0];
   const toCode = selectedStages[1];
-  const fromStep = routeStep(fromCode);
-  const toStep = routeStep(toCode);
-  const fromStage = stageRow(fromCode);
-  const toStage = stageRow(toCode);
-  const fromLabel = fromStep ? stepLabel(fromStep) : fromCode;
-  const toLabel = toStep ? stepLabel(toStep) : toCode;
-  const fromSupplierField = processNeedsSupplier(fromCode)
-    ? `<label class="field inv-inline-field inv-supplier-field">
+  const fromIsFin = fromCode === "FIN";
+  const toIsFin = toCode === "FIN";
+  const fromStep = fromIsFin ? null : routeStep(fromCode);
+  const toStep = toIsFin ? null : routeStep(toCode);
+  const fromStage = fromIsFin ? null : stageRow(fromCode);
+  const toStage = toIsFin ? null : stageRow(toCode);
+  const fromLabel = flowEndpointLabel(fromCode);
+  const toLabel = flowEndpointLabel(toCode);
+  const fromSupplierField =
+    !fromIsFin && processNeedsSupplier(fromCode)
+      ? `<label class="field inv-inline-field inv-supplier-field">
         <span>① 流出供应商</span>
         ${renderSupplierComboHtml("from_supplier_name", "", fromCode)}
       </label>`
-    : "";
-  const toSupplierField = processNeedsSupplier(toCode)
-    ? `<label class="field inv-inline-field inv-supplier-field">
+      : "";
+  const toSupplierField =
+    !toIsFin && processNeedsSupplier(toCode)
+      ? `<label class="field inv-inline-field inv-supplier-field">
         <span>② 流入供应商</span>
         ${renderSupplierComboHtml("to_supplier_name", "", toCode)}
       </label>`
-    : "";
+      : "";
+  const fromCurrentHint = fromIsFin
+    ? `成品 <b>${esc(boardRow?.finished_qty || "0")}</b> / 返修 <b>${esc(boardRow?.finished_repair_qty || "0")}</b>`
+    : `场内 <b>${esc(fromStage?.inhouse_qty || "0")}</b> / 在途 <b>${esc(fromStage?.outsource_qty || "0")}</b> / 返修 <b>${esc(fromStage?.repair_qty || "0")}</b>`;
+  const toCurrentHint = toIsFin
+    ? `成品 <b>${esc(boardRow?.finished_qty || "0")}</b> / 返修 <b>${esc(boardRow?.finished_repair_qty || "0")}</b>`
+    : `场内 <b>${esc(toStage?.inhouse_qty || "0")}</b> / 在途 <b>${esc(toStage?.outsource_qty || "0")}</b> / 返修 <b>${esc(toStage?.repair_qty || "0")}</b>`;
   return `<div class="inv-stage-edit-panel" id="invEditPanel">
     <div class="inv-stage-edit-head">
       <div class="inv-stage-edit-head-main">
@@ -445,12 +474,16 @@ function renderDualFlowEditPanel() {
       ${fromSupplierField}
       <label class="field inv-inline-field">
         <span>① 流出状态</span>
-        ${statusSelectHtml("from_status", "inhouse")}
+        ${fromIsFin ? finishedStatusSelectHtml("from_status", "finished") : statusSelectHtml("from_status", "inhouse")}
       </label>
       ${toSupplierField}
       <label class="field inv-inline-field">
         <span>② 流入状态</span>
-        ${statusSelectHtml("to_status", toStep?.is_outsource ? "outsource" : "inhouse")}
+        ${
+          toIsFin
+            ? finishedStatusSelectHtml("to_status", "finished")
+            : statusSelectHtml("to_status", toStep?.is_outsource ? "outsource" : "inhouse")
+        }
       </label>
       <label class="field inv-inline-field">
         <span>数量 (PCS)</span>
@@ -461,7 +494,7 @@ function renderDualFlowEditPanel() {
         <button type="button" class="btn btn-outline btn-sm" id="invEditCancel">取消</button>
       </div>
     </form>
-    <p class="inv-entry-mode-hint">当前：① 场内 <b>${esc(fromStage?.inhouse_qty || "0")}</b> / 在途 <b>${esc(fromStage?.outsource_qty || "0")}</b> / 返修 <b>${esc(fromStage?.repair_qty || "0")}</b>；② 场内 <b>${esc(toStage?.inhouse_qty || "0")}</b> / 在途 <b>${esc(toStage?.outsource_qty || "0")}</b> / 返修 <b>${esc(toStage?.repair_qty || "0")}</b></p>
+    <p class="inv-entry-mode-hint">当前：① ${fromCurrentHint}；② ${toCurrentHint}</p>
   </div>`;
 }
 
@@ -472,19 +505,12 @@ function renderEditPanelHtml() {
       ? renderSingleFinishedEditPanel()
       : renderSingleStageEditPanel(selectedStages[0]);
   }
-  if (selectedStages.includes("FIN")) {
-    return `<div class="inv-stage-edit-panel"><p class="inv-entry-mode-hint">成品与工序不能同时做双道流转，请只选 2 道工序或单独编辑成品。</p></div>`;
-  }
   return renderDualFlowEditPanel();
 }
 
 function bindEditPanelEvents(host) {
   host.querySelector("#invEditBtn")?.addEventListener("click", async () => {
     if (!selectedStages.length) return;
-    if (selectedStages.length === 2 && selectedStages.includes("FIN")) {
-      setMsg("成品与工序不能同时做双道流转", false);
-      return;
-    }
     await ensureSuppliers();
     editPanelOpen = true;
     renderStations();
@@ -576,12 +602,12 @@ function bindEditPanelEvents(host) {
     const toCombo = form.querySelector('[data-field-id="to_supplier_name"]');
     const fromCode = selectedStages[0];
     const toCode = selectedStages[1];
-    const fromSupplier = processNeedsSupplier(fromCode)
-      ? getSupplierComboValue(fromCombo)
-      : INHOUSE_SUPPLIER_LABEL;
-    const toSupplier = processNeedsSupplier(toCode)
-      ? getSupplierComboValue(toCombo)
-      : INHOUSE_SUPPLIER_LABEL;
+    const fromSupplier = fromCode === "FIN" || !processNeedsSupplier(fromCode)
+      ? INHOUSE_SUPPLIER_LABEL
+      : getSupplierComboValue(fromCombo);
+    const toSupplier = toCode === "FIN" || !processNeedsSupplier(toCode)
+      ? INHOUSE_SUPPLIER_LABEL
+      : getSupplierComboValue(toCombo);
     if (processNeedsSupplier(fromCode) && !fromSupplier) {
       setMsg("请选择①流出供应商", false);
       return;

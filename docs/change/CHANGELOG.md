@@ -33,6 +33,30 @@
 
 ## 变更记录
 
+### CL-0269 · 2026-07-30 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `inventory_entry.js`、`test_inventory.py` |
+| 变更内容 | 库存编辑：允许 **成品库存** 与任意工序做双选 **流转**（含返修回场：成品→上游工序场内/在途/返修）；后端 `stage-flow` 原已支持，解除前端禁止成品+工序组合的限制 |
+| 根因 | — |
+| 防复发 | `test_stage_flow_finished_to_upstream_process`、`test_stage_flow_process_to_finished` |
+| 验证 | 选「成品库存」+ 某工序 → 登记流转 → 成品减、目标工序增 |
+| SOP 同步 | 是 |
+| 关联 | — |
+
+### CL-0268 · 2026-07-30 · 新增（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `record_service.py`、`app.py`、`cost_query.html`、`cost_entry.html`、`cost_common.js`、`cost.css` |
+| 变更内容 | BOM 录入/查询页顶部增加 **供应商档案缺失预警**：扫描全部 BOM 外发工序，列出未在「供应商信息维护」建档且无法解析的供应商名称及引用次数，并提供跳转链接；预警条采用紧凑单行摘要 + 小字号标签 |
+| 根因 | — |
+| 防复发 | `test_list_missing_bom_suppliers` |
+| 验证 | `GET /api/cost/missing-suppliers`；本地 BOM 查询/录入页见黄色预警条 |
+| SOP 同步 | 是 |
+| 关联 | — |
+
 ### CL-0267 · 2026-07-30 · 修复（C）
 
 | 字段 | 内容 |

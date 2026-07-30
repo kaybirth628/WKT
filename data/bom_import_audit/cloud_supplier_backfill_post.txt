@@ -1,0 +1,5 @@
+DB: data/wkt_orders.db
+Mode: DRY-RUN
+Records scanned: 160
+Records updated: 0
+Supplier fields changed: 0

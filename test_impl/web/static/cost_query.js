@@ -504,5 +504,6 @@ CostCommon.loadOptions()
     initQueryFilterCombos();
     queryColFilter.bindHeader();
     applyQueryFromUrl();
+    CostCommon.renderMissingSupplierAlert("bomMissingSupplierAlert");
     return loadRecords();
   });

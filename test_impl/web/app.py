@@ -299,7 +299,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260730-bom-identity-dedupe",
+            "build": "20260730-inv-finished-flow",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -2039,6 +2039,11 @@ def cost_lookup():
         return jsonify(cost_lookup_service.lookup_by_part_no(product_part_no))
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/cost/missing-suppliers", methods=["GET"])
+def cost_missing_suppliers():
+    return jsonify(cost_record_service.list_missing_bom_suppliers())
 
 
 @app.route("/api/reconciliation/config", methods=["GET"])
