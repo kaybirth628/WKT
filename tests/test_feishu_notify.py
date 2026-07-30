@@ -221,13 +221,20 @@ class TestFeishuNotify(unittest.TestCase):
 
     def test_build_deploy_audit_summary(self) -> None:
         s = build_deploy_audit_summary(
-            {"version": "v0.6.0", "build": "old"},
-            {"version": "v0.6.0", "build": "new"},
+            {"version": "v0.6.0", "build": "build-old"},
+            {
+                "version": "v0.6.0",
+                "build": "build-new",
+                "changes": ["CL-0277 · 2026-07-30 · 新增：部署通知"],
+            },
             host_label="云端",
+            triggered_by="Albert",
         )
         self.assertIn("系统部署", s)
-        self.assertIn("old", s)
-        self.assertIn("new", s)
+        self.assertIn("build-old", s)
+        self.assertIn("build-new", s)
+        self.assertIn("CL-0277", s)
+        self.assertIn("Albert", s)
 
     def test_parse_changelog_head(self) -> None:
         sample = """

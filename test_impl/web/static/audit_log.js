@@ -23,6 +23,39 @@
     }
   }
 
+  function deployHoverText(row) {
+    var d = row.detail || {};
+    var lines = [];
+    if (row.summary) lines.push(String(row.summary));
+    if (d.triggered_by) lines.push("推送人：" + d.triggered_by);
+    var prev = d.previous || {};
+    var cur = d.current || {};
+    if (prev.version || cur.version) {
+      lines.push("版本：" + (prev.version || "—") + " → " + (cur.version || "—"));
+    }
+    if (prev.build || cur.build) {
+      lines.push("Build：" + (prev.build || "—") + " → " + (cur.build || "—"));
+    }
+    var changes = d.changes || [];
+    if (changes.length) {
+      lines.push("本次迭代：");
+      changes.forEach(function (item) {
+        lines.push("· " + item);
+      });
+    }
+    return lines.join("\n");
+  }
+
+  function bindSummaryCell(td, row) {
+    if (!td || !window.HoverTip) return;
+    var tip = row.action === "system.deploy" ? deployHoverText(row) : (td.textContent || "").trim();
+    if (!tip) return;
+    if (row.action === "system.deploy" || window.HoverTip.needsTip(td)) {
+      td.dataset.hoverText = tip;
+      window.HoverTip.bind(td);
+    }
+  }
+
   async function loadAudit() {
     var params = new URLSearchParams();
     var mod = document.getElementById("auditModule");
@@ -49,22 +82,15 @@
           "<td>" + esc(row.display_name || row.username) + "</td>" +
           "<td>" + esc(row.module_label || row.module) + "</td>" +
           "<td>" + esc(row.action_label || row.action) + "</td>" +
-          "<td>" + esc(row.summary) + "</td>" +
+          '<td class="audit-summary-cell">' + esc(row.summary) + "</td>" +
           "<td>" + esc(row.ip_address || "—") + "</td>" +
           "</tr>"
         );
       })
       .join("");
-    if (window.HoverTip) {
-      body.querySelectorAll("td:nth-child(5)").forEach(function (td) {
-        var text = (td.textContent || "").trim();
-        if (text && window.HoverTip.needsTip(td)) {
-          td.dataset.hoverText = text;
-          td.classList.add("list-td-text");
-          window.HoverTip.bind(td);
-        }
-      });
-    }
+    body.querySelectorAll("tr").forEach(function (tr, idx) {
+      bindSummaryCell(tr.querySelector("td.audit-summary-cell"), items[idx] || {});
+    });
   }
 
   document.getElementById("auditSearchBtn")?.addEventListener("click", loadAudit);

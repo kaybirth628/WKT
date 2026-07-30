@@ -120,6 +120,11 @@
   min-width: 120px;
 }
 
+.list-card .data-table.list-table#auditTable th.list-th-text,
+.list-card .data-table.list-table#auditTable td.audit-summary-cell {
+  text-align: center;
+}
+
 .section-h4 {
   margin: 0 0 0.75rem;
   font-size: 0.9375rem;

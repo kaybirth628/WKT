@@ -394,9 +394,35 @@ def build_deploy_audit_summary(
     current: Dict[str, Any],
     *,
     host_label: str = "云端",
+    triggered_by: str = "",
+    change_preview_len: int = 48,
 ) -> str:
-    version_line, build_line = format_deploy_transition(previous, current)
-    parts = [f"系统部署（{host_label}）", version_line.replace("版本：", ""), build_line.replace("Build：", "build ")]
+    parts = [f"系统部署（{host_label}）"]
+    prev_v = str((previous or {}).get("version") or "").strip()
+    cur_v = str(current.get("version") or "").strip()
+    if prev_v or cur_v:
+        if prev_v and cur_v and prev_v != cur_v:
+            parts.append(f"版本 {prev_v}→{cur_v}")
+        else:
+            parts.append(f"版本 {cur_v or prev_v}")
+    prev_b = str((previous or {}).get("build") or "").strip()
+    cur_b = str(current.get("build") or "").strip()
+    if prev_b or cur_b:
+        if prev_b and cur_b and prev_b != cur_b:
+            parts.append(f"build {prev_b}→{cur_b}")
+        else:
+            parts.append(f"build {cur_b or prev_b}")
+    changes = current.get("changes") or []
+    if changes:
+        preview = str(changes[0])
+        if len(preview) > change_preview_len:
+            preview = preview[: change_preview_len - 1] + "…"
+        parts.append(preview)
+        if len(changes) > 1:
+            parts.append(f"共{len(changes)}项变更")
+    op = str(triggered_by or "").strip()
+    if op:
+        parts.append(f"推送 {op}")
     return " · ".join(p for p in parts if p)
 
 
@@ -412,7 +438,9 @@ def log_system_deploy_audit(
     from test_impl.auth.service import AuditService
     from test_impl.auth.store import AuthStore
 
-    summary = build_deploy_audit_summary(previous, current, host_label=host_label)
+    summary = build_deploy_audit_summary(
+        previous, current, host_label=host_label, triggered_by=triggered_by
+    )
     triggered_by = str(operator or "deploy").strip() or "deploy"
     store = AuthStore(db_path=deploy_audit_db_path(app_dir))
     audit_user: Dict[str, Any] = {"username": "system", "display_name": "系统管理员"}
