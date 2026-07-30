@@ -34,6 +34,7 @@ def _register_audit_rules() -> None:
     _rule("DELETE", "/api/lines/<int:line_id>", "line.delete", "orders", "删除订单行")
     _rule("POST", "/api/lines/<int:line_id>/ship", "line.ship", "orders", "订单出货")
     _rule("POST", "/api/lines/<int:line_id>/force-close", "line.force_close", "orders", "强制结案")
+    _rule("POST", "/api/lines/force-close-batch", "line.force_close_batch", "orders", "批量强制结案")
     _rule("POST", "/api/lines/batch-ship", "line.batch_ship", "orders", "批量出货")
     _rule("POST", "/api/lines/batch-ship-draft", "line.batch_ship_draft", "orders", "批量出货草稿")
     _rule("POST", "/api/lines/import/preview", "line.import_preview", "orders", "Excel导入预览")

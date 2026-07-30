@@ -33,6 +33,18 @@
 
 ## 变更记录
 
+### CL-0284 · 2026-07-30 · 新增（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `line_service.py`、`app.py`、`app.js`、`index.html`、`flask_integration.py` |
+| 变更内容 | 未结订单支持勾选多条后 **批量结案**；新增 `POST /api/lines/force-close-batch` |
+| 根因 | — |
+| 防复发 | `test_force_close_lines_batch` |
+| 验证 | 勾选 ≥2 条 → 批量结案 → 归入强制结案列表；部分失败时返回 errors |
+| SOP 同步 | 是 |
+| 关联 | — |
+
 ### CL-0283 · 2026-07-30 · 简化（C）
 
 | 字段 | 内容 |

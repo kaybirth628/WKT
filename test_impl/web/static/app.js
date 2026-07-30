@@ -2444,7 +2444,7 @@ function renderOpenSeqCell(ln, idx) {
     return `<td class="list-td-seq">${idx + 1}</td>`;
   }
   const checked = openShipSelectedIds.has(ln.id) ? " checked" : "";
-  return `<td class="list-td-seq open-ship-seq-cell"><label class="open-ship-check-wrap"><input type="checkbox" class="open-ship-check" data-id="${ln.id}" aria-label="选择合并出货"${checked} /><span class="open-ship-seq-num">${idx + 1}</span></label></td>`;
+  return `<td class="list-td-seq open-ship-seq-cell"><label class="open-ship-check-wrap"><input type="checkbox" class="open-ship-check" data-id="${ln.id}" aria-label="选择此行"${checked} /><span class="open-ship-seq-num">${idx + 1}</span></label></td>`;
 }
 
 function renderListActions(ln, viewKey) {
@@ -2649,15 +2649,19 @@ function canBatchShipSelection(lines) {
 
 function updateOpenBatchShipUi() {
   const btn = document.getElementById("openBatchShipBtn");
+  const fcBtn = document.getElementById("openBatchForceCloseBtn");
   const hint = document.getElementById("openBatchShipHint");
   if (!FEATURE_BATCH_SHIP || currentSubmodule !== "open") {
     btn?.classList.add("is-hidden");
+    fcBtn?.classList.add("is-hidden");
     hint?.classList.add("is-hidden");
     return;
   }
   const lines = getOpenShipSelectedLines();
   const n = lines.length;
   if (n >= 2) {
+    fcBtn?.classList.remove("is-hidden");
+    if (fcBtn) fcBtn.textContent = `批量结案（${n} 条）`;
     const check = canBatchShipSelection(lines);
     if (check.ok) {
       btn?.classList.remove("is-hidden");
@@ -2672,6 +2676,7 @@ function updateOpenBatchShipUi() {
     }
   } else {
     btn?.classList.add("is-hidden");
+    fcBtn?.classList.add("is-hidden");
     hint?.classList.add("is-hidden");
   }
 }
@@ -3107,6 +3112,9 @@ function bindShipDnModal() {
   document.getElementById("openBatchShipBtn")?.addEventListener("click", () => {
     openBatchShipModal();
   });
+  document.getElementById("openBatchForceCloseBtn")?.addEventListener("click", () => {
+    forceCloseOpenLinesBatch(getOpenShipSelectedLines());
+  });
   document.getElementById("shipDnCancel")?.addEventListener("click", closeShipDnModal);
   document.getElementById("shipDnConfirm")?.addEventListener("click", confirmShipFromModal);
   document.getElementById("shipDnBackdrop")?.addEventListener("click", (e) => {
@@ -3158,6 +3166,54 @@ async function forceCloseOpenLine(lineId, ln) {
   }
   openShipSelectedIds.delete(lineId);
   showListMsg("✓ 已强制结案，该料号已归入「强制结案订单」", true);
+  await loadLines();
+}
+
+function buildForceCloseBatchConfirmMsg(lines) {
+  const preview = lines
+    .slice(0, 8)
+    .map((ln) => {
+      const openDisp = calcOpenDisplay(ln.po_qty, ln.shipped_qty);
+      return `· ${ln.customer || "—"} / ${ln.order_no || "—"} / ${ln.product_spec || "—"}（未结 ${openDisp}）`;
+    })
+    .join("\n");
+  const more = lines.length > 8 ? `\n… 共 ${lines.length} 条` : "";
+  return (
+    `确认对以下 ${lines.length} 条料号强制结案？\n\n${preview}${more}\n\n` +
+    "强制结案不记出货、不纳入对账，将归入「强制结案订单」。"
+  );
+}
+
+async function forceCloseOpenLinesBatch(lines) {
+  if (!lines || lines.length < 2) {
+    alert("请至少勾选两条料号");
+    return;
+  }
+  if (!confirm(buildForceCloseBatchConfirmMsg(lines))) return;
+  const lineIds = lines.map((ln) => ln.id);
+  const res = await fetch("/api/lines/force-close-batch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ line_ids: lineIds }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.error || "批量强制结案失败");
+    return;
+  }
+  const closedIds = new Set((data.closed || []).map((ln) => ln.id));
+  closedIds.forEach((id) => openShipSelectedIds.delete(id));
+  const closedCount = data.closed_count != null ? data.closed_count : closedIds.size;
+  const errCount = Array.isArray(data.errors) ? data.errors.length : 0;
+  let msg = `✓ 已强制结案 ${closedCount} 条料号，已归入「强制结案订单」`;
+  if (errCount) {
+    const errPreview = data.errors
+      .slice(0, 3)
+      .map((e) => `#${e.line_id}：${e.error}`)
+      .join("；");
+    msg += `\n${errCount} 条失败：${errPreview}${errCount > 3 ? "…" : ""}`;
+  }
+  showListMsg(msg, !errCount);
   await loadLines();
 }
 

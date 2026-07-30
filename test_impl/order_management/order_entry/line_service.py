@@ -416,6 +416,23 @@ class OrderLineService:
             raise ValueError("未结已为 0，请查看正常结案订单")
         return self._store.set_force_closed(line_id)
 
+    def force_close_lines_batch(
+        self, line_ids: list[int]
+    ) -> tuple[list[OrderLine], list[dict]]:
+        """批量强制结案：逐条处理，成功与失败分别返回。"""
+        closed: list[OrderLine] = []
+        errors: list[dict] = []
+        seen: set[int] = set()
+        for line_id in line_ids:
+            if line_id in seen:
+                continue
+            seen.add(line_id)
+            try:
+                closed.append(self.force_close_line(line_id))
+            except ValueError as exc:
+                errors.append({"line_id": line_id, "error": str(exc)})
+        return closed, errors
+
     def get_shipment_event(self, event_id: int):
         return self._store.get_shipment_event(event_id)
 

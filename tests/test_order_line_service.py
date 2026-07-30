@@ -425,6 +425,52 @@ class TestOrderLineService(unittest.TestCase):
         self.assertEqual(forced_rows[0].id, line.id)
         self.assertEqual(len(self.svc.list_shipment_events()), 0)
 
+    def test_force_close_lines_batch(self) -> None:
+        line1 = self.svc.create_line(
+            {
+                "customer": "批量结案A",
+                "order_date": "2026-05-30",
+                "order_no": "PO-FCB1",
+                "product_spec": "件B1",
+                "po_qty": "100",
+                "shipped_qty": "10",
+            }
+        )
+        line2 = self.svc.create_line(
+            {
+                "customer": "批量结案B",
+                "order_date": "2026-05-30",
+                "order_no": "PO-FCB2",
+                "product_spec": "件B2",
+                "po_qty": "50",
+                "shipped_qty": "0",
+            }
+        )
+        closed, errors = self.svc.force_close_lines_batch([line1.id, line2.id, line1.id])
+        self.assertEqual(errors, [])
+        self.assertEqual(len(closed), 2)
+        self.assertEqual(len(self.svc.list_lines(view="open")), 0)
+        forced_rows = self.svc.list_lines(view="closed_forced")
+        self.assertEqual(len(forced_rows), 2)
+        ids = {ln.id for ln in forced_rows}
+        self.assertEqual(ids, {line1.id, line2.id})
+
+    def test_force_close_lines_batch_partial_error(self) -> None:
+        line = self.svc.create_line(
+            {
+                "customer": "批量结案C",
+                "order_date": "2026-05-30",
+                "order_no": "PO-FCB3",
+                "product_spec": "件B3",
+                "po_qty": "20",
+                "shipped_qty": "0",
+            }
+        )
+        self.svc.force_close_line(line.id)
+        closed, errors = self.svc.force_close_lines_batch([line.id, 99999])
+        self.assertEqual(closed, [])
+        self.assertEqual(len(errors), 2)
+
     def test_reverse_shipment_event_returns_to_open(self) -> None:
         line = self.svc.create_line(
             {

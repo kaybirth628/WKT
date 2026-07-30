@@ -299,7 +299,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260730-inv-simple-set",
+            "build": "20260730-batch-force-close",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -316,6 +316,7 @@ def api_health():
                 "ship_delivery_confirm",
                 "batch_ship_merge",
                 "force_close",
+                "batch_force_close",
                 "feishu_notify",
                 "ai_db_assistant",
                 "ai_business_memory",
@@ -999,6 +1000,36 @@ def force_close_line(line_id: int):
         return jsonify(payload)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+
+@app.route("/api/lines/force-close-batch", methods=["POST"])
+def force_close_lines_batch():
+    """未结订单批量强制结案：不记出货、不纳入对账。"""
+    data = request.get_json(force=True) or {}
+    raw_ids = data.get("line_ids")
+    if not isinstance(raw_ids, list) or len(raw_ids) < 1:
+        return jsonify({"error": "请至少选择一条料号"}), 400
+    try:
+        line_ids = [int(x) for x in raw_ids]
+    except (TypeError, ValueError):
+        return jsonify({"error": "line_ids 格式无效"}), 400
+    closed, errors = line_service.force_close_lines_batch(line_ids)
+    if not closed:
+        err_msg = errors[0]["error"] if errors else "强制结案失败"
+        return jsonify({"error": err_msg, "errors": errors}), 400
+    payloads = []
+    for line in closed:
+        payload = _line_to_dict(line)
+        payload["force_closed"] = True
+        payloads.append(payload)
+    return jsonify(
+        {
+            "ok": True,
+            "closed": payloads,
+            "closed_count": len(closed),
+            "errors": errors,
+        }
+    )
 
 
 @app.route("/delivery-note/ship-confirm")
