@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -253,14 +254,38 @@ def notify_audit_action(
     feishu_notifier.notify_async(text, event="audit_action")
 
 
+
+_CL_TITLE_RE = re.compile(r"^(CL-\d+)\s*·\s*(\d{4}-\d{2}-\d{2})\s*·\s*(.+)$")
+_CL_NUM_RE = re.compile(r"CL-(\d+)")
+
+
 def parse_version_from_markdown(text: str) -> str:
     m = re.search(r"\*\*(v[\d.]+)\*\*", text)
     return m.group(1) if m else ""
 
 
-def parse_changelog_head(text: str, *, limit: int = 8) -> List[str]:
-    entries: List[str] = []
-    title_re = re.compile(r"^(CL-\d+)\s*·\s*(\d{4}-\d{2}-\d{2})\s*·\s*(.+)$")
+@dataclass
+class ChangelogEntry:
+    cl_id: str
+    cl_num: int
+    kind: str
+    body: str
+
+    def format_line(self) -> str:
+        if self.body and self.kind:
+            return f"[{self.kind}] {self.cl_id}：{self.body}"
+        if self.body:
+            return f"{self.cl_id}：{self.body}"
+        return self.cl_id
+
+
+def cl_number(cl_id: str) -> int:
+    m = _CL_NUM_RE.search(str(cl_id or ""))
+    return int(m.group(1)) if m else 0
+
+
+def parse_changelog_entries(text: str, *, limit: int = 50) -> List[ChangelogEntry]:
+    entries: List[ChangelogEntry] = []
     for block in re.split(r"\n(?=### CL-)", text):
         block = block.strip()
         if not block.startswith("### CL-"):
@@ -268,18 +293,53 @@ def parse_changelog_head(text: str, *, limit: int = 8) -> List[str]:
         lines = block.splitlines()
         title = lines[0].replace("### ", "").strip()
         body = _extract_cl_change_body(lines[1:])
-        m = title_re.match(title)
-        if m and body:
-            cl_id = m.group(1)
-            kind = _normalize_cl_kind(m.group(3))
-            entries.append(f"[{kind}] {cl_id}：{body}")
-        elif body:
-            entries.append(f"{title}：{body}")
-        else:
-            entries.append(title)
+        m = _CL_TITLE_RE.match(title)
+        if not m:
+            continue
+        cl_id = m.group(1)
+        entries.append(
+            ChangelogEntry(
+                cl_id=cl_id,
+                cl_num=cl_number(cl_id),
+                kind=_normalize_cl_kind(m.group(3)),
+                body=body,
+            )
+        )
         if len(entries) >= limit:
             break
     return entries
+
+
+def deploy_delta_from_entries(
+    entries: List[ChangelogEntry],
+    *,
+    since_cl: str = "",
+) -> tuple[List[str], str, str, str]:
+    """返回 (变更行, prev_cl, top_cl, cl_transition)。"""
+    top_cl = entries[0].cl_id if entries else ""
+    since = str(since_cl or "").strip()
+    since_num = cl_number(since)
+    if since_num > 0:
+        delta = sorted((e for e in entries if e.cl_num > since_num), key=lambda e: e.cl_num)
+    elif entries:
+        delta = [entries[0]]
+    else:
+        delta = []
+    changes = [e.format_line() for e in delta]
+    if since and top_cl:
+        if since != top_cl:
+            cl_transition = f"{since}→{top_cl}"
+        else:
+            cl_transition = f"{top_cl}（build 迭代）"
+    elif top_cl:
+        cl_transition = top_cl
+    else:
+        cl_transition = ""
+    return changes, since, top_cl, cl_transition
+
+
+def parse_changelog_head(text: str, *, limit: int = 8) -> List[str]:
+    return [e.format_line() for e in parse_changelog_entries(text, limit=limit)]
 
 
 def _normalize_cl_kind(raw: str) -> str:
@@ -328,21 +388,50 @@ def read_deploy_version(app_dir: Path) -> str:
     return ""
 
 
-def collect_deploy_summary(app_dir: Path, *, changelog_limit: int = 8) -> Dict[str, Any]:
-    info_dir = app_dir / "deploy-info"
-    version = ""
-    version_file = info_dir / "VERSION.md"
-    if version_file.is_file():
-        version = parse_version_from_markdown(version_file.read_text(encoding="utf-8"))
-    changelog_file = info_dir / "CHANGELOG.md"
-    changes: List[str] = []
-    if changelog_file.is_file():
-        changes = parse_changelog_head(changelog_file.read_text(encoding="utf-8"), limit=changelog_limit)
+def read_deploy_changelog_text(app_dir: Path) -> str:
+    changelog_file = app_dir / "deploy-info" / "CHANGELOG.md"
+    if not changelog_file.is_file():
+        return ""
+    return changelog_file.read_text(encoding="utf-8")
+
+
+def collect_deploy_delta(app_dir: Path, *, since_cl: str = "", changelog_limit: int = 50) -> Dict[str, Any]:
+    """相对上次已部署 CL（top_cl）计算本次增量。"""
+    entries = parse_changelog_entries(read_deploy_changelog_text(app_dir), limit=changelog_limit)
+    changes, prev_cl, top_cl, cl_transition = deploy_delta_from_entries(entries, since_cl=since_cl)
     return {
-        "version": version,
+        "version": read_deploy_version(app_dir),
         "build": read_deploy_build(app_dir),
+        "top_cl": top_cl,
+        "prev_cl": prev_cl,
+        "cl_transition": cl_transition,
         "changes": changes,
     }
+
+
+def collect_deploy_summary(app_dir: Path, *, changelog_limit: int = 8) -> Dict[str, Any]:
+    return collect_deploy_delta(app_dir, since_cl="", changelog_limit=changelog_limit)
+
+
+def capture_pre_deploy_snapshot(app_dir: Path) -> Dict[str, Any]:
+    """部署合并前写入当前云端 version/build 与上次已部署 CL。"""
+    import json
+
+    last = _read_snapshot_file(last_deploy_snapshot_path(app_dir)) or {}
+    top_cl = str(last.get("top_cl") or "").strip()
+    if not top_cl:
+        entries = parse_changelog_entries(read_deploy_changelog_text(app_dir), limit=1)
+        top_cl = entries[0].cl_id if entries else ""
+    summary = {
+        "version": read_deploy_version(app_dir),
+        "build": read_deploy_build(app_dir),
+        "top_cl": top_cl,
+        "captured_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    }
+    path = pre_deploy_snapshot_path(app_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return summary
 
 
 def pre_deploy_snapshot_path(app_dir: Path) -> Path:
@@ -371,18 +460,6 @@ def deploy_audit_db_path(app_dir: Path) -> Path:
     return app_dir / "data" / "wkt_orders.db"
 
 
-def capture_pre_deploy_snapshot(app_dir: Path) -> Dict[str, Any]:
-    """部署合并前写入当前云端版本/build（供部署后对比）。"""
-    import json
-
-    summary = collect_deploy_summary(app_dir)
-    summary["captured_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    path = pre_deploy_snapshot_path(app_dir)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return summary
-
-
 def load_pre_deploy_snapshot(app_dir: Path) -> Optional[Dict[str, Any]]:
     for path in (
         pre_deploy_snapshot_path(app_dir),
@@ -407,6 +484,7 @@ def save_last_deploy_snapshot(app_dir: Path, summary: Dict[str, Any]) -> None:
     payload = {
         "version": summary.get("version") or "",
         "build": summary.get("build") or "",
+        "top_cl": summary.get("top_cl") or "",
         "deployed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
     }
     path = last_deploy_snapshot_path(app_dir)
@@ -433,40 +511,14 @@ def format_deploy_transition(
 
 
 def build_deploy_audit_summary(
-    previous: Optional[Dict[str, Any]],
     current: Dict[str, Any],
     *,
     host_label: str = "云端",
-    triggered_by: str = "",
-    change_preview_len: int = 48,
 ) -> str:
-    parts = [f"系统部署（{host_label}）"]
-    prev_v = str((previous or {}).get("version") or "").strip()
-    cur_v = str(current.get("version") or "").strip()
-    if prev_v or cur_v:
-        if prev_v and cur_v and prev_v != cur_v:
-            parts.append(f"版本 {prev_v}→{cur_v}")
-        else:
-            parts.append(f"版本 {cur_v or prev_v}")
-    prev_b = str((previous or {}).get("build") or "").strip()
-    cur_b = str(current.get("build") or "").strip()
-    if prev_b or cur_b:
-        if prev_b and cur_b and prev_b != cur_b:
-            parts.append(f"build {prev_b}→{cur_b}")
-        else:
-            parts.append(f"build {cur_b or prev_b}")
-    changes = current.get("changes") or []
-    if changes:
-        preview = str(changes[0])
-        if len(preview) > change_preview_len:
-            preview = preview[: change_preview_len - 1] + "…"
-        parts.append(preview)
-        if len(changes) > 1:
-            parts.append(f"共{len(changes)}项变更")
-    op = str(triggered_by or "").strip()
-    if op:
-        parts.append(f"推送 {op}")
-    return " · ".join(p for p in parts if p)
+    cl_transition = str(current.get("cl_transition") or "").strip()
+    if cl_transition:
+        return f"系统部署（{host_label}）· {cl_transition}"
+    return f"系统部署（{host_label}）"
 
 
 def log_system_deploy_audit(
@@ -481,10 +533,8 @@ def log_system_deploy_audit(
     from test_impl.auth.service import AuditService
     from test_impl.auth.store import AuthStore
 
-    summary = build_deploy_audit_summary(
-        previous, current, host_label=host_label, triggered_by=triggered_by
-    )
     triggered_by = str(operator or "deploy").strip() or "deploy"
+    summary = build_deploy_audit_summary(current, host_label=host_label)
     store = AuthStore(db_path=deploy_audit_db_path(app_dir))
     audit_user: Dict[str, Any] = {"username": "system", "display_name": "系统管理员"}
     for user in store.list_users():
@@ -503,13 +553,16 @@ def log_system_deploy_audit(
             detail={
                 "host": host_label,
                 "triggered_by": triggered_by,
+                "cl_transition": current.get("cl_transition") or "",
                 "previous": {
                     "version": (previous or {}).get("version") or "",
                     "build": (previous or {}).get("build") or "",
+                    "top_cl": (previous or {}).get("top_cl") or "",
                 },
                 "current": {
                     "version": current.get("version") or "",
                     "build": current.get("build") or "",
+                    "top_cl": current.get("top_cl") or "",
                 },
                 "changes": current.get("changes") or [],
             },
@@ -525,6 +578,9 @@ def notify_system_deploy(
     build: str = "",
     prev_version: str = "",
     prev_build: str = "",
+    prev_top_cl: str = "",
+    top_cl: str = "",
+    cl_transition: str = "",
     changes: Optional[List[str]] = None,
     host_label: str = "云端",
     operator: str = "",
@@ -532,13 +588,16 @@ def notify_system_deploy(
 ) -> bool:
     """系统迭代部署完成后推送版本与变更摘要。deploy 脚本须 sync=True 以免进程退出前未发完。"""
     previous = (
-        {"version": prev_version, "build": prev_build}
-        if (prev_version or prev_build)
+        {"version": prev_version, "build": prev_build, "top_cl": prev_top_cl}
+        if (prev_version or prev_build or prev_top_cl)
         else None
     )
-    current = {"version": version, "build": build}
+    current = {"version": version, "build": build, "top_cl": top_cl}
     version_line, build_line = format_deploy_transition(previous, current)
     lines = [version_line, build_line, f"环境：{host_label}"]
+    cl_line = str(cl_transition or "").strip()
+    if cl_line:
+        lines.append(f"CL：{cl_line.replace('→', ' → ')}")
     op = str(operator or "").strip()
     if op:
         lines.append(f"推送人：{op}")
@@ -546,6 +605,8 @@ def notify_system_deploy(
     if items:
         lines.append("本次更新：")
         lines.extend(f"· {item}" for item in items)
+    elif cl_line.endswith("（build 迭代）"):
+        lines.append("本次更新：（仅 build 迭代，无新 CL）")
     else:
         lines.append("本次更新：见 CHANGELOG（deploy-info 未打包时仅显示 build）")
     text = f"【{_app_title()} · 系统更新】\n时间：{_now_str()}\n" + "\n".join(lines)

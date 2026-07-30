@@ -14,11 +14,13 @@ from test_impl.integrations.feishu import (
 )
 from test_impl.integrations.wkt_events import (
     build_deploy_audit_summary,
+    deploy_delta_from_entries,
     format_deploy_transition,
     notify_audit_action,
     notify_inventory_movement,
     notify_line_shipped,
     notify_system_deploy,
+    parse_changelog_entries,
     parse_changelog_head,
     parse_version_from_markdown,
 )
@@ -176,7 +178,10 @@ class TestFeishuNotify(unittest.TestCase):
             build="20260730-deploy-notify",
             prev_version="v0.6.0",
             prev_build="20260728-old-build",
-            changes=["[修复] CL-0278：部署飞书改同步发送"],
+            prev_top_cl="CL-0279",
+            top_cl="CL-0280",
+            cl_transition="CL-0279→CL-0280",
+            changes=["[修复] CL-0280：部署飞书改同步发送"],
             host_label="云端",
             operator="Albert",
             sync=True,
@@ -195,7 +200,10 @@ class TestFeishuNotify(unittest.TestCase):
             build="20260730-deploy-notify",
             prev_version="v0.6.0",
             prev_build="20260728-old-build",
-            changes=["[修复] CL-0278：部署飞书改同步发送"],
+            prev_top_cl="CL-0279",
+            top_cl="CL-0280",
+            cl_transition="CL-0279→CL-0280",
+            changes=["[修复] CL-0280：部署飞书改同步发送"],
             host_label="云端",
             operator="Albert",
         )
@@ -207,8 +215,40 @@ class TestFeishuNotify(unittest.TestCase):
         self.assertIn("20260730-deploy-notify", text)
         self.assertIn("→", text)
         self.assertIn("Albert", text)
-        self.assertIn("CL-0278", text)
+        self.assertIn("CL-0279", text)
+        self.assertIn("CL-0280", text)
         self.assertIn("同步发送", text)
+
+    def test_deploy_delta_since_cl(self) -> None:
+        sample = """
+### CL-0280 · 2026-07-30 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 变更内容 | 仅推送增量 CL |
+
+### CL-0279 · 2026-07-30 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 变更内容 | 摘要居中 |
+
+### CL-0278 · 2026-07-30 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 变更内容 | 飞书同步 |
+"""
+        entries = parse_changelog_entries(sample)
+        changes, prev_cl, top_cl, cl_transition = deploy_delta_from_entries(
+            entries, since_cl="CL-0279"
+        )
+        self.assertEqual(prev_cl, "CL-0279")
+        self.assertEqual(top_cl, "CL-0280")
+        self.assertEqual(cl_transition, "CL-0279→CL-0280")
+        self.assertEqual(len(changes), 1)
+        self.assertIn("CL-0280", changes[0])
+        self.assertIn("增量 CL", changes[0])
 
     def test_format_deploy_transition(self) -> None:
         v_line, b_line = format_deploy_transition(
@@ -227,21 +267,8 @@ class TestFeishuNotify(unittest.TestCase):
         self.assertIn("build-old → build-new", same_b)
 
     def test_build_deploy_audit_summary(self) -> None:
-        s = build_deploy_audit_summary(
-            {"version": "v0.6.0", "build": "build-old"},
-            {
-                "version": "v0.6.0",
-                "build": "build-new",
-                "changes": ["CL-0277 · 2026-07-30 · 新增：部署通知"],
-            },
-            host_label="云端",
-            triggered_by="Albert",
-        )
-        self.assertIn("系统部署", s)
-        self.assertIn("build-old", s)
-        self.assertIn("build-new", s)
-        self.assertIn("CL-0277", s)
-        self.assertIn("Albert", s)
+        s = build_deploy_audit_summary({"cl_transition": "CL-0279→CL-0280"}, host_label="云端")
+        self.assertEqual(s, "系统部署（云端）· CL-0279→CL-0280")
 
     def test_parse_changelog_head(self) -> None:
         bullet = """

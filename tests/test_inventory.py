@@ -489,6 +489,60 @@ class TestInventoryService(unittest.TestCase):
         self.assertGreaterEqual(len(adjust_rows), 3)
         self.assertIn("场内自制", adjust_rows[0]["note"])
 
+    def test_set_outsource_per_supplier_target(self) -> None:
+        self.inv.inject_balances(
+            _PART,
+            [
+                {
+                    "process_code": "02",
+                    "status": STATUS_OUTSOURCE,
+                    "supplier_name": _SUPPLIER,
+                    "qty": "8088",
+                }
+            ],
+            note="test setup",
+        )
+        alt = "备用外协厂"
+        with patch(
+            "test_impl.order_management.cost_analysis.record_service.list_profile_suppliers",
+            return_value=[_SUPPLIER, alt],
+        ):
+            self.inv.set_stage_buckets(_PART, "02", outsource_qty="50", supplier_name=_SUPPLIER)
+        self.assertEqual(
+            self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("50")
+        )
+        with patch(
+            "test_impl.order_management.cost_analysis.record_service.list_profile_suppliers",
+            return_value=[_SUPPLIER, alt],
+        ):
+            self.inv.set_stage_buckets(_PART, "02", outsource_qty="30", supplier_name=alt)
+        self.assertEqual(
+            self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, alt), Decimal("30")
+        )
+        self.assertEqual(
+            self.inv.store.get_qty(_PART, "02", STATUS_OUTSOURCE, _SUPPLIER), Decimal("50")
+        )
+
+    def test_set_inhouse_only_leaves_outsource_unchanged(self) -> None:
+        self.inv.inject_balances(
+            _PART,
+            [
+                {"process_code": "01", "status": STATUS_INHOUSE, "qty": "1000"},
+                {
+                    "process_code": "02",
+                    "status": STATUS_OUTSOURCE,
+                    "supplier_name": _SUPPLIER,
+                    "qty": "8088",
+                },
+            ],
+            note="test setup",
+        )
+        self.inv.set_stage_buckets(_PART, "01", inhouse_qty="0")
+        self.assertEqual(self.inv.store.get_qty(_PART, "01", STATUS_INHOUSE), Decimal("0"))
+        board = self.inv.board(product_part_no=_PART)[0]
+        stage02 = next(s for s in board["stages"] if s["process_code"] == "02")
+        self.assertEqual(Decimal(stage02["outsource_qty"]), Decimal("8088"))
+
     def test_set_stage_buckets_noop_raises(self) -> None:
         self.inv.inbound(_PART, "01", "50")
         with self.assertRaises(ValueError) as ctx:

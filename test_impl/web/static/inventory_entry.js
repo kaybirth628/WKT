@@ -117,6 +117,33 @@ function processNeedsSupplier(code) {
   return !!(step && step.is_outsource);
 }
 
+function outsourceQtyForSupplier(stage, supplier) {
+  if (!stage) return "0";
+  const key = (supplier || "").trim();
+  const row = (stage.suppliers || []).find(
+    (s) => (s.supplier_name || "").trim() === key
+  );
+  if (row) return String(row.qty ?? "0");
+  return "0";
+}
+
+function defaultOutsourceSupplier(stage, code) {
+  const step = routeStep(code);
+  return (step?.supplier || (step?.suppliers || [])[0] || "").trim();
+}
+
+function syncOutsourceQtyFromSupplier(combo) {
+  const form = document.getElementById("invSingleEditForm");
+  if (!form || !combo || !combo.closest("#invSingleEditForm")) return;
+  const code = selectedStages[0];
+  const stage = stageRow(code);
+  if (!stage || !processNeedsSupplier(code)) return;
+  const input = form.querySelector('input[name="outsource_qty"]');
+  if (!input) return;
+  const supplier = getSupplierComboValue(combo);
+  input.value = outsourceQtyForSupplier(stage, supplier);
+}
+
 function renderSupplierFieldHtml(fieldId, processCode) {
   if (!processNeedsSupplier(processCode)) return "";
   return `<label class="field inv-inline-field inv-supplier-field">
@@ -260,6 +287,7 @@ function bindSupplierCombos(root) {
       if (!opt) return;
       e.preventDefault();
       setSupplierComboValue(combo, opt.dataset.value || "");
+      syncOutsourceQtyFromSupplier(combo);
     });
 
     combo.addEventListener("click", (e) => e.stopPropagation());
@@ -377,12 +405,17 @@ function renderSingleStageEditPanel(code) {
   const stage = stageRow(code);
   const step = routeStep(code);
   const label = step ? stepLabel(step) : code;
+  const needsSup = processNeedsSupplier(code);
+  const defaultSup = needsSup ? defaultOutsourceSupplier(stage, code) : "";
+  const outsourceVal = needsSup
+    ? outsourceQtyForSupplier(stage, defaultSup)
+    : stage?.outsource_qty || "0";
   const supplierField = renderSupplierFieldHtml("supplier_name", code);
   return `<div class="inv-stage-edit-panel" id="invEditPanel">
     <div class="inv-stage-edit-head">
       <div class="inv-stage-edit-head-main">
         <span class="inv-stage-edit-title">编辑 ${esc(label)}</span>
-        <span class="inv-flow-current-inline">当前：场内库存 <b>${esc(stage?.inhouse_qty || "0")}</b> · 在途库存 <b>${esc(stage?.outsource_qty || "0")}</b> · 返修 <b>${esc(stage?.repair_qty || "0")}</b></span>
+        <span class="inv-flow-current-inline">填写目标数量，保存后直接变为该数字（在途按所选供应商）</span>
       </div>
     </div>
     <form id="invSingleEditForm" class="inv-submit-row">
@@ -392,8 +425,8 @@ function renderSingleStageEditPanel(code) {
         <input name="inhouse_qty" type="number" step="0.1" min="0" value="${esc(stage?.inhouse_qty || "0")}" required />
       </label>
       <label class="field inv-inline-field">
-        <span>在途库存 (PCS)</span>
-        <input name="outsource_qty" type="number" step="0.1" min="0" value="${esc(stage?.outsource_qty || "0")}" required />
+        <span>${needsSup ? "在途 (所选供应商, PCS)" : "在途 (PCS)"}</span>
+        <input name="outsource_qty" type="number" step="0.1" min="0" value="${esc(outsourceVal)}" required />
       </label>
       <label class="field inv-inline-field">
         <span>返修 (PCS)</span>
@@ -539,13 +572,19 @@ function bindEditPanelEvents(host) {
     let url;
     if (code === "FIN") {
       url = "/api/inventory/stage-set";
-      payload = {
-        product_part_no: part,
-        process_code: "FIN",
-        finished_qty: form.finished_qty.value,
-        finished_repair_qty: form.finished_repair_qty.value,
-      };
+      payload = { product_part_no: part, process_code: "FIN" };
+      if (form.finished_qty.value !== String(boardRow?.finished_qty || "0")) {
+        payload.finished_qty = form.finished_qty.value;
+      }
+      if (form.finished_repair_qty.value !== String(boardRow?.finished_repair_qty || "0")) {
+        payload.finished_repair_qty = form.finished_repair_qty.value;
+      }
+      if (Object.keys(payload).length <= 2) {
+        setMsg("数量未变更，请修改至少一项", false);
+        return;
+      }
     } else {
+      const stage = stageRow(code);
       const combo = form.querySelector(".inv-supplier-combo");
       let supplier = combo ? getSupplierComboValue(combo) : "";
       if (processNeedsSupplier(code)) {
@@ -560,11 +599,24 @@ function bindEditPanelEvents(host) {
       payload = {
         product_part_no: part,
         process_code: code,
-        inhouse_qty: form.inhouse_qty.value,
-        outsource_qty: form.outsource_qty.value,
-        repair_qty: form.repair_qty.value,
         supplier_name: supplier,
       };
+      if (form.inhouse_qty.value !== String(stage?.inhouse_qty || "0")) {
+        payload.inhouse_qty = form.inhouse_qty.value;
+      }
+      if (form.repair_qty.value !== String(stage?.repair_qty || "0")) {
+        payload.repair_qty = form.repair_qty.value;
+      }
+      const origOutsource = processNeedsSupplier(code)
+        ? outsourceQtyForSupplier(stage, supplier)
+        : String(stage?.outsource_qty || "0");
+      if (form.outsource_qty.value !== origOutsource) {
+        payload.outsource_qty = form.outsource_qty.value;
+      }
+      if (Object.keys(payload).length <= 2) {
+        setMsg("数量未变更，请修改至少一项", false);
+        return;
+      }
     }
     setMsg("保存中…", true);
     try {
@@ -650,6 +702,17 @@ function bindEditPanelEvents(host) {
   });
 
   bindSupplierCombos(host);
+  const editForm = host.querySelector("#invSingleEditForm");
+  if (editForm && selectedStages.length === 1 && selectedStages[0] !== "FIN") {
+    const code = selectedStages[0];
+    const stage = stageRow(code);
+    const combo = editForm.querySelector(".inv-supplier-combo");
+    if (combo && processNeedsSupplier(code)) {
+      const defaultSup = defaultOutsourceSupplier(stage, code);
+      setSupplierComboValue(combo, defaultSup);
+      syncOutsourceQtyFromSupplier(combo);
+    }
+  }
 }
 
 function renderStations() {

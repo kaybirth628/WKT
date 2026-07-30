@@ -135,8 +135,14 @@ class AuthTests(unittest.TestCase):
 
         log_system_deploy_audit(
             app_dir,
-            previous={"version": "v0.6.0", "build": "build-old"},
-            current={"version": "v0.6.0", "build": "build-new", "changes": ["CL-0277 · test"]},
+            previous={"version": "v0.6.0", "build": "build-old", "top_cl": "CL-0279"},
+            current={
+                "version": "v0.6.0",
+                "build": "build-new",
+                "top_cl": "CL-0280",
+                "cl_transition": "CL-0279→CL-0280",
+                "changes": ["[修复] CL-0280：测试"],
+            },
             operator="Albert",
             host_label="云端",
         )
@@ -148,8 +154,7 @@ class AuthTests(unittest.TestCase):
         self.assertEqual(item["action"], "system.deploy")
         self.assertEqual(action_label("system.deploy"), "系统部署")
         self.assertEqual(module_label("system"), "系统")
-        self.assertIn("build-old", item["summary"])
-        self.assertIn("build-new", item["summary"])
+        self.assertIn("CL-0279→CL-0280", item["summary"])
         self.assertEqual(item["display_name"], "系统管理员")
         deploy_store.close()
 

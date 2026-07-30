@@ -26,10 +26,14 @@
   function deployHoverText(row) {
     var d = row.detail || {};
     var lines = [];
-    if (row.summary) lines.push(String(row.summary));
+    var clTrans = d.cl_transition || row.summary || "";
+    if (clTrans) lines.push(String(clTrans));
     if (d.triggered_by) lines.push("推送人：" + d.triggered_by);
     var prev = d.previous || {};
     var cur = d.current || {};
+    if (prev.top_cl || cur.top_cl) {
+      lines.push("CL：" + (prev.top_cl || "—") + " → " + (cur.top_cl || "—"));
+    }
     if (prev.version || cur.version) {
       lines.push("版本：" + (prev.version || "—") + " → " + (cur.version || "—"));
     }

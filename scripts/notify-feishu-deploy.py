@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from test_impl.integrations.wkt_events import (
-    collect_deploy_summary,
+    collect_deploy_delta,
     load_pre_deploy_snapshot,
     log_system_deploy_audit,
     notify_system_deploy,
@@ -33,19 +33,23 @@ def main() -> int:
         default="",
         help="Who triggered deploy (default: env WKT_DEPLOY_OPERATOR or deploy)",
     )
-    parser.add_argument("--changelog-limit", type=int, default=8)
+    parser.add_argument("--changelog-limit", type=int, default=50)
     args = parser.parse_args()
 
     app_dir = Path(args.app_dir)
     operator = (args.operator or os.environ.get("WKT_DEPLOY_OPERATOR") or "deploy").strip() or "deploy"
     previous = load_pre_deploy_snapshot(app_dir)
-    summary = collect_deploy_summary(app_dir, changelog_limit=args.changelog_limit)
+    since_cl = str((previous or {}).get("top_cl") or "").strip()
+    summary = collect_deploy_delta(app_dir, since_cl=since_cl, changelog_limit=args.changelog_limit)
 
     feishu_ok = notify_system_deploy(
         version=summary["version"],
         build=summary["build"],
         prev_version=str((previous or {}).get("version") or ""),
         prev_build=str((previous or {}).get("build") or ""),
+        prev_top_cl=since_cl,
+        top_cl=str(summary.get("top_cl") or ""),
+        cl_transition=str(summary.get("cl_transition") or ""),
         changes=summary["changes"],
         host_label=args.host_label,
         operator=operator,
@@ -66,8 +70,9 @@ def main() -> int:
 
     save_last_deploy_snapshot(app_dir, summary)
     print(
-        f"Deploy notify: {((previous or {}).get('build') or '—')} -> {summary['build']} "
-        f"(version {(previous or {}).get('version') or '—'} -> {summary['version'] or '—'}) "
+        f"Deploy notify: {since_cl or '—'} -> {summary.get('top_cl') or '—'} "
+        f"build {((previous or {}).get('build') or '—')} -> {summary['build']} "
+        f"changes={len(summary.get('changes') or [])} "
         f"operator={operator} feishu={'ok' if feishu_ok else 'failed/skipped'} audit={'ok' if audit_ok else 'failed'}"
     )
     return 0
