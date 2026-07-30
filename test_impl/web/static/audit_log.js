@@ -38,7 +38,7 @@
     }
     var changes = d.changes || [];
     if (changes.length) {
-      lines.push("本次迭代：");
+      lines.push("本次更新：");
       changes.forEach(function (item) {
         lines.push("· " + item);
       });

@@ -176,7 +176,7 @@ class TestFeishuNotify(unittest.TestCase):
             build="20260730-deploy-notify",
             prev_version="v0.6.0",
             prev_build="20260728-old-build",
-            changes=["CL-0149 · 2026-07-25 · 优化：飞书审计通知"],
+            changes=["[修复] CL-0278：部署飞书改同步发送"],
             host_label="云端",
             operator="Albert",
             sync=True,
@@ -195,7 +195,7 @@ class TestFeishuNotify(unittest.TestCase):
             build="20260730-deploy-notify",
             prev_version="v0.6.0",
             prev_build="20260728-old-build",
-            changes=["CL-0149 · 2026-07-25 · 优化：飞书审计通知"],
+            changes=["[修复] CL-0278：部署飞书改同步发送"],
             host_label="云端",
             operator="Albert",
         )
@@ -207,7 +207,8 @@ class TestFeishuNotify(unittest.TestCase):
         self.assertIn("20260730-deploy-notify", text)
         self.assertIn("→", text)
         self.assertIn("Albert", text)
-        self.assertIn("CL-0149", text)
+        self.assertIn("CL-0278", text)
+        self.assertIn("同步发送", text)
 
     def test_format_deploy_transition(self) -> None:
         v_line, b_line = format_deploy_transition(
@@ -218,6 +219,12 @@ class TestFeishuNotify(unittest.TestCase):
         self.assertIn("v0.6.0", v_line)
         self.assertIn("build-a", b_line)
         self.assertIn("build-b", b_line)
+        same_v, same_b = format_deploy_transition(
+            {"version": "v0.6.0", "build": "build-old"},
+            {"version": "v0.6.0", "build": "build-new"},
+        )
+        self.assertIn("v0.6.0 → v0.6.0", same_v)
+        self.assertIn("build-old → build-new", same_b)
 
     def test_build_deploy_audit_summary(self) -> None:
         s = build_deploy_audit_summary(
@@ -237,16 +244,30 @@ class TestFeishuNotify(unittest.TestCase):
         self.assertIn("Albert", s)
 
     def test_parse_changelog_head(self) -> None:
-        sample = """
+        bullet = """
 ### CL-0149 · 2026-07-25 · 优化（B）
 - 变更内容：飞书审计统一推送
 ### CL-0148 · 2026-07-25 · 优化（B）
 - 变更内容：扩展模块通知
 """
-        items = parse_changelog_head(sample, limit=2)
+        items = parse_changelog_head(bullet, limit=2)
         self.assertEqual(len(items), 2)
+        self.assertIn("[优化]", items[0])
         self.assertIn("CL-0149", items[0])
         self.assertIn("飞书审计", items[0])
+
+        table = """
+### CL-0278 · 2026-07-30 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 变更内容 | 部署飞书改同步发送（修复 notify_async 未发出） |
+"""
+        table_items = parse_changelog_head(table, limit=1)
+        self.assertEqual(len(table_items), 1)
+        self.assertIn("[修复]", table_items[0])
+        self.assertIn("CL-0278", table_items[0])
+        self.assertIn("同步发送", table_items[0])
 
     def test_parse_version_from_markdown(self) -> None:
         text = "| **版本号** | **v0.6.0** |"

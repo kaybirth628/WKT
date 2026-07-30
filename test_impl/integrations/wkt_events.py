@@ -260,22 +260,56 @@ def parse_version_from_markdown(text: str) -> str:
 
 def parse_changelog_head(text: str, *, limit: int = 8) -> List[str]:
     entries: List[str] = []
+    title_re = re.compile(r"^(CL-\d+)\s*·\s*(\d{4}-\d{2}-\d{2})\s*·\s*(.+)$")
     for block in re.split(r"\n(?=### CL-)", text):
         block = block.strip()
         if not block.startswith("### CL-"):
             continue
         lines = block.splitlines()
         title = lines[0].replace("### ", "").strip()
-        body = ""
-        for line in lines[1:]:
-            s = line.strip()
-            if s.startswith("- 变更内容："):
-                body = s.replace("- 变更内容：", "", 1).strip()
-                break
-        entries.append(f"{title}：{body}" if body else title)
+        body = _extract_cl_change_body(lines[1:])
+        m = title_re.match(title)
+        if m and body:
+            cl_id = m.group(1)
+            kind = _normalize_cl_kind(m.group(3))
+            entries.append(f"[{kind}] {cl_id}：{body}")
+        elif body:
+            entries.append(f"{title}：{body}")
+        else:
+            entries.append(title)
         if len(entries) >= limit:
             break
     return entries
+
+
+def _normalize_cl_kind(raw: str) -> str:
+    s = str(raw or "").strip()
+    for suffix in ("（A）", "（B）", "（C）", "（D）"):
+        s = s.replace(suffix, "")
+    return s.strip() or raw
+
+
+def _extract_cl_change_body(lines: List[str]) -> str:
+    for line in lines:
+        s = line.strip()
+        if s.startswith("- 变更内容："):
+            return s.replace("- 变更内容：", "", 1).strip()
+        m = re.match(r"^\|\s*变更内容\s*\|\s*(.+?)\s*\|\s*$", s)
+        if m:
+            return m.group(1).strip()
+    return ""
+
+
+def _read_snapshot_file(path: Path) -> Optional[Dict[str, Any]]:
+    import json
+
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else None
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 def read_deploy_build(app_dir: Path) -> str:
@@ -312,10 +346,18 @@ def collect_deploy_summary(app_dir: Path, *, changelog_limit: int = 8) -> Dict[s
 
 
 def pre_deploy_snapshot_path(app_dir: Path) -> Path:
-    return app_dir / "deploy-info" / "pre-deploy-snapshot.json"
+    return app_dir / "data" / "pre-deploy-snapshot.json"
 
 
 def last_deploy_snapshot_path(app_dir: Path) -> Path:
+    return app_dir / "data" / "last-deploy.json"
+
+
+def _legacy_pre_deploy_snapshot_path(app_dir: Path) -> Path:
+    return app_dir / "deploy-info" / "pre-deploy-snapshot.json"
+
+
+def _legacy_last_deploy_snapshot_path(app_dir: Path) -> Path:
     return app_dir / "deploy-info" / "last-deploy.json"
 
 
@@ -342,18 +384,21 @@ def capture_pre_deploy_snapshot(app_dir: Path) -> Dict[str, Any]:
 
 
 def load_pre_deploy_snapshot(app_dir: Path) -> Optional[Dict[str, Any]]:
-    import json
-
-    path = pre_deploy_snapshot_path(app_dir)
-    if not path.is_file():
-        path = last_deploy_snapshot_path(app_dir)
-        if not path.is_file():
-            return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else None
-    except (json.JSONDecodeError, OSError):
-        return None
+    for path in (
+        pre_deploy_snapshot_path(app_dir),
+        _legacy_pre_deploy_snapshot_path(app_dir),
+    ):
+        data = _read_snapshot_file(path)
+        if data:
+            return data
+    for path in (
+        last_deploy_snapshot_path(app_dir),
+        _legacy_last_deploy_snapshot_path(app_dir),
+    ):
+        data = _read_snapshot_file(path)
+        if data:
+            return data
+    return None
 
 
 def save_last_deploy_snapshot(app_dir: Path, summary: Dict[str, Any]) -> None:
@@ -378,13 +423,11 @@ def format_deploy_transition(
     prev_build = str((previous or {}).get("build") or "").strip()
     cur_ver = str(current.get("version") or "").strip()
     cur_build = str(current.get("build") or "").strip()
-    if prev_ver:
+    if previous is not None:
         version_line = f"版本：{prev_ver or '—'} → {cur_ver or '—'}"
-    else:
-        version_line = f"版本：{cur_ver or '—'}"
-    if prev_build:
         build_line = f"Build：{prev_build or '—'} → {cur_build or '—'}"
     else:
+        version_line = f"版本：{cur_ver or '—'}"
         build_line = f"Build：{cur_build or '—'}"
     return version_line, build_line
 
@@ -501,10 +544,10 @@ def notify_system_deploy(
         lines.append(f"推送人：{op}")
     items = changes or []
     if items:
-        lines.append("本次迭代：")
+        lines.append("本次更新：")
         lines.extend(f"· {item}" for item in items)
     else:
-        lines.append("本次迭代：见 CHANGELOG（deploy-info 未打包时仅显示 build）")
+        lines.append("本次更新：见 CHANGELOG（deploy-info 未打包时仅显示 build）")
     text = f"【{_app_title()} · 系统更新】\n时间：{_now_str()}\n" + "\n".join(lines)
     if sync:
         return feishu_notifier.notify_text(text, event="system_deploy")
