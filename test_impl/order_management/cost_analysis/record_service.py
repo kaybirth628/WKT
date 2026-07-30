@@ -150,7 +150,11 @@ class CostRecordService:
             try:
                 part_no = str(payload.get("product_part_no") or "").strip()
                 if overwrite and part_no and not is_unfilled_part_no(part_no):
-                    existing_ids = self._store.list_ids_by_part_no(part_no)
+                    existing_ids = self._store.find_import_overwrite_ids(
+                        part_no,
+                        customer_name=str(payload.get("customer_name") or "").strip(),
+                        product_name=str(payload.get("product_name") or "").strip(),
+                    )
                 else:
                     existing_ids = []
                 if existing_ids:

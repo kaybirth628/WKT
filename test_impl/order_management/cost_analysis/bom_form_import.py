@@ -900,7 +900,7 @@ def _tier_for_row(
         binding = store.get_part_binding(part)
         if binding and binding.get("customer_name"):
             issues.append(
-                f"料号已存在（客户：{binding['customer_name']}），上传时将按料号覆盖"
+                f"料号已存在（客户：{binding['customer_name']}），上传时将按料号+品名覆盖同条记录"
             )
 
     blocking = [

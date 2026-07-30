@@ -21,7 +21,11 @@ def is_unfilled_part_no(part: str) -> bool:
 
 
 def normalize_part_no(part: str) -> str:
-    """料号规范化：去空格、统一连字符（OCR/手工录入差异）。"""
+    """料号规范化：去空格、统一连字符（OCR/手工录入差异）。
+
+    整串均为唯一标识，例如 ``11*000000/04016-04`` 与 ``11*000000/04023-01`` 为不同料号，
+    不得仅按 ``/`` 前前缀或料号片段比较、去重或覆盖。
+    """
     s = str(part or "").strip()
     for ch in (
         "\u2010",
@@ -37,6 +41,14 @@ def normalize_part_no(part: str) -> str:
         s = s.replace(ch, "-")
     return s.replace(" ", "")
 
+
+def bom_row_identity_key(part_no: str, customer: str, product_name: str) -> tuple[str, str, str]:
+    """BOM 联想/列表去重键：整串料号 + 客户 + 品名（三者缺一即视为不同行）。"""
+    return (
+        str(part_no or "").strip().casefold(),
+        str(customer or "").strip().casefold(),
+        str(product_name or "").strip().casefold(),
+    )
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS cost_records (
@@ -348,15 +360,17 @@ class CostStore:
             part_no = str(row["product_part_no"] or "").strip()
             if not part_no:
                 continue
-            key = part_no.casefold()
+            customer = str(row["customer_name"] or "").strip()
+            product_name = str(row["product_name"] or "").strip()
+            key = bom_row_identity_key(part_no, customer, product_name)
             if key in seen:
                 continue
             seen.add(key)
             results.append(
                 {
                     "product_part_no": part_no,
-                    "customer_name": str(row["customer_name"] or "").strip(),
-                    "product_name": str(row["product_name"] or "").strip(),
+                    "customer_name": customer,
+                    "product_name": product_name,
                     "unit_weight_g": str(row["unit_weight_g"] or "").strip(),
                     "source": "bom",
                 }
@@ -456,16 +470,17 @@ class CostStore:
             part_no = str(row["product_part_no"] or "").strip()
             if not part_no:
                 continue
-            key = part_no.casefold()
+            customer = str(row["customer_name"] or "").strip()
+            product_name = str(row["product_name"] or "").strip()
+            key = bom_row_identity_key(part_no, customer, product_name)
             if key in seen:
                 continue
             seen.add(key)
-            product_name = str(row["product_name"] or "").strip()
             out.append(
                 {
                     "product_spec": product_name or part_no,
                     "customer_part_no": part_no,
-                    "customer_name": str(row["customer_name"] or "").strip(),
+                    "customer_name": customer,
                 }
             )
         out.sort(key=lambda item: (item["product_spec"].casefold(), item["customer_part_no"].casefold()))
@@ -520,6 +535,52 @@ class CostStore:
             (part_no,),
         ).fetchall()
         return [int(r["id"]) for r in rows]
+
+    def find_import_overwrite_ids(
+        self,
+        product_part_no: str,
+        *,
+        customer_name: str,
+        product_name: str,
+    ) -> List[int]:
+        """批量导入覆盖：按整串料号 + 品名定位；同品名多条时保留最新。无匹配则新建，不删其它品名。"""
+        part_no = normalize_part_no(product_part_no)
+        customer = (customer_name or "").strip()
+        product = (product_name or "").strip()
+        if not part_no or is_unfilled_part_no(part_no):
+            return []
+
+        if customer and product:
+            rows = self._conn.execute(
+                """
+                SELECT id FROM cost_records
+                WHERE LOWER(TRIM(product_part_no)) = LOWER(?)
+                  AND LOWER(TRIM(customer_name)) = LOWER(?)
+                  AND LOWER(TRIM(product_name)) = LOWER(?)
+                ORDER BY updated_at DESC, id DESC
+                """,
+                (part_no, customer, product),
+            ).fetchall()
+            if rows:
+                return [int(r["id"]) for r in rows]
+
+        if product:
+            rows = self._conn.execute(
+                """
+                SELECT id FROM cost_records
+                WHERE LOWER(TRIM(product_part_no)) = LOWER(?)
+                  AND LOWER(TRIM(product_name)) = LOWER(?)
+                ORDER BY updated_at DESC, id DESC
+                """,
+                (part_no, product),
+            ).fetchall()
+            if rows:
+                return [int(r["id"]) for r in rows]
+
+        all_for_part = self.list_ids_by_part_no(part_no)
+        if not product and len(all_for_part) == 1:
+            return all_for_part
+        return []
 
     def delete(self, record_id: int) -> None:
         cur = self._conn.execute("DELETE FROM cost_records WHERE id = ?", (record_id,))

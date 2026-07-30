@@ -44,6 +44,48 @@ class TestCostLookupService(unittest.TestCase):
         self.assertEqual(items[0]["customer_name"], "凯泰")
         self.assertEqual(items[0]["source"], "bom")
 
+    def test_suggest_part_numbers_same_part_different_product_names(self) -> None:
+        seed_bom_conflict(
+            self.cost_store,
+            "11*000000/04016-04",
+            customers=[
+                ("苏州大沃", "810S头壳"),
+                ("苏州大沃", "改良810STK2头壳（黑色）"),
+            ],
+        )
+        seed_bom(
+            self.record_service,
+            customer_name="苏州大沃",
+            product_name="810头壳",
+            product_part_no="11*000000/04016-02",
+        )
+        items = self.lookup.suggest_part_numbers("810")
+        self.assertEqual(len(items), 3)
+        names = {item["product_name"] for item in items}
+        self.assertEqual(
+            names,
+            {"810S头壳", "改良810STK2头壳（黑色）", "810头壳"},
+        )
+        parts = {item["product_part_no"] for item in items}
+        self.assertEqual(parts, {"11*000000/04016-04", "11*000000/04016-02"})
+
+    def test_list_master_parts_same_part_different_product_names(self) -> None:
+        seed_bom_conflict(
+            self.cost_store,
+            "11*000000/04023-01",
+            customers=[
+                ("苏州大沃", "810后盖"),
+                ("苏州大沃", "改良810后盖-黑色"),
+            ],
+        )
+        parts = self.cost_store.list_master_parts()
+        matched = [p for p in parts if p["customer_part_no"] == "11*000000/04023-01"]
+        self.assertEqual(len(matched), 2)
+        self.assertEqual(
+            {p["product_spec"] for p in matched},
+            {"810后盖", "改良810后盖-黑色"},
+        )
+
     def test_suggest_customers_from_bom(self) -> None:
         seed_bom(
             self.record_service,

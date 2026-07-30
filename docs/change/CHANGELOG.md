@@ -33,6 +33,19 @@
 
 ## 变更记录
 
+### CL-0267 · 2026-07-30 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_store.py`、`line_store.py`、`record_service.py`、`bom_form_import.py`、`test_cost_lookup.py`、`test_bom_form_import.py` |
+| 变更内容 | BOM/订单料号联想与主数据列表：去重键改为 **整串料号+客户+品名**（同料号不同品名不再合并）；批量导入覆盖改为按 **料号+品名** 定位，多条并存时不再整料号误删 |
+| 根因 | 多处 `search_part_numbers` / `list_master_parts` / 导入覆盖仅按料号去重或删除，同料号多品名（810 系列）只保留最新一条 |
+| 防复发 | `test_suggest_part_numbers_same_part_different_product_names`、`test_list_master_parts_same_part_different_product_names`、`test_import_overwrite_same_part_different_product_names_keeps_both` |
+| 验证 | 本地库搜 `810` 品名联想返回 7 条（原 5 条） |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 搜索行为修复，无新操作流程 |
+| 关联 | BF-0024 |
+
 ### CL-0266 · 2026-07-30 · 优化（C）
 
 | 字段 | 内容 |

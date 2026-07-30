@@ -299,7 +299,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260730-inv-qty-backfill",
+            "build": "20260730-bom-identity-dedupe",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),

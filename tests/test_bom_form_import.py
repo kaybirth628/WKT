@@ -209,13 +209,13 @@ class BomFormImportTests(unittest.TestCase):
         service.import_bom_rows([old_payload], skip_supplier_check=True, overwrite=True)
         new_payload = dict(old_payload)
         new_payload["customer_name"] = "苏州大沃工具科技有限公司"
-        new_payload["product_name"] = "电机外壳（第二次导入）"
+        new_payload["machine_tonnage"] = "350T"
         result = service.import_bom_rows([new_payload], skip_supplier_check=True, overwrite=True)
         self.assertEqual(result["updated"], 1)
         self.assertEqual(result["created"], 0)
         record = service.get_record(result["record_ids"][0])
         self.assertEqual(record.customer_name, "苏州大沃工具科技有限公司")
-        self.assertEqual(record.product_name, "电机外壳（第二次导入）")
+        self.assertEqual(record.machine_tonnage, "350T")
 
     def test_import_overwrite_same_part_no(self) -> None:
         parsed = parse_bom_workbook(_build_sample_bom_workbook())
@@ -227,14 +227,49 @@ class BomFormImportTests(unittest.TestCase):
         r1 = service.import_bom_rows([payload], skip_supplier_check=True, overwrite=True)
         self.assertEqual(r1["created"], 1)
         self.assertEqual(r1["updated"], 0)
-        payload["product_name"] = "电机外壳（覆盖）"
         payload["machine_tonnage"] = "350T"
         r2 = service.import_bom_rows([payload], skip_supplier_check=True, overwrite=True)
         self.assertEqual(r2["updated"], 1)
         self.assertEqual(r2["created"], 0)
         self.assertEqual(len(store.list_ids_by_part_no("EP1210.50.01")), 1)
         record = service.get_record(r2["record_ids"][0])
-        self.assertEqual(record.product_name, "电机外壳（覆盖）")
+        self.assertEqual(record.product_name, payload["product_name"])
+        self.assertEqual(record.machine_tonnage, "350T")
+
+    def test_import_overwrite_same_part_different_product_names_keeps_both(self) -> None:
+        """同料号不同品名（如 810 系列）覆盖导入时不得误删另一条。"""
+        store = CostStore(db_path=":memory:")
+        line_store = LineStore(db_path=":memory:")
+        service = CostRecordService(store=store, line_store=line_store)
+        base = {
+            "customer_name": "苏州大沃工具科技有限公司",
+            "mold_no": "M-TEST",
+            "product_part_no": "11*000000/04016-04",
+            "cavity": "1*2",
+            "unit_weight_g": "100",
+            "material": "ADC12",
+            "machine_tonnage": "280T",
+            "material_unit_price": "0.02",
+            "process_prices": {"01": "1.0"},
+        }
+        payload_a = {**base, "product_name": "810S头壳"}
+        payload_b = {**base, "product_name": "改良810STK2头壳（黑色）"}
+        service.import_bom_rows([payload_a], skip_supplier_check=True, overwrite=True)
+        service.import_bom_rows([payload_b], skip_supplier_check=True, overwrite=True)
+        self.assertEqual(len(store.list_ids_by_part_no("11*000000/04016-04")), 2)
+
+        payload_a["machine_tonnage"] = "350T"
+        result = service.import_bom_rows([payload_a], skip_supplier_check=True, overwrite=True)
+        self.assertEqual(result["updated"], 1)
+        self.assertEqual(result["created"], 0)
+        self.assertEqual(len(store.list_ids_by_part_no("11*000000/04016-04")), 2)
+        ids = store.find_import_overwrite_ids(
+            "11*000000/04016-04",
+            customer_name=base["customer_name"],
+            product_name="810S头壳",
+        )
+        record = service.get_record(ids[0])
+        self.assertEqual(record.product_name, "810S头壳")
         self.assertEqual(record.machine_tonnage, "350T")
 
     def test_existing_part_preview_not_blocked(self) -> None:

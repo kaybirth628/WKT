@@ -752,7 +752,12 @@ class LineStore:
             customer = str(row["customer"] or "").strip()
             if not part_no:
                 continue
-            dedupe_key = part_no.casefold()
+            product_name = str(row["product_spec"] or "").strip()
+            dedupe_key = (
+                part_no.casefold(),
+                customer.casefold(),
+                product_name.casefold(),
+            )
             if dedupe_key in seen:
                 continue
             seen.add(dedupe_key)
@@ -760,7 +765,7 @@ class LineStore:
                 {
                     "product_part_no": part_no,
                     "customer_name": customer,
-                    "product_name": str(row["product_spec"] or "").strip(),
+                    "product_name": product_name,
                     "unit_weight_g": str(row["unit_weight_g"] or "").strip(),
                     "source": "order_line",
                 }
