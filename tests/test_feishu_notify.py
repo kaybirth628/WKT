@@ -13,6 +13,8 @@ from test_impl.integrations.feishu import (
     send_text,
 )
 from test_impl.integrations.wkt_events import (
+    build_deploy_audit_summary,
+    format_deploy_transition,
     notify_audit_action,
     notify_inventory_movement,
     notify_line_shipped,
@@ -170,15 +172,42 @@ class TestFeishuNotify(unittest.TestCase):
     def test_system_deploy_message(self, mock_async: MagicMock) -> None:
         notify_system_deploy(
             version="v0.6.0",
-            build="20260725-feishu-audit-deploy",
+            build="20260730-deploy-notify",
+            prev_version="v0.6.0",
+            prev_build="20260728-old-build",
             changes=["CL-0149 · 2026-07-25 · 优化：飞书审计通知"],
             host_label="云端",
+            operator="Albert",
         )
         mock_async.assert_called_once()
         text = mock_async.call_args[0][0]
         self.assertIn("系统更新", text)
         self.assertIn("v0.6.0", text)
+        self.assertIn("20260728-old-build", text)
+        self.assertIn("20260730-deploy-notify", text)
+        self.assertIn("→", text)
+        self.assertIn("Albert", text)
         self.assertIn("CL-0149", text)
+
+    def test_format_deploy_transition(self) -> None:
+        v_line, b_line = format_deploy_transition(
+            {"version": "v0.5.1", "build": "build-a"},
+            {"version": "v0.6.0", "build": "build-b"},
+        )
+        self.assertIn("v0.5.1", v_line)
+        self.assertIn("v0.6.0", v_line)
+        self.assertIn("build-a", b_line)
+        self.assertIn("build-b", b_line)
+
+    def test_build_deploy_audit_summary(self) -> None:
+        s = build_deploy_audit_summary(
+            {"version": "v0.6.0", "build": "old"},
+            {"version": "v0.6.0", "build": "new"},
+            host_label="云端",
+        )
+        self.assertIn("系统部署", s)
+        self.assertIn("old", s)
+        self.assertIn("new", s)
 
     def test_parse_changelog_head(self) -> None:
         sample = """

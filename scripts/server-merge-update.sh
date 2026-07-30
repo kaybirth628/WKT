@@ -24,6 +24,35 @@ fi
 
 mkdir -p "${APP_DIR}"
 
+resolve_python() {
+  if [ -x "${APP_DIR}/venv/bin/python" ]; then
+    echo "${APP_DIR}/venv/bin/python"
+  elif [ -x "${APP_DIR}/.venv/bin/python" ]; then
+    echo "${APP_DIR}/.venv/bin/python"
+  elif command -v python3 >/dev/null 2>&1; then
+    echo "python3"
+  elif command -v python >/dev/null 2>&1; then
+    echo "python"
+  else
+    echo ""
+  fi
+}
+
+PY="$(resolve_python)"
+DEPLOY_OPERATOR="${WKT_DEPLOY_OPERATOR:-deploy}"
+
+if [ -n "${PY}" ] && [ -f "${APP_DIR}/scripts/capture-pre-deploy-snapshot.py" ]; then
+  echo "==> 捕获部署前版本快照 ..."
+  (cd "${APP_DIR}" && PYTHONPATH="${APP_DIR}" "${PY}" scripts/capture-pre-deploy-snapshot.py --app-dir "${APP_DIR}") || true
+elif [ -n "${PY}" ] && [ -f "${APP_DIR}/test_impl/web/app.py" ]; then
+  echo "==> 捕获部署前版本快照（内联） ..."
+  (cd "${APP_DIR}" && PYTHONPATH="${APP_DIR}" "${PY}" -c "
+from pathlib import Path
+from test_impl.integrations.wkt_events import capture_pre_deploy_snapshot
+capture_pre_deploy_snapshot(Path('${APP_DIR}'))
+") || true
+fi
+
 if command -v rsync >/dev/null 2>&1; then
   rsync -a --delete "${STAGING}/test_impl/" "${APP_DIR}/test_impl/"
   if [ -d "${STAGING}/scripts" ]; then
@@ -153,19 +182,11 @@ if [ "$FULL_DATA" != "1" ]; then
   fi
 fi
 
-PY=""
-if [ -x "${APP_DIR}/venv/bin/python" ]; then
-  PY="${APP_DIR}/venv/bin/python"
-elif [ -x "${APP_DIR}/.venv/bin/python" ]; then
-  PY="${APP_DIR}/.venv/bin/python"
-elif command -v python3 >/dev/null 2>&1; then
-  PY="python3"
-elif command -v python >/dev/null 2>&1; then
-  PY="python"
-fi
+PY="$(resolve_python)"
 if [ -n "${PY}" ] && [ -f "${APP_DIR}/scripts/notify-feishu-deploy.py" ]; then
-  echo "==> 飞书部署通知 ..."
-  (cd "${APP_DIR}" && "${PY}" scripts/notify-feishu-deploy.py --app-dir "${APP_DIR}" --host-label "云端") || true
+  echo "==> 飞书部署通知 + 操作记录 ..."
+  (cd "${APP_DIR}" && PYTHONPATH="${APP_DIR}" WKT_DEPLOY_OPERATOR="${DEPLOY_OPERATOR}" \
+    "${PY}" scripts/notify-feishu-deploy.py --app-dir "${APP_DIR}" --host-label "云端" --operator "${DEPLOY_OPERATOR}") || true
 fi
 
 echo "==> 完成。请访问外网 8088 端口并 Ctrl+F5 刷新。"

@@ -21,6 +21,7 @@ MODULE_LABELS: Dict[str, str] = {
 
 ACTION_LABELS: Dict[str, str] = {
     "auth.login": "用户登录",
+    "system.deploy": "系统部署",
 }
 
 

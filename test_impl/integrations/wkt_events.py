@@ -286,6 +286,14 @@ def read_deploy_build(app_dir: Path) -> str:
     return m.group(1) if m else "unknown"
 
 
+def read_deploy_version(app_dir: Path) -> str:
+    info_dir = app_dir / "deploy-info"
+    version_file = info_dir / "VERSION.md"
+    if version_file.is_file():
+        return parse_version_from_markdown(version_file.read_text(encoding="utf-8"))
+    return ""
+
+
 def collect_deploy_summary(app_dir: Path, *, changelog_limit: int = 8) -> Dict[str, Any]:
     info_dir = app_dir / "deploy-info"
     version = ""
@@ -303,15 +311,159 @@ def collect_deploy_summary(app_dir: Path, *, changelog_limit: int = 8) -> Dict[s
     }
 
 
+def pre_deploy_snapshot_path(app_dir: Path) -> Path:
+    return app_dir / "deploy-info" / "pre-deploy-snapshot.json"
+
+
+def last_deploy_snapshot_path(app_dir: Path) -> Path:
+    return app_dir / "deploy-info" / "last-deploy.json"
+
+
+def deploy_audit_db_path(app_dir: Path) -> Path:
+    """部署脚本写入 audit_log 时使用的 SQLite 路径（与 Flask 同库）。"""
+    import os
+
+    env = os.environ.get("WKT_DB_PATH", "").strip()
+    if env:
+        return Path(env)
+    return app_dir / "data" / "wkt_orders.db"
+
+
+def capture_pre_deploy_snapshot(app_dir: Path) -> Dict[str, Any]:
+    """部署合并前写入当前云端版本/build（供部署后对比）。"""
+    import json
+
+    summary = collect_deploy_summary(app_dir)
+    summary["captured_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    path = pre_deploy_snapshot_path(app_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return summary
+
+
+def load_pre_deploy_snapshot(app_dir: Path) -> Optional[Dict[str, Any]]:
+    import json
+
+    path = pre_deploy_snapshot_path(app_dir)
+    if not path.is_file():
+        path = last_deploy_snapshot_path(app_dir)
+        if not path.is_file():
+            return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else None
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def save_last_deploy_snapshot(app_dir: Path, summary: Dict[str, Any]) -> None:
+    import json
+
+    payload = {
+        "version": summary.get("version") or "",
+        "build": summary.get("build") or "",
+        "deployed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    }
+    path = last_deploy_snapshot_path(app_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def format_deploy_transition(
+    previous: Optional[Dict[str, Any]],
+    current: Dict[str, Any],
+) -> tuple[str, str]:
+    """返回 (版本行, build 行) 用于飞书/审计摘要。"""
+    prev_ver = str((previous or {}).get("version") or "").strip()
+    prev_build = str((previous or {}).get("build") or "").strip()
+    cur_ver = str(current.get("version") or "").strip()
+    cur_build = str(current.get("build") or "").strip()
+    if prev_ver:
+        version_line = f"版本：{prev_ver or '—'} → {cur_ver or '—'}"
+    else:
+        version_line = f"版本：{cur_ver or '—'}"
+    if prev_build:
+        build_line = f"Build：{prev_build or '—'} → {cur_build or '—'}"
+    else:
+        build_line = f"Build：{cur_build or '—'}"
+    return version_line, build_line
+
+
+def build_deploy_audit_summary(
+    previous: Optional[Dict[str, Any]],
+    current: Dict[str, Any],
+    *,
+    host_label: str = "云端",
+) -> str:
+    version_line, build_line = format_deploy_transition(previous, current)
+    parts = [f"系统部署（{host_label}）", version_line.replace("版本：", ""), build_line.replace("Build：", "build ")]
+    return " · ".join(p for p in parts if p)
+
+
+def log_system_deploy_audit(
+    app_dir: Path,
+    *,
+    previous: Optional[Dict[str, Any]],
+    current: Dict[str, Any],
+    operator: str = "deploy",
+    host_label: str = "云端",
+) -> None:
+    """写入操作记录 audit_log（与网页操作记录同源）。"""
+    from test_impl.auth.service import AuditService
+    from test_impl.auth.store import AuthStore
+
+    summary = build_deploy_audit_summary(previous, current, host_label=host_label)
+    op = str(operator or "deploy").strip() or "deploy"
+    store = AuthStore(db_path=deploy_audit_db_path(app_dir))
+    audit = AuditService(store=store)
+    try:
+        audit.log(
+            user={"username": "deploy", "display_name": op},
+            action="system.deploy",
+            module="system",
+            summary=summary,
+            entity_type="deploy",
+            entity_id=str(current.get("build") or ""),
+            detail={
+                "host": host_label,
+                "previous": {
+                    "version": (previous or {}).get("version") or "",
+                    "build": (previous or {}).get("build") or "",
+                },
+                "current": {
+                    "version": current.get("version") or "",
+                    "build": current.get("build") or "",
+                },
+                "changes": current.get("changes") or [],
+            },
+            ip_address="deploy",
+        )
+    finally:
+        store.close()
+
+
 def notify_system_deploy(
     *,
     version: str = "",
     build: str = "",
+    prev_version: str = "",
+    prev_build: str = "",
     changes: Optional[List[str]] = None,
     host_label: str = "云端",
+    operator: str = "",
 ) -> None:
     """系统迭代部署完成后推送版本与变更摘要。"""
-    lines = [f"版本：{version or '—'}", f"Build：{build or '—'}", f"环境：{host_label}"]
+    previous = (
+        {"version": prev_version, "build": prev_build}
+        if (prev_version or prev_build)
+        else None
+    )
+    current = {"version": version, "build": build}
+    version_line, build_line = format_deploy_transition(previous, current)
+    lines = [version_line, build_line, f"环境：{host_label}"]
+    op = str(operator or "").strip()
+    if op:
+        lines.append(f"推送人：{op}")
     items = changes or []
     if items:
         lines.append("本次迭代：")

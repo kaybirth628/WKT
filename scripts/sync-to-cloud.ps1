@@ -138,6 +138,13 @@ function Invoke-RemoteMerge {
         $appDir = $Cfg.remote_app_dir
         $sup = $Cfg.supervisor_name
         $fullFlag = if ($FullData) { "1" } else { "0" }
+        $deployOp = ""
+        try {
+            $deployOp = (git config user.name 2>$null | Out-String).Trim()
+        } catch {}
+        if (-not $deployOp) { $deployOp = $env:USERNAME }
+        if (-not $deployOp) { $deployOp = "deploy" }
+        $deployOpEsc = $deployOp -replace "'", "'\\''"
         $remoteScript = @"
 set -e
 APP_DIR='$appDir'
@@ -153,6 +160,7 @@ esac
 export WKT_APP_DIR="`$APP_DIR"
 export WKT_SUPERVISOR_NAME='$sup'
 export WKT_FULL_DATA_SYNC='$fullFlag'
+export WKT_DEPLOY_OPERATOR='$deployOpEsc'
 bash "`$STAGING/scripts/server-merge-update.sh" "`$STAGING"
 rm -f "`$ARCH"
 rm -rf "`$STAGING"

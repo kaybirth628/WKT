@@ -124,6 +124,35 @@ class AuthTests(unittest.TestCase):
         row = self.audit.query(username="worker")["items"][0]
         self.assertEqual(row["display_name"], "娟娟")
 
+    def test_system_deploy_audit(self) -> None:
+        from test_impl.auth.audit_labels import action_label, module_label
+        from test_impl.integrations.wkt_events import log_system_deploy_audit
+
+        app_dir = Path(self._tmp.name) / "app"
+        (app_dir / "data").mkdir(parents=True)
+        deploy_db = app_dir / "data" / "wkt_orders.db"
+        deploy_db.write_bytes(self.db_path.read_bytes())
+
+        log_system_deploy_audit(
+            app_dir,
+            previous={"version": "v0.6.0", "build": "build-old"},
+            current={"version": "v0.6.0", "build": "build-new", "changes": ["CL-0277 · test"]},
+            operator="Albert",
+            host_label="云端",
+        )
+        deploy_store = AuthStore(deploy_db)
+        deploy_audit = AuditService(store=deploy_store)
+        result = deploy_audit.query(module="system")
+        self.assertEqual(result["total"], 1)
+        item = result["items"][0]
+        self.assertEqual(item["action"], "system.deploy")
+        self.assertEqual(action_label("system.deploy"), "系统部署")
+        self.assertEqual(module_label("system"), "系统")
+        self.assertIn("build-old", item["summary"])
+        self.assertIn("build-new", item["summary"])
+        self.assertEqual(item["display_name"], "Albert")
+        deploy_store.close()
+
     def test_cannot_delete_admin_or_self(self) -> None:
         admin = self.auth.authenticate("admin", "WKT@2026")
         with self.assertRaises(Exception):

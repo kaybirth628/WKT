@@ -33,6 +33,19 @@
 
 ## 变更记录
 
+### CL-0277 · 2026-07-30 · 新增（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `wkt_events.py`、`notify-feishu-deploy.py`、`capture-pre-deploy-snapshot.py`、`server-merge-update.sh`、`sync-to-cloud.ps1`、`audit_labels.py` |
+| 变更内容 | 云端代码部署完成后：**飞书**推送 `版本/build 从→到` + 推送人 + CHANGELOG 摘要；**操作记录**写入 `system.deploy`；部署前自动捕获云端旧 build |
+| 根因 | — |
+| 防复发 | `test_system_deploy_message`、`test_system_deploy_audit` |
+| 验证 | 运行 `一键推送云端和GitHub.bat` 后飞书与操作记录（模块=系统）可见部署条目 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 运维通知增强 |
+| 关联 | — |
+
 ### CL-0276 · 2026-07-30 · 优化（C）
 
 | 字段 | 内容 |
