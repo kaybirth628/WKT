@@ -3793,7 +3793,9 @@ body {
 
 /* 表单卡勿 flex 拉伸（否则会占半屏、表头上方大面积留白） */
 .app-main:has(#submoduleDelivery:not(.is-hidden)) .dn-maint-card.list-card:has(.dn-new-form),
-.app-main:has(#submoduleSupplier:not(.is-hidden)) .dn-maint-card.list-card:has(.dn-new-form) {
+.app-main:has(#submoduleDelivery:not(.is-hidden)) .dn-maint-card.list-card:has(#dnNewCustomerForm),
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .dn-maint-card.list-card:has(.dn-new-form),
+.app-main:has(#submoduleSupplier:not(.is-hidden)) .dn-maint-card.list-card:has(#spNewSupplierForm) {
   flex: 0 0 auto;
 }
 
@@ -4179,6 +4181,14 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.dn-maint-table .list-td-datetime,
+.dn-maint-table .list-th-datetime {
+  font-family: Consolas, "Courier New", ui-monospace, monospace;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  color: var(--text-secondary);
 }
 
 #spMaintTable .sp-actions {

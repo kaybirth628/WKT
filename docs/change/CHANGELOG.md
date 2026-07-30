@@ -33,6 +33,32 @@
 
 ## 变更记录
 
+### CL-0276 · 2026-07-30 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | 客户/供应商信息维护（`index.html`、`delivery-note-admin.js`、`supplier-admin.js`、`delivery_note/service.py`、`style.css`） |
+| 变更内容 | 列表在备注（客户为操作列前）增加**录入时间**列（只读）；列表按 `created_at` **新→旧**排序（新建档案置顶）；客户 `customer_rows` API 返回 `created_at` |
+| 根因 | — |
+| 防复发 | 既有 `store.list_profile_*` / `sort_names_by_created_at` 排序测试；前端二次排序 |
+| 验证 | 新增客户/供应商后排在首行并显示录入时间；旧档案无时间显示「—」 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 列表增列，流程不变 |
+| 关联 | UI-0022 |
+
+### CL-0275 · 2026-07-30 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `supplier-admin.js`、`app.js` |
+| 变更内容 | 供应商维护：筛选后页面滚回表格顶部（避免列表变短后停在底部「清空筛选」）；切换离开再进入模块时自动清空列筛选、恢复全量列表；**修复单行表单去掉 `dn-new-form` 后表单卡 flex 撑满导致表格沉底** |
+| 根因 | 筛选后 tbody 变短但 `scrollY` 未调整；`loadSupplierAdmin` 未重置 `spColFilter`；表单改 `sp-new-form-onerow` 后 `:has(.dn-new-form)` 失效，首卡 `flex:1` 占满视口 |
+| 防复发 | 进入子模块 `loadSupplierAdmin(true)`；筛选 `onChange` 有活跃筛选时滚回表头 |
+| 验证 | 供应商列筛选确定后视口在表格区；切到其他模块再回供应商，显示全部 40 条且无筛选高亮 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 交互修复 |
+| 关联 | BF-0026 |
+
 ### CL-0274 · 2026-07-30 · 优化（C）
 
 | 字段 | 内容 |

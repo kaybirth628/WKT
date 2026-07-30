@@ -536,7 +536,25 @@ flowchart LR
 
 ---
 
-## 13. 维护与排查
+## 13. JSON 客商档案（`data/customer_profiles.json` / `data/supplier_profiles.json`）
+
+非 SQLite；维护页列表顺序按 **`created_at` 降序**（最新录入在前）。新建档案时服务端写入 UTC ISO 时间；编辑/改名保留原 `created_at`。
+
+| 字段 | 客户 | 供应商 | 说明 |
+|------|:----:|:------:|------|
+| `address` | ✓ | ✓ | 地址 |
+| `contact` / `phone` / `email` | ✓ | ✓ | 联系信息 |
+| `payment_terms` | ✓ | ✓ | 账期 |
+| `reconciliation_period` | ✓ | ✓ | 对账周期（供应商默认自然月） |
+| `delivery_enabled` | ✓ | — | 客户是否启用送货单 |
+| `notes` | — | ✓ | 供应商备注 |
+| `created_at` | ✓ | ✓ | 录入时间（ISO UTC）；维护列表只读展示 |
+
+API：`GET /api/customer-profiles`、`GET /api/supplier-profiles`、`GET /api/delivery-templates`（`customer_rows[].created_at`）。
+
+---
+
+## 14. 维护与排查
 
 | 操作 | 命令 / 路径 |
 |------|-------------|

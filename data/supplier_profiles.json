@@ -6,7 +6,8 @@
     "email": "",
     "payment_terms": "15天",
     "notes": "原材料",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:00:00+00:00"
   },
   "江西金旺铝业有限公司": {
     "address": "江西省鹰潭市余江县黄溪镇",
@@ -15,7 +16,8 @@
     "email": "",
     "payment_terms": "现结",
     "notes": "原材料",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:01:00+00:00"
   },
   "苏州润特新材料科技有限公司": {
     "address": "苏州吴中区胜浦路2号",
@@ -24,7 +26,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "压铸辅料",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:02:00+00:00"
   },
   "昆山溯源纸制品有限公司": {
     "address": "昆山市张浦镇西街2号",
@@ -33,7 +36,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "包材",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:03:00+00:00"
   },
   "苏州麦凯良金属制品厂": {
     "address": "苏州吴中区甪直镇东庄路29号",
@@ -42,7 +46,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "打磨",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-23T01:54:54.082321+00:00"
   },
   "昆山市张浦镇天宇鑫五金机械厂": {
     "address": "昆山市张浦镇南港源进路",
@@ -51,7 +56,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "CNC",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:05:00+00:00"
   },
   "苏州双佰精密科技有限公司": {
     "address": "昆山市巴城镇石牌东岳路55号A栋3楼",
@@ -60,7 +66,8 @@
     "email": "",
     "payment_terms": "120天",
     "notes": "喷漆",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:47:50.191814+00:00"
   },
   "江苏凤友金属科技有限公司": {
     "address": "昆山长顺路59号",
@@ -69,16 +76,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "机加工",
-    "reconciliation_period": "month_21_20"
-  },
-  "巧手点鑫金属制品厂": {
-    "address": "苏州吴中区甪直彩虹路路36号-8",
-    "contact": "马超",
-    "phone": "13913726516",
-    "email": "",
-    "payment_terms": "150天",
-    "notes": "表面处理",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:46:24.365526+00:00"
   },
   "昆山和勤盛电子有限公司": {
     "address": "昆山张浦镇南港白米村南侧",
@@ -87,7 +86,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "包材",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:08:00+00:00"
   },
   "无锡博雅德精密机械有限公司": {
     "address": "无锡新区梅村锡贤路108号",
@@ -96,7 +96,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "车加工",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:48:02.704309+00:00"
   },
   "上海睿赞金属制品厂": {
     "address": "江苏省常州市钟楼区邹区镇龙潭",
@@ -105,7 +106,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "化镍",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:10:00+00:00"
   },
   "昆山锦宇树精密机械有限公司": {
     "address": "昆山市千灯镇少卿西路87-7号",
@@ -114,7 +116,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "车加工",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:46:24.373615+00:00"
   },
   "昆山市全九京金属热处理有限公司": {
     "address": "张浦镇欣达路520号",
@@ -123,7 +126,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "热处理",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:12:00+00:00"
   },
   "苏州市慧金新材料科技有限公司": {
     "address": "常熟市董浜镇安庆路7号",
@@ -132,7 +136,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "高导热原材",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:13:00+00:00"
   },
   "吴中区甪直锦拓精密电子厂": {
     "address": "苏州市吴中区甪直镇凌港路3号",
@@ -141,7 +146,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "抛丸/喷砂",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:46:24.378478+00:00"
   },
   "昆山市张浦镇义恒谱电子厂": {
     "address": "张浦镇亲和路796号",
@@ -150,7 +156,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "丝印/镭雕",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:15:00+00:00"
   },
   "昆山市张浦镇同齐力精密五金厂": {
     "address": "昆山市张浦镇花苑路876号",
@@ -159,7 +166,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "CNC",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:47:50.186174+00:00"
   },
   "海盐青元山五金制品有限公司": {
     "address": "浙江省嘉兴市海盐县西塘桥街道戴凤路元润创业园2幢",
@@ -168,7 +176,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "抛光",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:46:24.365526+00:00"
   },
   "苏州益地金属科技有限公司": {
     "address": "苏州市相城区黄埭镇春申路997号",
@@ -177,7 +186,8 @@
     "email": "",
     "payment_terms": "120天",
     "notes": "电泳",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:47:50.186174+00:00"
   },
   "昆山欣宏威金属制品有限公司": {
     "address": "昆山市丰收南路",
@@ -186,7 +196,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "烤漆",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:50:18.733852+00:00"
   },
   "昆山市张浦镇威洋五金加工厂": {
     "address": "江苏省镇江市丹徒区辛丰镇亨威创业园",
@@ -195,7 +206,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "振研",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:51:22.710189+00:00"
   },
   "常州市佳艺金属表面处理有限公司": {
     "address": "江苏省常州市新北区西夏墅镇太行山路12号",
@@ -204,7 +216,8 @@
     "email": "",
     "payment_terms": "60天",
     "notes": "电泳",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:47:50.190017+00:00"
   },
   "江苏智嘉迪电子有限公司": {
     "address": "泰兴市滨江镇西江路8号104-3",
@@ -213,7 +226,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "阳极",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:48:02.708830+00:00"
   },
   "苏州富可特科技有限公司": {
     "address": "昆山市张浦南港区富利路329号",
@@ -222,7 +236,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "成品交货",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:47:50.195330+00:00"
   },
   "昆山昆甲林金属制品有限公司": {
     "address": "常熟市任昆路60号",
@@ -231,7 +246,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "压铸",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:24:00+00:00"
   },
   "桃江县博鑫机械制造厂": {
     "address": "湖南省桃江县武潭镇新铺子村",
@@ -240,7 +256,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "耗材",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:25:00+00:00"
   },
   "必盛克（浙江）精密科技有限公司": {
     "address": "浙江省宁波市慈溪市宗汉街道高新技术产业开发区新兴一路1号",
@@ -249,7 +266,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "耗材",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:26:00+00:00"
   },
   "苏州聚诚欣精密五金有限公司": {
     "address": "苏州市吴中区甪直镇辰东村1-20",
@@ -258,7 +276,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "去毛边",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:27:00+00:00"
   },
   "昆山台佳汇金属科技有限公司": {
     "address": "昆山市周市镇横长泾路601号",
@@ -267,7 +286,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "铝挤散热片",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:51:22.704712+00:00"
   },
   "苏州市邑尔维金属压铸有限公司": {
     "address": "苏州市吴江区汾湖经济开发区友东路199号",
@@ -276,7 +296,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "压铸",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:29:00+00:00"
   },
   "太仓全才金属科技有限公司": {
     "address": "江苏省苏州市太仓市城厢镇合兴产业园10栋",
@@ -285,7 +306,8 @@
     "email": "",
     "payment_terms": "150天",
     "notes": "抛光",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:30:00+00:00"
   },
   "深圳市瑞泓科技有限公司": {
     "address": "宝安区燕罗街道塘下涌社区同富路10号厂房D栋301",
@@ -294,7 +316,8 @@
     "email": "",
     "payment_terms": "90天",
     "notes": "电镀",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:47:50.188218+00:00"
   },
   "无锡瑞联精密机械有限公司": {
     "address": "无锡新区梅村锡贤路108号",
@@ -303,7 +326,8 @@
     "email": "",
     "payment_terms": "月结150天",
     "notes": "车加工",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:32:00+00:00"
   },
   "广德康际金属表面处理有限公司": {
     "address": "安徽省广德县桃州镇建设北路31号",
@@ -312,7 +336,8 @@
     "email": "",
     "payment_terms": "",
     "notes": "电镀",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T03:46:24.373615+00:00"
   },
   "镇江威可特精密电子有限公司": {
     "address": "江苏省镇江市丹徒区辛丰镇金润大道100号",
@@ -321,6 +346,57 @@
     "email": "",
     "payment_terms": "月结120天",
     "notes": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:34:00+00:00"
+  },
+  "苏州巧手点鑫金属制品有限公司": {
+    "address": "苏州吴中区甪直彩虹路路36号-8",
+    "contact": "马超",
+    "phone": "13913726516",
+    "email": "",
+    "payment_terms": "150天",
+    "notes": "表面处理",
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-30T03:42:13.974332+00:00"
+  },
+  "昆山市张浦镇喜来来五金加工厂": {
+    "address": "张浦镇垌丘路199号",
+    "contact": "张小喜",
+    "phone": "",
+    "email": "",
+    "payment_terms": "月结90天",
+    "notes": "振研",
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-30T03:27:04+00:00"
+  },
+  "巧手": {
+    "address": "",
+    "contact": "",
+    "phone": "",
+    "email": "",
+    "payment_terms": "",
+    "notes": "",
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-30T03:28:20+00:00"
+  },
+  "瑞联": {
+    "address": "",
+    "contact": "",
+    "phone": "",
+    "email": "",
+    "payment_terms": "",
+    "notes": "",
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-30T03:43:39+00:00"
+  },
+  "苏州术尔能源新材料有限公司": {
+    "address": "3、苏州市吴中区甪直镇车坊前港村苏同黎公                 路3353号6幢3层",
+    "contact": "苑术光",
+    "phone": "0512—52670252",
+    "email": "",
+    "payment_terms": "月结120天",
+    "notes": "烤漆",
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-30T03:31:06+00:00"
   }
 }

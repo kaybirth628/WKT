@@ -1047,6 +1047,7 @@ class DeliveryNoteService:
                     "reconciliation_period_label": reconciliation_period_label(
                         profile.get("reconciliation_period")
                     ),
+                    "created_at": (profile.get("created_at") or "").strip(),
                 }
             )
         return {
@@ -1070,6 +1071,7 @@ class DeliveryNoteService:
                         v.get("reconciliation_period")
                     ),
                     "delivery_enabled": is_delivery_enabled(v),
+                    "created_at": (v.get("created_at") or "").strip(),
                 }
                 for k, v in profiles.items()
             },

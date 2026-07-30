@@ -1605,7 +1605,7 @@ async function switchSubmodule(key) {
   } else if (isDelivery && typeof loadDeliveryNoteAdmin === "function") {
     await loadDeliveryNoteAdmin();
   } else if (isSupplier && typeof loadSupplierAdmin === "function") {
-    await loadSupplierAdmin();
+    await loadSupplierAdmin(true);
   } else if (isAi && typeof window.focusAiAssistant === "function") {
     window.focusAiAssistant();
   }

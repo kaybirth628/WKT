@@ -63,6 +63,22 @@
       .replace(/"/g, "&quot;");
   }
 
+  function formatCreatedAt(iso) {
+    if (!iso) return "—";
+    const d = new Date(String(iso).trim());
+    if (Number.isNaN(d.getTime())) return esc(String(iso).slice(0, 16) || "—");
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function sortRowsByCreatedAt(rows) {
+    return [...(rows || [])].sort((a, b) => {
+      const ta = String(a.created_at || "");
+      const tb = String(b.created_at || "");
+      return tb.localeCompare(ta);
+    });
+  }
+
   function attrEsc(s) {
     return esc(s).replace(/'/g, "&#39;");
   }
@@ -164,6 +180,7 @@
       email: row.email || p.email || "",
       payment_terms: row.payment_terms || p.payment_terms || "",
       reconciliation_period: row.reconciliation_period || p.reconciliation_period || "",
+      created_at: row.created_at || p.created_at || "",
     };
   }
 
@@ -193,7 +210,7 @@
     if (!rows.length && data.mapping && typeof data.mapping === "object") {
       rows = Object.keys(data.mapping).map((customer) => ({ customer }));
     }
-    return rows;
+    return sortRowsByCreatedAt(rows);
   }
 
   function readRowInputs(tr) {
@@ -403,8 +420,8 @@
     updateCustomerListCount(rows.length, totalCount, options.isFiltered);
     if (!rows.length) {
       tbody.innerHTML = options.isFiltered
-        ? '<tr><td colspan="10" class="empty-cell">无匹配结果，请调整筛选条件</td></tr>'
-        : '<tr><td colspan="10" class="empty-cell">暂无客户。请使用上方「新增客户」录入，或在「订单录入」中创建订单时自动带出客户。</td></tr>';
+        ? '<tr><td colspan="11" class="empty-cell">无匹配结果，请调整筛选条件</td></tr>'
+        : '<tr><td colspan="11" class="empty-cell">暂无客户。请使用上方「新增客户」录入，或在「订单录入」中创建订单时自动带出客户。</td></tr>';
       return;
     }
     tbody.innerHTML = rows
@@ -438,6 +455,7 @@
                 <span class="dn-period-display">${esc(reconciliationPeriodLabel(p.reconciliation_period))}</span>
                 <div class="dn-period-edit is-hidden">${reconciliationPeriodSelectHtml(p.reconciliation_period, { selectClass: "dn-inline-select le" })}</div>
               </td>
+              <td class="list-td-datetime">${esc(formatCreatedAt(row.created_at || p.created_at))}</td>
               <td class="action-cell dn-cell-actions">
                 <button type="button" class="btn btn-sm btn-outline dn-edit-row-btn" data-customer="${esc(row.customer)}">编辑</button>
                 <button type="button" class="btn btn-sm btn-outline dn-preview-row-btn" data-customer="${esc(row.customer)}"${mode === "off" ? " disabled" : ""}>预览</button>

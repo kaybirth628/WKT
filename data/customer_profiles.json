@@ -6,7 +6,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-23T01:54:54.214667+00:00"
   },
   "苏州大沃工具科技有限公司": {
     "address": "江苏省苏州市吴中区木渎镇金枫南路1218号吴中区机器人产业园8幢（b3）5层",
@@ -15,7 +16,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_26_25"
+    "reconciliation_period": "month_26_25",
+    "created_at": "2026-07-23T01:54:54.219485+00:00"
   },
   "东莞市凯泰智联科技有限公司": {
     "address": "广东省东莞市黄江镇北岸南路32号（仓库三楼）",
@@ -24,7 +26,8 @@
     "email": "",
     "payment_terms": "月结60天",
     "delivery_enabled": "",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-23T01:54:54.225632+00:00"
   },
   "浙江红黑科技有限公司": {
     "address": "浙江省丽水市缙云县壶镇镇聚贤路1号",
@@ -33,7 +36,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_22_21"
+    "reconciliation_period": "month_22_21",
+    "created_at": "2026-07-23T01:54:54.229929+00:00"
   },
   "瑞声光电科技（常州）有限公司": {
     "address": "常州市武进区常漕路3号瑞声科技园新能源厂区-南门1号楼5楼",
@@ -42,7 +46,8 @@
     "email": "",
     "payment_terms": "月结90天，承兑汇票180天",
     "delivery_enabled": "",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-23T01:54:54.234296+00:00"
   },
   "上海商米科技集团股份有限公司": {
     "address": "浙江省嘉兴市嘉善县魏塘街道魏中路1号2幢1层北侧和3层",
@@ -51,7 +56,8 @@
     "email": "",
     "payment_terms": "月结60天，承兑汇票60天",
     "delivery_enabled": "1",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-23T01:54:54.240501+00:00"
   },
   "苏州顺广精密设备有限公司": {
     "address": "江苏省昆山市张浦镇振新东路111号",
@@ -60,7 +66,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-23T01:54:54.245346+00:00"
   },
   "苏州腾圣技术有限公司": {
     "address": "苏州市相城区渭塘爱格豪路55号2号楼2楼",
@@ -69,7 +76,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-23T01:54:54.250893+00:00"
   },
   "浙江金棒运动器材有限公司": {
     "address": "浙江省丽水市缙云县壶镇镇聚贤路1号",
@@ -78,7 +86,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "1",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-23T01:54:54.256784+00:00"
   },
   "上海金脉电子科技有限公司": {
     "address": "江西省新余市分宜县东环北路8号",
@@ -87,7 +96,8 @@
     "email": "",
     "payment_terms": "月结90天，承兑汇票180天",
     "delivery_enabled": "1",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-23T01:54:54.262078+00:00"
   },
   "昆山晨兴德机械有限公司": {
     "address": "昆山市城北高新区盛创路55号金土地智造园A栋1楼",
@@ -96,7 +106,8 @@
     "email": "",
     "payment_terms": "票到付款",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-23T01:54:54.267718+00:00"
   },
   "同致电子科技（昆山）有限公司": {
     "address": "江苏省昆山市玉山镇晨丰路8号",
@@ -105,7 +116,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-23T01:54:54.275109+00:00"
   },
   "东莞维诺电子科技有限公司": {
     "address": "广东省东莞市东坑镇兴国路东坑段7号3号楼",
@@ -114,7 +126,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-23T01:54:54.280936+00:00"
   },
   "上海富山精密机械科技有限公司": {
     "address": "上海市金山区朱泾镇工业园区中达路800号",
@@ -123,7 +136,8 @@
     "email": "",
     "payment_terms": "月结30天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-23T01:54:54.287086+00:00"
   },
   "海鑫精密电子（常熟）有限公司": {
     "address": "江苏省苏州市常熟市董浜镇徐市民丰路35号常熟经济开发区第十产业园5/6/7/8幢厂房",
@@ -132,7 +146,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-23T01:54:54.292920+00:00"
   },
   "昆山鸿鹏达电子有限公司": {
     "address": "昆山市玉山镇金蝶路16号",
@@ -141,7 +156,8 @@
     "email": "",
     "payment_terms": "月结60天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:15:00+00:00"
   },
   "南京克斯勒电气有限公司": {
     "address": "南京市江宁区水阁路6号38栋",
@@ -150,7 +166,8 @@
     "email": "",
     "payment_terms": "月结30天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:16:00+00:00"
   },
   "广东胡明车业有限公司": {
     "address": "广东省东莞市石排镇沙角金沙南路 8 号",
@@ -159,7 +176,8 @@
     "email": "",
     "payment_terms": "月结30天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:17:00+00:00"
   },
   "苏州爱毕黎实业有限公司": {
     "address": "江苏省苏州太仓市双凤镇凤林路65号",
@@ -168,7 +186,8 @@
     "email": "",
     "payment_terms": "月结30天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:18:00+00:00"
   },
   "昆山互协精密模具有限公司": {
     "address": "昆山市张浦镇振兴东路583号",
@@ -177,7 +196,8 @@
     "email": "",
     "payment_terms": "月结60天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:19:00+00:00"
   },
   "昆山昶乐模塑科技有限公司": {
     "address": "昆山市张浦镇俱进路1461号B1栋",
@@ -186,7 +206,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:20:00+00:00"
   },
   "精达科技（安徽）有限公司": {
     "address": "安徽省芜湖市繁昌区繁昌经济开发区神山路和中江路往北350米1号",
@@ -195,7 +216,8 @@
     "email": "",
     "payment_terms": "月结60天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T06:54:56.766722+00:00"
   },
   "浙江康比利电气有限公司": {
     "address": "浙江省湖州市南太湖新区敢山路1288号",
@@ -204,7 +226,8 @@
     "email": "",
     "payment_terms": "月结30天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_16_15"
+    "reconciliation_period": "month_16_15",
+    "created_at": "2026-07-11T08:22:00+00:00"
   },
   "江苏朗信电气股份有限公司": {
     "address": "张家港市杨舍镇塘市紫荆路108号(2号物流门）",
@@ -213,7 +236,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-11T08:23:00+00:00"
   },
   "湖州立讯精密工业有限公司": {
     "address": "浙江省湖州市吴兴区织里镇晟讯路399号A3栋1楼仓库",
@@ -222,7 +246,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_16_15"
+    "reconciliation_period": "month_16_15",
+    "created_at": "2026-07-11T08:24:00+00:00"
   },
   "江苏日月照明电器有限公司": {
     "address": "江苏省盐城市建湖县光明路999号日月照明电器有限公司一号仓库",
@@ -231,7 +256,8 @@
     "email": "",
     "payment_terms": "月结60天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T07:07:12.729491+00:00"
   },
   "苏州锐霸智能科技有限公司": {
     "address": "苏州市吴中区兴吴路27号6栋",
@@ -240,7 +266,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:26:00+00:00"
   },
   "昆山思瑞奕电子有限公司": {
     "address": "江苏省昆山市北门路1588号",
@@ -249,7 +276,8 @@
     "email": "",
     "payment_terms": "月结60天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:27:00+00:00"
   },
   "苏州允锐液压设备有限公司": {
     "address": "江苏省苏州市工业园区唯亭镇春辉路22号-2#厂房",
@@ -258,7 +286,8 @@
     "email": "",
     "payment_terms": "月结30天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:28:00+00:00"
   },
   "昆山泰仕通精密电子有限公司": {
     "address": "昆山市红杨路1188号1号厂房",
@@ -267,7 +296,8 @@
     "email": "",
     "payment_terms": "月结60天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:29:00+00:00"
   },
   "先锋高科技（常州）有限公司": {
     "address": "上海市奉贤区环城北路1号(西门)",
@@ -276,7 +306,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-11T08:30:00+00:00"
   },
   "先锋高科技（上海）有限公司": {
     "address": "上海市奉贤区环城北路1号(西门)",
@@ -285,7 +316,8 @@
     "email": "",
     "payment_terms": "月结90天",
     "delivery_enabled": "",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-11T08:31:00+00:00"
   },
   "苏州鑫福泰电子科技有限公司": {
     "address": "昆山市锦溪镇昆开路88号",
@@ -294,7 +326,8 @@
     "email": "",
     "payment_terms": "月结120天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:32:00+00:00"
   },
   "镇江鸿福泰电子科技有限公司": {
     "address": "江苏省镇江市丹徒区辛丰镇亨威创业园",
@@ -303,7 +336,8 @@
     "email": "",
     "payment_terms": "月结120天",
     "delivery_enabled": "",
-    "reconciliation_period": "calendar_month"
+    "reconciliation_period": "calendar_month",
+    "created_at": "2026-07-11T08:33:00+00:00"
   },
   "迅铂科技（常州）有限公司": {
     "address": "江苏省无锡市新吴区新荣路26号无锡荣志电子有限公司",
@@ -312,7 +346,8 @@
     "email": "",
     "payment_terms": "月结60天",
     "delivery_enabled": "1",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:34:00+00:00"
   },
   "怡利电子科技（江苏）有限公司": {
     "address": "江苏省苏州市吴江市运东经济开发区锦湖西路167号",
@@ -321,7 +356,8 @@
     "email": "",
     "payment_terms": "月结95天",
     "delivery_enabled": "1",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-29T09:26:16.614497+00:00"
   },
   "苏州鑫福泰电子科技有限公司-东硕": {
     "address": "昆山市锦溪镇昆开路88号",
@@ -330,7 +366,8 @@
     "email": "",
     "payment_terms": "月结120天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:36:00+00:00"
   },
   "苏州鑫福泰电子科技有限公司-中磊": {
     "address": "昆山市锦溪镇昆开路88号",
@@ -339,7 +376,8 @@
     "email": "",
     "payment_terms": "月结120天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:37:00+00:00"
   },
   "苏州鑫福泰电子科技有限公司-剑桥": {
     "address": "昆山市锦溪镇昆开路88号",
@@ -348,7 +386,8 @@
     "email": "",
     "payment_terms": "月结120天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:38:00+00:00"
   },
   "苏州鑫福泰电子科技有限公司-力硕": {
     "address": "昆山市锦溪镇昆开路88号",
@@ -357,7 +396,8 @@
     "email": "",
     "payment_terms": "月结120天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:39:00+00:00"
   },
   "苏州鑫福泰电子科技有限公司-名硕（巴淡）": {
     "address": "昆山市锦溪镇昆开路88号",
@@ -366,7 +406,8 @@
     "email": "",
     "payment_terms": "月结120天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:40:00+00:00"
   },
   "苏州鑫福泰电子科技有限公司-巨圣": {
     "address": "昆山市锦溪镇昆开路88号",
@@ -375,6 +416,7 @@
     "email": "",
     "payment_terms": "月结120天",
     "delivery_enabled": "",
-    "reconciliation_period": "month_21_20"
+    "reconciliation_period": "month_21_20",
+    "created_at": "2026-07-11T08:41:00+00:00"
   }
 }

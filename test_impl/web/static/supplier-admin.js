@@ -17,6 +17,7 @@
     onChange(filtered, meta) {
       updateSupplierListCount(meta.shown, meta.total, meta.filtered);
       renderTable(filtered, { isFiltered: meta.filtered, totalCount: meta.total });
+      scrollSupplierListToTop();
     },
   });
 
@@ -26,6 +27,22 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function formatCreatedAt(iso) {
+    if (!iso) return "—";
+    const d = new Date(String(iso).trim());
+    if (Number.isNaN(d.getTime())) return esc(String(iso).slice(0, 16) || "—");
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function sortRowsByCreatedAt(rows) {
+    return [...(rows || [])].sort((a, b) => {
+      const ta = String(a.created_at || "");
+      const tb = String(b.created_at || "");
+      return tb.localeCompare(ta);
+    });
   }
 
   function showMsg(el, text, ok) {
@@ -56,10 +73,18 @@
     el.textContent = `共 ${total} 条`;
   }
 
-  function refreshSupplierTable() {
-    spColFilter.setRows(allRows);
-    spColFilter.bindHeader();
-    spColFilter.refresh();
+  function scrollSupplierListToTop() {
+    const run = () => {
+      const sm = document.getElementById("submoduleSupplier");
+      if (!sm || sm.classList.contains("is-hidden")) return;
+      const host = sm.querySelector(".list-scroll-host");
+      const wrap = sm.querySelector(".list-table-wrap");
+      if (host) host.scrollTop = 0;
+      if (wrap) wrap.scrollTop = 0;
+      const anchor = document.getElementById("spMaintHead") || sm.querySelector(".submodule-page-title");
+      anchor?.scrollIntoView({ block: "start", behavior: "instant" });
+    };
+    requestAnimationFrame(() => requestAnimationFrame(run));
   }
 
   function rowProfile(row) {
@@ -71,6 +96,7 @@
       email: row.email || p.email || "",
       payment_terms: row.payment_terms || p.payment_terms || "",
       notes: row.notes || p.notes || "",
+      created_at: row.created_at || p.created_at || "",
     };
   }
 
@@ -166,8 +192,8 @@
     updateSupplierListCount(rows.length, totalCount, options.isFiltered);
     if (!rows.length) {
       tbody.innerHTML = options.isFiltered
-        ? '<tr><td colspan="9" class="empty-cell">无匹配结果，请调整筛选条件</td></tr>'
-        : '<tr><td colspan="9" class="empty-cell">暂无供应商，请在上方添加</td></tr>';
+        ? '<tr><td colspan="10" class="empty-cell">无匹配结果，请调整筛选条件</td></tr>'
+        : '<tr><td colspan="10" class="empty-cell">暂无供应商，请在上方添加</td></tr>';
       return;
     }
     tbody.innerHTML = rows
@@ -183,6 +209,7 @@
         <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="phone" value="${esc(p.phone)}" disabled /></td>
         <td class="list-td-text"><input type="email" class="dn-inline-input le" data-field="email" value="${esc(p.email)}" disabled /></td>
         <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="payment_terms" value="${esc(p.payment_terms)}" disabled /></td>
+        <td class="list-td-datetime">${esc(formatCreatedAt(row.created_at || p.created_at))}</td>
         <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="notes" value="${esc(p.notes)}" disabled /></td>
         <td class="action-cell sp-actions">
           <button type="button" class="btn btn-outline btn-sm sp-edit-btn">编辑</button>
@@ -301,17 +328,24 @@
     });
   }
 
-  async function loadSupplierAdmin() {
+  async function loadSupplierAdmin(resetFilters) {
     const res = await fetch("/api/supplier-profiles");
     const data = await parseJsonResponse(res);
     if (!res.ok) throw new Error(data.error || "加载失败");
     profileMap = {};
-    allRows = data.rows || [];
+    allRows = sortRowsByCreatedAt(data.rows || []);
     allRows.forEach((row) => {
       profileMap[row.supplier] = row;
     });
-    refreshSupplierTable();
+    spColFilter.setRows(allRows);
+    spColFilter.bindHeader();
+    if (resetFilters) {
+      spColFilter.clearAll();
+    } else {
+      spColFilter.refresh();
+    }
     bindNewSupplierForm();
+    if (resetFilters) scrollSupplierListToTop();
   }
 
   function bindRefreshBtn() {
