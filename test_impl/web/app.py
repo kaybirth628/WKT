@@ -299,7 +299,7 @@ def api_health():
     return jsonify(
         {
             "ok": True,
-            "build": "20260730-inv-finished-flow",
+            "build": "20260730-audit-display-name",
             "storage": "sqlite",
             "db_path": str(line_service.db_path),
             "line_count": line_service.count_lines(),
@@ -1457,8 +1457,14 @@ def save_supplier_profile():
     if not supplier:
         return jsonify({"error": "供应商名称不能为空"}), 400
     try:
-        profile = supplier_profile_service.save(supplier, data.get("profile") or {})
-        return jsonify({"ok": True, "supplier": supplier, "profile": profile})
+        new_supplier = (data.get("new_supplier") or "").strip()
+        profile = supplier_profile_service.save(
+            supplier,
+            data.get("profile") or {},
+            new_supplier=new_supplier,
+        )
+        final_name = new_supplier or supplier
+        return jsonify({"ok": True, "supplier": final_name, "profile": profile})
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 

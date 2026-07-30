@@ -59,6 +59,30 @@ class TestSupplierProfileStore(unittest.TestCase):
             svc.delete("待删供应商")
         self.assertEqual(store.get_profile("待删供应商"), store.EMPTY_PROFILE)
 
+    def test_rename_supplier(self) -> None:
+        svc = SupplierProfileService()
+        store.save_profile("旧名称厂", {"address": "地址A", "created_at": "2026-07-01T10:00:00+00:00"})
+        row = svc.save(
+            "旧名称厂",
+            {"address": "地址B", "contact": "张三"},
+            new_supplier="新名称厂",
+        )
+        self.assertEqual(row["address"], "地址B")
+        self.assertEqual(row["contact"], "张三")
+        self.assertEqual(row["created_at"], "2026-07-01T10:00:00+00:00")
+        self.assertEqual(store.get_profile("新名称厂")["address"], "地址B")
+        self.assertEqual(store.get_profile("旧名称厂"), store.EMPTY_PROFILE)
+        names = [r["supplier"] for r in svc.list_rows()]
+        self.assertIn("新名称厂", names)
+        self.assertNotIn("旧名称厂", names)
+
+    def test_rename_supplier_duplicate(self) -> None:
+        svc = SupplierProfileService()
+        store.save_profile("供应商A", {"address": "A"})
+        store.save_profile("供应商B", {"address": "B"})
+        with self.assertRaises(ValueError):
+            svc.save("供应商A", {"address": "A2"}, new_supplier="供应商B")
+
     def test_resolve_supplier_name_exact(self) -> None:
         store.save_profile("昆山欣宏威金属制品有限公司", {"notes": "烤漆"})
         name, note = store.resolve_supplier_name("昆山欣宏威金属制品有限公司")

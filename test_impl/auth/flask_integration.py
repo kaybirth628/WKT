@@ -221,6 +221,23 @@ def register_auth(app: Flask, auth_service: AuthService, audit_service: AuditSer
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
     @app.before_request
+    def _refresh_session_profile():
+        if _is_public():
+            return None
+        uid = session.get("user_id")
+        if not uid:
+            return None
+        row = auth_service.store.get_user_by_id(int(uid))
+        if not row or not row.is_active:
+            session.clear()
+            return None
+        session["username"] = row.username
+        session["display_name"] = row.display_name
+        session["role"] = row.role
+        session["must_change_password"] = row.must_change_password
+        return None
+
+    @app.before_request
     def _require_login():
         if _is_public():
             return None
@@ -434,6 +451,10 @@ def register_auth(app: Flask, auth_service: AuthService, audit_service: AuditSer
             )
         except AuthError as exc:
             return jsonify({"error": str(exc)}), 400
+        actor = get_session_user() or {}
+        if int(actor.get("id") or 0) == user_id:
+            session["display_name"] = updated["display_name"]
+            session["role"] = updated["role"]
         return jsonify({"ok": True, "user": updated})
 
     @app.route("/api/users/<int:user_id>", methods=["DELETE"])

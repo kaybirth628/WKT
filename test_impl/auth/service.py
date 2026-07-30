@@ -157,6 +157,46 @@ class AuditService:
     def __init__(self, store: Optional[AuthStore] = None) -> None:
         self._store = store or AuthStore()
 
+    def _resolve_operator(self, user: Optional[Dict[str, Any]]) -> tuple[Optional[int], str, str]:
+        username = str((user or {}).get("username") or "system").strip() or "system"
+        display_name = str((user or {}).get("display_name") or username).strip() or username
+        user_id = (user or {}).get("id")
+        uid = int(user_id) if user_id is not None else None
+        if uid is not None:
+            row = self._store.get_user_by_id(uid)
+            if row:
+                return row.id, row.username, row.display_name
+        if username.lower() != "system":
+            row = self._store.get_user_by_username(username)
+            if row:
+                return row.id, row.username, row.display_name
+        return uid, username, display_name
+
+    def _display_name_map(self) -> tuple[Dict[int, str], Dict[str, str]]:
+        by_id: Dict[int, str] = {}
+        by_username: Dict[str, str] = {}
+        for user in self._store.list_users():
+            by_id[user.id] = user.display_name
+            by_username[user.username.casefold()] = user.display_name
+        return by_id, by_username
+
+    @staticmethod
+    def _resolve_audit_display_name(
+        row: AuditRow,
+        *,
+        by_id: Dict[int, str],
+        by_username: Dict[str, str],
+    ) -> str:
+        if row.user_id is not None and row.user_id in by_id:
+            return by_id[row.user_id]
+        key = row.username.casefold()
+        if key in by_username:
+            return by_username[key]
+        snap = str(row.display_name or "").strip()
+        if snap and snap.casefold() != key:
+            return snap
+        return snap or row.username
+
     def log(
         self,
         *,
@@ -169,12 +209,10 @@ class AuditService:
         detail: Optional[Dict[str, Any]] = None,
         ip_address: str = "",
     ) -> int:
-        username = str((user or {}).get("username") or "system")
-        display_name = str((user or {}).get("display_name") or username)
-        user_id = (user or {}).get("id")
+        user_id, username, display_name = self._resolve_operator(user)
         detail_json = json.dumps(detail or {}, ensure_ascii=False)
         return self._store.insert_audit(
-            user_id=int(user_id) if user_id is not None else None,
+            user_id=user_id,
             username=username,
             display_name=display_name,
             action=action,
@@ -213,8 +251,16 @@ class AuditService:
             date_from=date_from,
             date_to=date_to,
         )
+        by_id, by_username = self._display_name_map()
+        items = []
+        for row in rows:
+            payload = audit_to_dict(row)
+            payload["display_name"] = self._resolve_audit_display_name(
+                row, by_id=by_id, by_username=by_username
+            )
+            items.append(payload)
         return {
-            "items": [audit_to_dict(r) for r in rows],
+            "items": items,
             "total": total,
             "limit": limit,
             "offset": offset,

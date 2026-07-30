@@ -85,6 +85,45 @@ class AuthTests(unittest.TestCase):
         self.auth.delete_user(uid, actor_user_id=admin.id)
         self.assertIsNone(self.auth.store.get_user_by_id(uid))
 
+    def test_audit_display_name_resolves_after_rename(self) -> None:
+        self.auth.authenticate("admin", "WKT@2026")
+        created = self.auth.create_user(
+            username="1",
+            display_name="1",
+            password="pass1234",
+            role="user",
+        )
+        uid = int(created["id"])
+        self.audit.log(
+            user={"id": uid, "username": "1", "display_name": "1"},
+            action="line.create",
+            module="orders",
+            summary="改名前操作",
+        )
+        self.auth.update_user(uid, display_name="娟娟", role="user")
+        result = self.audit.query(username="1")
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["items"][0]["display_name"], "娟娟")
+
+    def test_audit_log_uses_fresh_display_name(self) -> None:
+        self.auth.authenticate("admin", "WKT@2026")
+        created = self.auth.create_user(
+            username="worker",
+            display_name="旧名",
+            password="pass1234",
+            role="user",
+        )
+        uid = int(created["id"])
+        self.auth.update_user(uid, display_name="娟娟", role="user")
+        self.audit.log(
+            user={"id": uid, "username": "worker", "display_name": "旧名"},
+            action="line.update",
+            module="orders",
+            summary="改名后操作",
+        )
+        row = self.audit.query(username="worker")["items"][0]
+        self.assertEqual(row["display_name"], "娟娟")
+
     def test_cannot_delete_admin_or_self(self) -> None:
         admin = self.auth.authenticate("admin", "WKT@2026")
         with self.assertRaises(Exception):

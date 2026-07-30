@@ -86,18 +86,33 @@ def get_profile(supplier: str) -> Dict[str, str]:
     return dict(all_cfg.get(supplier, EMPTY_PROFILE))
 
 
-def save_profile(supplier: str, info: dict) -> Dict[str, str]:
-    supplier = (supplier or "").strip()
-    if not supplier:
+def save_profile(supplier: str, info: dict, *, new_supplier: str = "") -> Dict[str, str]:
+    old_name = (supplier or "").strip()
+    new_name = (new_supplier or old_name).strip()
+    if not new_name:
         raise ValueError("供应商名称不能为空")
     row = _normalize_row(info)
     all_cfg = load_all_profiles()
-    prev = all_cfg.get(supplier) or {}
-    if supplier in all_cfg:
+    old_key = _resolve_profile_key(all_cfg, old_name) if old_name else None
+
+    if old_key:
+        prev = all_cfg[old_key]
         row["created_at"] = str(prev.get("created_at") or row.get("created_at") or "").strip()
     elif not row.get("created_at"):
         row["created_at"] = _now_iso()
-    all_cfg[supplier] = row
+
+    dest = new_name
+    if old_key and dest.casefold() != old_key.casefold():
+        for key in all_cfg:
+            if key.casefold() == dest.casefold():
+                raise ValueError(f"供应商「{dest}」已存在")
+        del all_cfg[old_key]
+    elif not old_key:
+        for key in all_cfg:
+            if key.casefold() == dest.casefold():
+                raise ValueError(f"供应商「{dest}」已存在")
+
+    all_cfg[dest] = row
     PROFILES_FILE.parent.mkdir(parents=True, exist_ok=True)
     PROFILES_FILE.write_text(
         json.dumps(all_cfg, ensure_ascii=False, indent=2),

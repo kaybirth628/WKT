@@ -20,8 +20,8 @@ class SupplierProfileService:
     def get(self, supplier: str) -> Dict[str, str]:
         return get_profile(supplier)
 
-    def save(self, supplier: str, info: dict) -> Dict[str, str]:
-        return save_profile(supplier, info)
+    def save(self, supplier: str, info: dict, *, new_supplier: str = "") -> Dict[str, str]:
+        return save_profile(supplier, info, new_supplier=new_supplier)
 
     def create(self, supplier: str, info: dict) -> Dict[str, str]:
         supplier = (supplier or "").strip()

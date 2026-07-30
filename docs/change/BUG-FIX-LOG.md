@@ -37,6 +37,18 @@
 
 ## 变更记录
 
+### BF-0025 · 2026-07-30
+
+| 字段 | 内容 |
+|------|------|
+| 关联 CL | CL-0273 |
+| 模块 | 操作记录 / 用户管理（`auth/service.py`、`flask_integration.py`） |
+| 现象 | 用户 1 姓名已改为「娟娟」，操作记录仍显示「1」 |
+| 根因 | 审计写入使用 session 快照 display_name；列表直接读 audit_log 旧字段 |
+| 修复 | 写入/查询时从 users 表解析最新 display_name；每请求刷新 session |
+| 防复发 | `test_audit_display_name_resolves_after_rename` |
+| 验证 | 改名后刷新操作记录，操作人列显示娟娟 |
+
 ### BF-0024 · 2026-07-30
 
 | 字段 | 内容 |

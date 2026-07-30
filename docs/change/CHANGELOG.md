@@ -33,6 +33,70 @@
 
 ## 变更记录
 
+### CL-0274 · 2026-07-30 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `index.html`（供应商表 colgroup）、`style.css` |
+| 变更内容 | 供应商维护：重分配列宽（名称/地址加宽、邮箱/操作收窄）；统一单元格左右 padding；只读行 ellipsis；**新增表单改单行**，电话/邮箱/账期/备注收窄 |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | 供应商列表列宽更均衡，操作列不再过宽 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 纯 UI 间距 |
+| 关联 | UI-0020 |
+
+### CL-0273 · 2026-07-30 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `auth/service.py`、`auth/flask_integration.py`、`test_auth.py` |
+| 变更内容 | 操作记录「操作人」：写入前从用户表取最新 **display_name**；列表查询按 user_id/username 解析当前姓名（改名后历史记录也显示「娟娟」而非「1」）；每请求刷新 session 姓名 |
+| 根因 | 审计日志快照 session 旧 display_name；用户改名后 session 未刷新 |
+| 防复发 | `test_audit_display_name_resolves_after_rename`、`test_audit_log_uses_fresh_display_name` |
+| 验证 | 用户 1 改名娟娟后，操作记录操作人列显示娟娟 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 展示修复 |
+| 关联 | BF-0025 |
+
+### CL-0272 · 2026-07-30 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `style.css`、`cost.css` |
+| 变更内容 | BOM 查询 / 供应商维护字体对齐 **ui-layout-rules §8.2 + §7.9**：列表展示 **0.75rem**、表头 **0.6875rem**；筛选栏/客商新增表单/行内编辑方框 **0.8125rem**；预警条 **0.8125rem**、标签 **0.75rem** |
+| 根因 | 筛选栏 0.875rem、供应商行内 0.875rem、预警 inherit 正文 0.9375rem，与 list-table 不一致 |
+| 防复发 | — |
+| 验证 | BOM 查询筛选+表格+预警；供应商新增表单+列表展示/编辑 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 纯 UI 字号 |
+| 关联 | UI 规范 V3 §8.2 / §7.9 · UI-0019 |
+
+### CL-0271 · 2026-07-30 · 优化（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `cost_entry.html`、`cost_entry.js`、`cost.css`、`系统操作SOP.md` |
+| 变更内容 | 供应商档案缺失预警 **仅保留 BOM 查询页**；预警条字体改为 `inherit`（Noto Sans SC 正文栈、line-height 1.6），与页面全局 ERP 字体规范一致 |
+| 根因 | — |
+| 防复发 | — |
+| 验证 | BOM 录入无预警条；BOM 查询仍有；预警与表格字号一致 |
+| SOP 同步 | 是 |
+| 关联 | CL-0268 |
+
+### CL-0270 · 2026-07-30 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `supplier_profile/store.py`、`service.py`、`app.py`、`supplier-admin.js`、`style.css` |
+| 变更内容 | 供应商信息维护：编辑时可 **修改供应商名称**（后端支持 rename）；列表行内输入框字体与上方新增表单统一（0.875rem、inherit） |
+| 根因 | 名称列只渲染文本；列表 `input.le` 被全局 0.72rem 覆盖 |
+| 防复发 | `test_rename_supplier`、`test_rename_supplier_duplicate` |
+| 验证 | 编辑行改名称保存；上下字体一致 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 原有编辑流程，仅补全可改字段 |
+| 关联 | — |
+
 ### CL-0269 · 2026-07-30 · 优化（C）
 
 | 字段 | 内容 |

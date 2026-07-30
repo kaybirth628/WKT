@@ -1907,6 +1907,24 @@ body {
   padding: 0.25rem 0.3rem;
 }
 
+.list-table.dn-maint-table input.le,
+.list-table.dn-maint-table .dn-inline-input {
+  font-size: 0.8125rem;
+  font-family: inherit;
+  padding: 0.35rem 0.45rem;
+  line-height: 1.35;
+  min-height: 2rem;
+  box-sizing: border-box;
+}
+
+.list-table.dn-maint-table tr:not(.is-editing) input.le:disabled,
+.list-table.dn-maint-table tr:not(.is-editing) .dn-inline-input:disabled {
+  font-size: 0.75rem;
+  padding: 0;
+  min-height: 0;
+  line-height: 1.35;
+}
+
 .detail-table {
   width: 100%;
   border-collapse: collapse;
@@ -3648,17 +3666,21 @@ body {
 .filter-bar input[type="text"] {
   flex: 1;
   min-width: 180px;
-  padding: 0.5rem 0.65rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  line-height: 1.35;
 }
 
 .filter-bar select {
-  padding: 0.5rem 0.65rem;
+  padding: 0.35rem 0.5rem;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  line-height: 1.35;
   min-width: 120px;
 }
 
@@ -3871,10 +3893,14 @@ body {
 .dn-form input,
 .dn-form select {
   min-width: 180px;
-  padding: 0.45rem 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.875rem;
+  padding: 0.35rem 0.45rem;
+  min-height: 2rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  line-height: 1.35;
+  box-sizing: border-box;
 }
 
 .dn-msg:empty {
@@ -4095,13 +4121,76 @@ body {
   justify-self: start;
 }
 
-#spNewSupplierForm.dn-new-form-2row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+#spNewSupplierForm.sp-new-form-onerow {
+  display: grid;
+  grid-template-columns:
+    minmax(8rem, 1.35fr)
+    minmax(9rem, 1.85fr)
+    minmax(4rem, 0.65fr)
+    minmax(5.5rem, 0.7fr)
+    minmax(6rem, 0.85fr)
+    minmax(4.5rem, 0.65fr)
+    minmax(4rem, 0.6fr)
+    auto;
+  gap: 0.4rem 0.45rem;
+  align-items: end;
+  width: 100%;
+  margin-top: 0.35rem;
 }
 
-#spNewSupplierForm .dn-form-actions {
-  grid-column: 4;
-  justify-self: start;
+#spNewSupplierForm.sp-new-form-onerow label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+#spNewSupplierForm.sp-new-form-onerow input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 0.45rem;
+  min-height: 2rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+}
+
+#spNewSupplierForm.sp-new-form-onerow .dn-form-actions {
+  margin: 0;
+  align-self: end;
+  grid-column: auto;
+}
+
+#spNewSupplierForm.sp-new-form-onerow .dn-form-actions .btn-sm {
+  white-space: nowrap;
+}
+
+/* 供应商维护：列宽与单元格间距对齐表格内容 */
+#spMaintTable th,
+#spMaintTable td {
+  padding: var(--wkt-list-cell-py) 0.38rem;
+}
+
+#spMaintTable tr:not(.is-editing) .dn-inline-input:disabled {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#spMaintTable .sp-actions {
+  white-space: nowrap;
+  padding-left: 0.28rem;
+  padding-right: 0.28rem;
+}
+
+#spMaintTable .sp-actions .btn-sm {
+  padding: 0.18rem 0.42rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
 }
 
 @media (max-width: 900px) {
@@ -4109,8 +4198,12 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  #spNewSupplierForm.dn-new-form-2row {
+  #spNewSupplierForm.sp-new-form-onerow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #spNewSupplierForm.sp-new-form-onerow .dn-form-actions {
+    grid-column: 1 / -1;
   }
 }
 

@@ -77,6 +77,7 @@
   function readRowInputs(tr) {
     const val = (field) => tr.querySelector(`[data-field="${field}"]`)?.value.trim() || "";
     return {
+      supplier: val("supplier"),
       address: val("address"),
       contact: val("contact"),
       phone: val("phone"),
@@ -86,11 +87,24 @@
     };
   }
 
-  async function saveSupplierRow(supplier, inputs) {
+  async function saveSupplierRow(oldSupplier, inputs) {
+    const newName = inputs.supplier || oldSupplier;
+    const profile = {
+      address: inputs.address,
+      contact: inputs.contact,
+      phone: inputs.phone,
+      email: inputs.email,
+      payment_terms: inputs.payment_terms,
+      notes: inputs.notes,
+    };
+    const body = { supplier: oldSupplier, profile };
+    if (newName && newName !== oldSupplier) {
+      body.new_supplier = newName;
+    }
     const res = await fetch("/api/supplier-profiles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ supplier, profile: inputs }),
+      body: JSON.stringify(body),
     });
     const data = await parseJsonResponse(res);
     if (!res.ok) throw new Error(data.error || "供应商档案保存失败");
@@ -163,13 +177,13 @@
         return `
       <tr data-supplier="${esc(supplier)}">
         <td class="list-td-seq">${idx + 1}</td>
-        <td class="list-td-text sp-name-cell">${esc(supplier)}</td>
-        <td class="list-td-text"><input class="le" data-field="address" value="${esc(p.address)}" disabled /></td>
-        <td class="list-td-text"><input class="le" data-field="contact" value="${esc(p.contact)}" disabled /></td>
-        <td class="list-td-text"><input class="le" data-field="phone" value="${esc(p.phone)}" disabled /></td>
-        <td class="list-td-text"><input class="le" data-field="email" value="${esc(p.email)}" disabled /></td>
-        <td class="list-td-text"><input class="le" data-field="payment_terms" value="${esc(p.payment_terms)}" disabled /></td>
-        <td class="list-td-text"><input class="le" data-field="notes" value="${esc(p.notes)}" disabled /></td>
+        <td class="list-td-text sp-name-cell"><input type="text" class="dn-inline-input le" data-field="supplier" value="${esc(supplier)}" disabled /></td>
+        <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="address" value="${esc(p.address)}" disabled /></td>
+        <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="contact" value="${esc(p.contact)}" disabled /></td>
+        <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="phone" value="${esc(p.phone)}" disabled /></td>
+        <td class="list-td-text"><input type="email" class="dn-inline-input le" data-field="email" value="${esc(p.email)}" disabled /></td>
+        <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="payment_terms" value="${esc(p.payment_terms)}" disabled /></td>
+        <td class="list-td-text"><input type="text" class="dn-inline-input le" data-field="notes" value="${esc(p.notes)}" disabled /></td>
         <td class="action-cell sp-actions">
           <button type="button" class="btn btn-outline btn-sm sp-edit-btn">编辑</button>
           <button type="button" class="btn btn-danger btn-sm sp-delete-btn">删除</button>
@@ -185,6 +199,7 @@
       tr.querySelector(".sp-edit-btn")?.addEventListener("click", () => {
         storeRowSnapshot(tr);
         setRowEditing(tr, true);
+        tr.querySelector('[data-field="supplier"]')?.focus();
       });
       tr.querySelector(".sp-cancel-btn")?.addEventListener("click", () => {
         restoreRowSnapshot(tr);
@@ -194,14 +209,19 @@
         const supplier = tr.dataset.supplier || "";
         const msg = document.getElementById("spMapMsg");
         const btn = tr.querySelector(".sp-save-btn");
+        const inputs = readRowInputs(tr);
+        if (!inputs.supplier) {
+          showMsg(msg, "供应商名称不能为空", false);
+          return;
+        }
         if (btn) btn.disabled = true;
         try {
-          await saveSupplierRow(supplier, readRowInputs(tr));
-          profileMap[supplier] = readRowInputs(tr);
+          await saveSupplierRow(supplier, inputs);
           storeRowSnapshot(tr);
           setRowEditing(tr, false);
           showMsg(msg, "✓ 已保存", true);
           if (window.showSaveSuccess) window.showSaveSuccess("✓ 已保存");
+          await loadSupplierAdmin();
         } catch (err) {
           showMsg(msg, err.message || "保存失败", false);
           if (window.showSaveError) window.showSaveError(err.message || "保存失败");

@@ -777,11 +777,14 @@ select:focus {
 
 .cost-filter-field input[type="text"] {
   min-width: 140px;
-  padding: 0.5rem 0.65rem;
+  padding: 0.35rem 0.5rem;
+  min-height: 2rem;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-family: inherit;
+  line-height: 1.35;
+  box-sizing: border-box;
 }
 
 .list-empty-hint {
@@ -878,8 +881,10 @@ select:focus {
   background: var(--warning-soft, #fffbeb);
   border: 1px solid rgba(217, 119, 6, 0.28);
   color: #92400e;
+  font-family: inherit;
   font-size: 0.8125rem;
   line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
 }
 
 .bom-missing-supplier-alert.is-hidden {
@@ -892,22 +897,27 @@ select:focus {
   align-items: center;
   gap: 0.35rem 0.55rem;
   margin-bottom: 0.35rem;
+  font-family: inherit;
+  font-size: inherit;
 }
 
 .bom-missing-supplier-head strong {
-  font-size: 0.8125rem;
+  font-family: inherit;
+  font-size: inherit;
   font-weight: 600;
 }
 
 .bom-missing-supplier-meta {
   color: rgba(146, 64, 14, 0.82);
-  font-size: 0.75rem;
+  font-family: inherit;
+  font-size: inherit;
 }
 
 .bom-missing-supplier-link {
   margin-left: auto;
   color: #b45309;
-  font-size: 0.75rem;
+  font-family: inherit;
+  font-size: inherit;
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
@@ -921,6 +931,8 @@ select:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0.35rem;
+  font-family: inherit;
+  font-size: 0.75rem;
 }
 
 .bom-missing-supplier-chip {
@@ -930,14 +942,16 @@ select:focus {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(217, 119, 6, 0.22);
-  font-size: 0.75rem;
+  font-family: inherit;
+  font-size: inherit;
   line-height: 1.35;
 }
 
 .bom-missing-supplier-count {
   margin-left: 0.12rem;
-  font-size: 0.6875rem;
-  opacity: 0.8;
+  font-family: inherit;
+  font-size: inherit;
+  opacity: 0.82;
 }
 
 .bom-import-card {

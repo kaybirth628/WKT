@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WKT 销售管理系统 · 订单管理</title>
   {% include '_theme_head.html' %}
-  <link rel="stylesheet" href="/static/style.css?v=20260729-hover-tip-copy" />
+  <link rel="stylesheet" href="/static/style.css?v=20260730-supplier-form-onerow" />
   <link rel="stylesheet" href="/static/dashboard.css?v=20260623-order-dashboard" />
 </head>
 <body>
@@ -411,20 +411,16 @@
         <div id="submoduleSupplier" class="submodule-panel is-hidden">
           <h3 class="section-h3 submodule-page-title">供应商信息维护</h3>
           <section class="card list-card dn-maint-card">
-            <form id="spNewSupplierForm" class="dn-form dn-new-form dn-new-form-2row">
-              <div class="dn-form-row">
-                <label>供应商名称 <input type="text" id="spNewName" required placeholder="公司全称" /></label>
-                <label>地址 <input type="text" id="spNewAddress" placeholder="公司地址" /></label>
-                <label>联系人 <input type="text" id="spNewContact" placeholder="联系人" /></label>
-                <label>电话 <input type="text" id="spNewPhone" placeholder="电话" /></label>
-              </div>
-              <div class="dn-form-row">
-                <label>邮箱 <input type="email" id="spNewEmail" placeholder="邮箱" /></label>
-                <label>账期 <input type="text" id="spNewPaymentTerms" placeholder="如：月结60天" /></label>
-                <label>备注 <input type="text" id="spNewNotes" placeholder="备注（可选）" /></label>
-                <div class="dn-form-actions">
-                  <button type="submit" class="btn btn-primary btn-sm">添加供应商</button>
-                </div>
+            <form id="spNewSupplierForm" class="dn-form sp-new-form-onerow">
+              <label class="sp-field-name">供应商名称 <input type="text" id="spNewName" required placeholder="公司全称" /></label>
+              <label class="sp-field-address">地址 <input type="text" id="spNewAddress" placeholder="公司地址" /></label>
+              <label class="sp-field-contact">联系人 <input type="text" id="spNewContact" placeholder="联系人" /></label>
+              <label class="sp-field-phone">电话 <input type="text" id="spNewPhone" placeholder="电话" /></label>
+              <label class="sp-field-email">邮箱 <input type="email" id="spNewEmail" placeholder="邮箱" /></label>
+              <label class="sp-field-payment">账期 <input type="text" id="spNewPaymentTerms" placeholder="月结60天" /></label>
+              <label class="sp-field-notes">备注 <input type="text" id="spNewNotes" placeholder="可选" /></label>
+              <div class="dn-form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">添加供应商</button>
               </div>
             </form>
             <p id="spNewMsg" class="msg dn-msg"></p>
@@ -449,15 +445,15 @@
               <div class="table-wrap list-table-wrap dn-table-scroll">
                 <table class="data-table list-table dn-maint-table" id="spMaintTable">
                   <colgroup>
-                    <col style="width:3%" />
-                    <col style="width:13%" />
-                    <col style="width:17%" />
+                    <col style="width:4%" />
+                    <col style="width:18%" />
+                    <col style="width:24%" />
+                    <col style="width:8%" />
+                    <col style="width:10%" />
                     <col style="width:8%" />
                     <col style="width:9%" />
-                    <col style="width:11%" />
-                    <col style="width:11%" />
-                    <col style="width:13%" />
-                    <col style="width:15%" />
+                    <col style="width:9%" />
+                    <col style="width:10%" />
                   </colgroup>
                   <thead id="spMaintHead">
                     <tr class="list-header-row">
@@ -546,7 +542,7 @@
   <script src="/static/save-feedback.js?v=20260530"></script>
   <script src="/static/list-col-filter.js?v=20260725-partner-seq"></script>
   <script src="/static/delivery-note-admin.js?v=20260725-partner-sort-desc"></script>
-  <script src="/static/supplier-admin.js?v=20260725-partner-sort-desc"></script>
+  <script src="/static/supplier-admin.js?v=20260730-supplier-table-spacing"></script>
   <script src="/static/ai-assistant.js?v=20260530-ai-sidebar"></script>
   <script src="/static/hover_tip.js?v=20260729-no-copy-popup"></script>
   <script src="/static/inventory_bom_lookup.js?v=20260729-ui-full-align"></script>

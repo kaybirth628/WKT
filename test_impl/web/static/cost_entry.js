@@ -552,7 +552,6 @@ CostCommon.loadOptions()
     setupPartLookup();
     initCostEntryCombos();
     initBatchCustomerCombo();
-    CostCommon.renderMissingSupplierAlert("bomMissingSupplierAlert");
   });
 
 function switchBomMode(mode) {
