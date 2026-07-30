@@ -33,6 +33,19 @@
 
 ## 变更记录
 
+### CL-0278 · 2026-07-30 · 修复（C）
+
+| 字段 | 内容 |
+|------|------|
+| 涉及模块 | `wkt_events.py`、`notify-feishu-deploy.py` |
+| 变更内容 | 部署飞书改同步发送（修复脚本退出导致 notify_async 未发出）；操作记录操作人改为系统管理员，git 推送人写入 detail.triggered_by |
+| 根因 | deploy 脚本短生命周期 + daemon 线程；操作人误用 git user.name 作 display_name |
+| 防复发 | `test_system_deploy_message_sync` |
+| 验证 | 再次推送云端后飞书收到「系统更新」；操作记录操作人为「系统管理员」 |
+| SOP 同步 | 否 |
+| SOP 免同步原因 | 运维通知修复 |
+| 关联 | CL-0277 |
+
 ### CL-0277 · 2026-07-30 · 新增（C）
 
 | 字段 | 内容 |

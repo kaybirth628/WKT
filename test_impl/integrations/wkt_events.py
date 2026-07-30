@@ -413,12 +413,17 @@ def log_system_deploy_audit(
     from test_impl.auth.store import AuthStore
 
     summary = build_deploy_audit_summary(previous, current, host_label=host_label)
-    op = str(operator or "deploy").strip() or "deploy"
+    triggered_by = str(operator or "deploy").strip() or "deploy"
     store = AuthStore(db_path=deploy_audit_db_path(app_dir))
+    audit_user: Dict[str, Any] = {"username": "system", "display_name": "系统管理员"}
+    for user in store.list_users():
+        if user.role == "admin" and user.is_active:
+            audit_user = {"id": user.id, "username": user.username, "display_name": user.display_name}
+            break
     audit = AuditService(store=store)
     try:
         audit.log(
-            user={"username": "deploy", "display_name": op},
+            user=audit_user,
             action="system.deploy",
             module="system",
             summary=summary,
@@ -426,6 +431,7 @@ def log_system_deploy_audit(
             entity_id=str(current.get("build") or ""),
             detail={
                 "host": host_label,
+                "triggered_by": triggered_by,
                 "previous": {
                     "version": (previous or {}).get("version") or "",
                     "build": (previous or {}).get("build") or "",
@@ -451,8 +457,9 @@ def notify_system_deploy(
     changes: Optional[List[str]] = None,
     host_label: str = "云端",
     operator: str = "",
-) -> None:
-    """系统迭代部署完成后推送版本与变更摘要。"""
+    sync: bool = False,
+) -> bool:
+    """系统迭代部署完成后推送版本与变更摘要。deploy 脚本须 sync=True 以免进程退出前未发完。"""
     previous = (
         {"version": prev_version, "build": prev_build}
         if (prev_version or prev_build)
@@ -471,7 +478,10 @@ def notify_system_deploy(
     else:
         lines.append("本次迭代：见 CHANGELOG（deploy-info 未打包时仅显示 build）")
     text = f"【{_app_title()} · 系统更新】\n时间：{_now_str()}\n" + "\n".join(lines)
+    if sync:
+        return feishu_notifier.notify_text(text, event="system_deploy")
     feishu_notifier.notify_async(text, event="system_deploy")
+    return True
 
 
 def send_test_message() -> None:

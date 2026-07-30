@@ -150,7 +150,7 @@ class AuthTests(unittest.TestCase):
         self.assertEqual(module_label("system"), "系统")
         self.assertIn("build-old", item["summary"])
         self.assertIn("build-new", item["summary"])
-        self.assertEqual(item["display_name"], "Albert")
+        self.assertEqual(item["display_name"], "系统管理员")
         deploy_store.close()
 
     def test_cannot_delete_admin_or_self(self) -> None:

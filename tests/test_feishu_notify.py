@@ -168,6 +168,26 @@ class TestFeishuNotify(unittest.TestCase):
         self.assertIn("录入订单行", text)
         self.assertEqual(mock_async.call_args[1]["event"], "audit_action")
 
+    @patch.object(FeishuNotifier, "notify_text")
+    def test_system_deploy_message_sync(self, mock_text: MagicMock) -> None:
+        mock_text.return_value = True
+        ok = notify_system_deploy(
+            version="v0.6.0",
+            build="20260730-deploy-notify",
+            prev_version="v0.6.0",
+            prev_build="20260728-old-build",
+            changes=["CL-0149 · 2026-07-25 · 优化：飞书审计通知"],
+            host_label="云端",
+            operator="Albert",
+            sync=True,
+        )
+        mock_text.assert_called_once()
+        self.assertTrue(ok)
+        text = mock_text.call_args[0][0]
+        self.assertIn("系统更新", text)
+        self.assertIn("Albert", text)
+        self.assertEqual(mock_text.call_args[1]["event"], "system_deploy")
+
     @patch.object(FeishuNotifier, "notify_async")
     def test_system_deploy_message(self, mock_async: MagicMock) -> None:
         notify_system_deploy(

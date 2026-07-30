@@ -41,7 +41,7 @@ def main() -> int:
     previous = load_pre_deploy_snapshot(app_dir)
     summary = collect_deploy_summary(app_dir, changelog_limit=args.changelog_limit)
 
-    notify_system_deploy(
+    feishu_ok = notify_system_deploy(
         version=summary["version"],
         build=summary["build"],
         prev_version=str((previous or {}).get("version") or ""),
@@ -49,6 +49,7 @@ def main() -> int:
         changes=summary["changes"],
         host_label=args.host_label,
         operator=operator,
+        sync=True,
     )
     try:
         log_system_deploy_audit(
@@ -65,9 +66,9 @@ def main() -> int:
 
     save_last_deploy_snapshot(app_dir, summary)
     print(
-        f"Deploy notify queued: {((previous or {}).get('build') or '—')} -> {summary['build']} "
+        f"Deploy notify: {((previous or {}).get('build') or '—')} -> {summary['build']} "
         f"(version {(previous or {}).get('version') or '—'} -> {summary['version'] or '—'}) "
-        f"operator={operator} audit={'ok' if audit_ok else 'failed'}"
+        f"operator={operator} feishu={'ok' if feishu_ok else 'failed/skipped'} audit={'ok' if audit_ok else 'failed'}"
     )
     return 0
 
